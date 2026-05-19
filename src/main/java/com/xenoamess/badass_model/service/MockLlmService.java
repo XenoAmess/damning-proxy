@@ -261,70 +261,104 @@ public class MockLlmService {
                 
                 /**
                  * Build tool arguments based on the tool's parameter schema.
-                 * Attempts to detect the correct parameter name for the command.
-                 */
-                private String buildToolArguments(Tool tool) {
-                    Object parameters = tool.getFunction().getParameters();
-                    
-                    // Try to extract parameter names from the schema
-                    List<String> paramNames = extractParameterNames(parameters);
-                    
-                    // Find the most likely parameter name for the command
-                    String commandParam = findCommandParameter(paramNames);
-                    
-                    // Build JSON arguments
-                    StringBuilder args = new StringBuilder();
-                    args.append("{");
-                    args.append("\"").append(commandParam).append("\": \"ls -l\"");
-                    
-                    // Add description if there's a second parameter or if it seems appropriate
-                    if (paramNames.size() > 1) {
-                        String secondParam = paramNames.get(1);
-                        if (!secondParam.equals(commandParam)) {
-                            args.append(", \"").append(secondParam).append("\": \"List files in current directory\"");
-                        }
-                    }
-                    
-                    args.append("}");
-                    return args.toString();
-                }
-                
-                /**
-                 * Extract parameter names from the tool's JSON schema.
+                 * Only includes parameters defined in the schema with correctly typed values.
                  */
                 @SuppressWarnings("unchecked")
-                private List<String> extractParameterNames(Object parameters) {
-                    List<String> names = new ArrayList<>();
+                private String buildToolArguments(Tool tool) {
+                    Object parameters = tool.getFunction().getParameters();
+                    Map<String, Object> properties = new LinkedHashMap<>();
+                    List<String> requiredParams = new ArrayList<>();
+                    
                     if (parameters instanceof Map) {
                         Map<String, Object> paramMap = (Map<String, Object>) parameters;
-                        Object properties = paramMap.get("properties");
-                        if (properties instanceof Map) {
-                            names.addAll(((Map<String, Object>) properties).keySet());
+                        Object props = paramMap.get("properties");
+                        if (props instanceof Map) {
+                            properties = (Map<String, Object>) props;
+                        }
+                        Object req = paramMap.get("required");
+                        if (req instanceof List) {
+                            requiredParams = (List<String>) req;
                         }
                     }
-                    // Default fallback
-                    if (names.isEmpty()) {
-                        names.add("command");
+                    
+                    // Build JSON arguments respecting parameter types
+                    Map<String, Object> args = new LinkedHashMap<>();
+                    
+                    for (Map.Entry<String, Object> entry : properties.entrySet()) {
+                        String paramName = entry.getKey();
+                        Map<String, Object> paramSchema = entry.getValue() instanceof Map 
+                            ? (Map<String, Object>) entry.getValue() 
+                            : new HashMap<>();
+                        String paramType = paramSchema.get("type") != null ? paramSchema.get("type").toString() : "string";
+                        
+                        // Determine value based on parameter name and type
+                        Object value = getParameterValue(paramName, paramType);
+                        if (value != null) {
+                            args.put(paramName, value);
+                        }
                     }
-                    return names;
+                    
+                    try {
+                        return objectMapper.writeValueAsString(args);
+                    } catch (JsonProcessingException e) {
+                        // Fallback to simple JSON
+                        return "{\"command\": \"ls -l\"}";
+                    }
                 }
                 
                 /**
-                 * Find the parameter name that most likely represents the command input.
+                 * Get a properly typed value for a parameter based on its name and schema type.
                  */
-                private String findCommandParameter(List<String> paramNames) {
-                    List<String> commandPatterns = List.of("command", "cmd", "shell", "script", "input", "code", "line");
+                private Object getParameterValue(String paramName, String paramType) {
+                    String nameLower = paramName.toLowerCase();
                     
-                    for (String pattern : commandPatterns) {
-                        for (String param : paramNames) {
-                            if (param.toLowerCase().contains(pattern)) {
-                                return param;
-                            }
-                        }
+                    // Command parameter - always string
+                    if (nameLower.contains("command") || nameLower.contains("cmd") || 
+                        nameLower.contains("shell") || nameLower.contains("script") ||
+                        nameLower.contains("input") || nameLower.contains("code") ||
+                        nameLower.contains("line") || nameLower.contains("query")) {
+                        return "ls -l";
                     }
                     
-                    // Return first parameter as fallback
-                    return paramNames.get(0);
+                    // Timeout parameter - must be a number
+                    if (nameLower.contains("timeout") || nameLower.contains("time") ||
+                        nameLower.contains("limit") || nameLower.contains("duration")) {
+                        if ("integer".equals(paramType) || "number".equals(paramType)) {
+                            return 120; // 120 seconds default timeout
+                        }
+                        return null; // Skip if type doesn't match
+                    }
+                    
+                    // Description parameter - string
+                    if (nameLower.contains("desc") || nameLower.contains("explain") ||
+                        nameLower.contains("reason") || nameLower.contains("purpose")) {
+                        return "List files in current directory";
+                    }
+                    
+                    // Boolean parameters
+                    if ("boolean".equals(paramType)) {
+                        return false;
+                    }
+                    
+                    // Array parameters
+                    if ("array".equals(paramType)) {
+                        return new ArrayList<>();
+                    }
+                    
+                    // Object parameters
+                    if ("object".equals(paramType)) {
+                        return new HashMap<>();
+                    }
+                    
+                    // For string parameters that look like paths/directories
+                    if (nameLower.contains("dir") || nameLower.contains("path") || 
+                        nameLower.contains("workdir") || nameLower.contains("cwd") ||
+                        nameLower.contains("folder") || nameLower.contains("location")) {
+                        return "/tmp";
+                    }
+                    
+                    // Default: null to skip unknown parameters (safer than guessing)
+                    return null;
                 }
                 
                 private String[] splitIntoChunks(String str, int chunkSize) {
