@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "kimi-for-coding": {
+      "models": {
+        "k2p6": {
+          "headers": {
+            "User-Agent": "KimiCLI/1.5"
+          }
+        }
+      }
+    }
+  }
+}

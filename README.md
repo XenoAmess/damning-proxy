@@ -1,0 +1,204 @@
+# badass-model
+
+A high-performance, OpenAI-compatible API server built with **Java 21**, **Quarkus**, and **GraalVM Native Image** support.
+
+## Features
+
+- **OpenAI-compatible Chat Completions API** (`POST /v1/chat/completions`) with SSE streaming
+- **Models API** (`GET /v1/models`) for model discovery
+- **Bearer Token Authentication**
+- **GraalVM Native Image** ready — compiles to a fast-starting, low-memory native binary
+- **Mock LLM Service** included for testing and development
+
+## Tech Stack
+
+| Technology | Version |
+|-----------|---------|
+| Java | 21 |
+| Quarkus | 3.15.1 |
+| Maven | 3.9+ |
+| GraalVM | 23.1+ (for native compilation) |
+
+## Quick Start
+
+### 1. Run in Development Mode
+
+```bash
+mvn quarkus:dev
+```
+
+The server starts on `http://localhost:12360`.
+
+### 2. Build and Run JAR
+
+```bash
+mvn clean package
+java -jar target/badass-model-1.0-SNAPSHOT-runner.jar
+```
+
+### 3. Build Native Image (requires GraalVM)
+
+```bash
+mvn clean package -Pnative
+./target/badass-model-1.0-SNAPSHOT-runner
+```
+
+## API Endpoints
+
+| Method | Path | Description | Auth Required |
+|--------|------|-------------|---------------|
+| `POST` | `/v1/chat/completions` | Streaming chat completions | Yes |
+| `GET` | `/v1/models` | List available models | Yes |
+| `GET` | `/v1/health` | Health check | No |
+
+### Authentication
+
+All protected endpoints require a Bearer token:
+
+```
+Authorization: Bearer sk-badass-model-demo-token
+```
+
+The token can be customized via the `API_TOKEN` environment variable.
+
+### Test with cURL
+
+**List models:**
+```bash
+curl -H "Authorization: Bearer sk-badass-model-demo-token" \
+  http://localhost:12360/v1/models
+```
+
+**Chat completions (streaming):**
+```bash
+curl -N -H "Authorization: Bearer sk-badass-model-demo-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "mock-gpt-4o",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "stream": true
+  }' \
+  http://localhost:12360/v1/chat/completions
+```
+
+## Connect with OpenCode
+
+To use this server as a custom provider in [OpenCode](https://opencode.ai), add the following configuration to your `opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "badass-model": {
+      "type": "npm",
+      "package": "@ai-sdk/openai-compatible",
+      "baseURL": "http://localhost:12360/v1",
+      "apiKey": "sk-badass-model-demo-token",
+      "models": {
+        "mock-gpt-4o": {
+          "contextWindow": 128000
+        },
+        "mock-claude-3-sonnet": {
+          "contextWindow": 200000
+        },
+        "mock-llama-3-70b": {
+          "contextWindow": 128000
+        }
+      }
+    }
+  }
+}
+```
+
+### Configuration Explained
+
+| Field | Description |
+|-------|-------------|
+| `type` | Must be `"npm"` to use the ai-sdk package |
+| `package` | The OpenAI-compatible adapter from Vercel AI SDK |
+| `baseURL` | Your server URL + `/v1` path |
+| `apiKey` | Must match the `API_TOKEN` environment variable (default: `sk-badass-model-demo-token`) |
+| `models` | Maps model IDs to their capabilities. The IDs must match those returned by `GET /v1/models` |
+
+### Model IDs
+
+The server exposes these mock models via `/v1/models`:
+
+- `mock-gpt-4o`
+- `mock-claude-3-sonnet`
+- `mock-llama-3-70b`
+
+### Switching Models in OpenCode
+
+After configuring, you can switch to your custom provider in OpenCode:
+
+1. Open the model selector in OpenCode
+2. Choose `badass-model` as the provider
+3. Select one of the configured models (`mock-gpt-4o`, etc.)
+
+## Project Structure
+
+```
+src/
+├── main/
+│   ├── java/com/xenoamess/badass_model/
+│   │   ├── Main.java                    # Application entry point
+│   │   ├── api/
+│   │   │   └── OpenAiCompatibleApi.java # REST API endpoints
+│   │   ├── dto/                         # Request/response DTOs
+│   │   │   ├── ChatCompletionRequest.java
+│   │   │   ├── ChatCompletionChunk.java
+│   │   │   ├── ChatMessage.java
+│   │   │   ├── ModelListResponse.java
+│   │   │   └── ...
+│   │   ├── filter/
+│   │   │   ├── BearerTokenFilter.java   # Auth filter
+│   │   │   └── GlobalExceptionMapper.java
+│   │   └── service/
+│   │       └── MockLlmService.java      # Mock LLM streaming logic
+│   └── resources/
+│       └── application.properties       # Quarkus config
+└── test/
+    └── java/.../OpenAiCompatibleApiTest.java
+```
+
+## Configuration
+
+### Application Properties (`application.properties`)
+
+```properties
+quarkus.http.port=12360
+
+# CORS (enabled for OpenCode client)
+quarkus.http.cors=true
+quarkus.http.cors.origins=*
+
+# Logging
+quarkus.log.level=INFO
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `API_TOKEN` | `sk-badass-model-demo-token` | Bearer token for API authentication |
+
+## Development
+
+### Run Tests
+
+```bash
+mvn test
+```
+
+### Dev Mode with Hot Reload
+
+```bash
+mvn quarkus:dev
+```
+
+Press `r` in the terminal to run tests, `h` for help.
+
+## License
+
+MIT
