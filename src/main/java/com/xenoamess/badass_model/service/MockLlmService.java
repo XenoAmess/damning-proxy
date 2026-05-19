@@ -10,6 +10,7 @@ import jakarta.inject.Inject;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.Flow;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @ApplicationScoped
 public class MockLlmService {
@@ -17,20 +18,14 @@ public class MockLlmService {
     @Inject
     ObjectMapper objectMapper;
 
-    private static final String[] MOCK_RESPONSES = {
-        "Hello! I'm a mock AI assistant running on Quarkus + GraalVM native.",
-        "I can help you with various tasks, though I'm just a demo implementation.",
-        "This server implements the OpenAI-compatible chat completions API.",
-        "You can stream responses, use tools, and authenticate with Bearer tokens.",
-        "Built with Java 21, Quarkus 3.15, and ready for GraalVM native compilation!"
-    };
+    private static final String MOCK_RESPONSE = "Hello! I am a mock AI assistant. I can help you with various tasks, though I am just a demo implementation running on Quarkus and GraalVM native.";
 
     public Flow.Publisher<String> streamChatCompletion(ChatCompletionRequest request) {
         return subscriber -> {
             subscriber.onSubscribe(new Flow.Subscription() {
                 private volatile boolean cancelled = false;
                 private volatile boolean completed = false;
-                private final Random random = new Random();
+                private final AtomicBoolean started = new AtomicBoolean(false);
                 private final String requestId = "chatcmpl-" + UUID.randomUUID().toString().replace("-", "");
                 private final long created = Instant.now().getEpochSecond();
                 private final String model = request.getModel() != null ? request.getModel() : "mock-model";
@@ -39,7 +34,9 @@ public class MockLlmService {
                 @Override
                 public void request(long n) {
                     if (cancelled || completed) return;
-                    // Process in a virtual thread
+                    // Only start streaming once, regardless of how many times request() is called
+                    if (!started.compareAndSet(false, true)) return;
+                    
                     Thread.startVirtualThread(() -> {
                         try {
                             // Send role delta
@@ -70,8 +67,8 @@ public class MockLlmService {
                                 );
                                 if (!sendEvent(chunk)) return;
 
-                                // Simulate network latency
-                                Thread.sleep(random.nextInt(20, 80));
+                                // Small delay for streaming effect
+                                Thread.sleep(10);
                             }
 
                             // Send finish reason
@@ -117,48 +114,26 @@ public class MockLlmService {
                     cancelled = true;
                 }
 
-                /**
-                 * Sends an event to the subscriber. Returns false if the subscriber was cancelled
-                 * or the send failed (e.g. connection closed), indicating the caller should stop sending.
-                 */
                 private boolean sendEvent(ChatCompletionChunk chunk) throws JsonProcessingException {
                     if (cancelled || completed) {
                         return false;
                     }
                     try {
                         String json = objectMapper.writeValueAsString(chunk);
-                        subscriber.onNext("data: " + json + "\n\n");
+                        // Prefix with space so Quarkus produces "data: {...}" instead of "data:{...}"
+                        subscriber.onNext(" " + json);
                         return true;
                     } catch (IllegalStateException e) {
-                        // Connection already closed — mark as completed to prevent further errors
                         completed = true;
                         return false;
                     }
                 }
 
                 private String selectResponse(ChatCompletionRequest request) {
-                    // Simple logic: pick based on message content keywords
-                    String content = "";
-                    if (request.getMessages() != null && !request.getMessages().isEmpty()) {
-                        ChatMessage lastMessage = request.getMessages().get(request.getMessages().size() - 1);
-                        content = lastMessage.getContent() != null ? lastMessage.getContent().toLowerCase() : "";
-                    }
-
-                    if (content.contains("tool") || content.contains("function")) {
-                        return "I can use tools! Though this mock implementation doesn't actually execute them. In a real implementation, you would define tools in your request and I'd stream back tool_calls deltas.";
-                    }
-                    if (content.contains("native") || content.contains("graal")) {
-                        return "GraalVM native image compilation produces fast-starting, low-memory binaries. This Quarkus app is designed to compile natively!";
-                    }
-                    if (content.contains("hello") || content.contains("hi")) {
-                        return "Hello there! Welcome to the badass-model OpenAI-compatible server. I'm ready to help!";
-                    }
-
-                    return MOCK_RESPONSES[random.nextInt(MOCK_RESPONSES.length)];
+                    return MOCK_RESPONSE;
                 }
 
                 private int estimateTokens(String text) {
-                    // Very rough estimation: ~4 chars per token
                     return Math.max(1, text.length() / 4);
                 }
 
@@ -182,12 +157,10 @@ public class MockLlmService {
         long created = Instant.now().getEpochSecond();
         String model = request.getModel() != null ? request.getModel() : "mock-model";
 
-        String response = "This is a non-streaming mock response. Set stream=true for SSE streaming.";
-
         return new ChatCompletionChunk(
             requestId, "chat.completion", created, model,
             List.of(new ChatCompletionChunk.Choice(0,
-                new ChatCompletionChunk.Delta(null, response, null), "stop")),
+                new ChatCompletionChunk.Delta(null, MOCK_RESPONSE, null), "stop")),
             null
         );
     }
