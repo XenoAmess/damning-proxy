@@ -20,6 +20,15 @@ public class MockLlmService {
 
     private static final String MOCK_RESPONSE = "Hello! I am a mock AI assistant. I can help you with various tasks, though I am just a demo implementation running on Quarkus and GraalVM native.";
 
+    // Keywords that indicate the user wants to execute a command
+    private static final List<String> COMMAND_KEYWORDS = List.of("ls", "list", "file", "目录", "文件", "exec", "run", "command", "命令");
+
+    // Tool names that semantically match "execute command" functionality
+    private static final List<String> COMMAND_TOOL_PATTERNS = List.of(
+        "bash", "shell", "exec", "run", "command", "cmd", "terminal", "sh",
+        "execute", "system", "process", "spawn", "调用", "执行"
+    );
+
     public Flow.Publisher<String> streamChatCompletion(ChatCompletionRequest request) {
         return subscriber -> {
             subscriber.onSubscribe(new Flow.Subscription() {
@@ -39,8 +48,9 @@ public class MockLlmService {
                     
                     Thread.startVirtualThread(() -> {
                         try {
-                            // Check if we should trigger a tool call
-                            boolean shouldTriggerToolCall = shouldTriggerToolCall(request);
+                            // Find the best matching tool for command execution from request.tools
+                            Tool matchedTool = findBestCommandTool(request);
+                            boolean shouldTriggerToolCall = matchedTool != null && isCommandRequest(request);
                             
                             // Send role delta
                             if (!cancelled && !completed) {
@@ -55,7 +65,7 @@ public class MockLlmService {
 
                             if (shouldTriggerToolCall) {
                                 // Stream a tool call instead of text
-                                if (!streamToolCall()) return;
+                                if (!streamToolCall(matchedTool)) return;
                             } else {
                                 // Send content chunks word by word
                                 String response = selectResponse(request);
@@ -123,20 +133,87 @@ public class MockLlmService {
                     cancelled = true;
                 }
 
-                private boolean shouldTriggerToolCall(ChatCompletionRequest request) {
+                /**
+                 * Check if the user's last message indicates a command execution intent.
+                 */
+                private boolean isCommandRequest(ChatCompletionRequest request) {
                     if (request.getMessages() == null || request.getMessages().isEmpty()) return false;
                     String lastContent = request.getMessages().get(request.getMessages().size() - 1).getContent();
                     if (lastContent == null) return false;
                     String lower = lastContent.toLowerCase();
-                    // Trigger tool call when user asks about files/directories
-                    return lower.contains("ls") || lower.contains("list") || lower.contains("file") || lower.contains("目录") || lower.contains("文件");
+                    return COMMAND_KEYWORDS.stream().anyMatch(lower::contains);
                 }
 
-                private boolean streamToolCall() throws JsonProcessingException, InterruptedException {
+                /**
+                 * Find the best matching tool from request.tools that semantically represents
+                 * a "command execution" capability.
+                 * Returns null if no suitable tool is found.
+                 */
+                private Tool findBestCommandTool(ChatCompletionRequest request) {
+                    if (request.getTools() == null || request.getTools().isEmpty()) return null;
+                    
+                    Tool bestMatch = null;
+                    int bestScore = -1;
+                    
+                    for (Tool tool : request.getTools()) {
+                        if (tool == null || tool.getFunction() == null) continue;
+                        
+                        String toolName = tool.getFunction().getName();
+                        String toolDescription = tool.getFunction().getDescription();
+                        
+                        if (toolName == null) continue;
+                        
+                        int score = calculateCommandToolScore(toolName, toolDescription);
+                        
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMatch = tool;
+                        }
+                    }
+                    
+                    // Only return if we have a reasonable match (score > 0)
+                    return bestScore > 0 ? bestMatch : null;
+                }
+                
+                /**
+                 * Calculate how well a tool matches "command execution" semantics.
+                 * Score is based on name and description matching known command patterns.
+                 */
+                private int calculateCommandToolScore(String toolName, String toolDescription) {
+                    int score = 0;
+                    String nameLower = toolName.toLowerCase();
+                    String descLower = toolDescription != null ? toolDescription.toLowerCase() : "";
+                    
+                    // Check tool name against command patterns
+                    for (String pattern : COMMAND_TOOL_PATTERNS) {
+                        if (nameLower.contains(pattern)) {
+                            score += 10; // Strong match in name
+                        }
+                    }
+                    
+                    // Check tool description for command-related keywords
+                    String[] descKeywords = {"command", "shell", "bash", "execute", "run", "terminal", "system", "exec", "process"};
+                    for (String keyword : descKeywords) {
+                        if (descLower.contains(keyword)) {
+                            score += 3; // Weaker match in description
+                        }
+                    }
+                    
+                    // Bonus for exact matches of well-known command tools
+                    if (nameLower.equals("bash") || nameLower.equals("shell") || nameLower.equals("exec")) {
+                        score += 20;
+                    }
+                    
+                    return score;
+                }
+
+                private boolean streamToolCall(Tool tool) throws JsonProcessingException, InterruptedException {
                     String toolCallId = "call_" + UUID.randomUUID().toString().replace("-", "").substring(0, 24);
-                    // OpenCode only supports these tools: bash, edit, glob, grep, invalid, question, read, skill, task, todowrite, webfetch, write
-                    String toolName = "bash";
-                    String toolArguments = "{\"command\": \"ls -l\", \"description\": \"List files in current directory\"}";
+                    String toolName = tool.getFunction().getName();
+                    
+                    // Build arguments based on the tool's expected parameters
+                    // For command execution tools, we typically need a "command" parameter
+                    String toolArguments = buildToolArguments(tool);
                     
                     // Stream tool_call delta with id and type
                     ChatCompletionChunk.ToolCallDelta toolCallDelta = new ChatCompletionChunk.ToolCallDelta();
@@ -180,6 +257,74 @@ public class MockLlmService {
                     }
                     
                     return true;
+                }
+                
+                /**
+                 * Build tool arguments based on the tool's parameter schema.
+                 * Attempts to detect the correct parameter name for the command.
+                 */
+                private String buildToolArguments(Tool tool) {
+                    Object parameters = tool.getFunction().getParameters();
+                    
+                    // Try to extract parameter names from the schema
+                    List<String> paramNames = extractParameterNames(parameters);
+                    
+                    // Find the most likely parameter name for the command
+                    String commandParam = findCommandParameter(paramNames);
+                    
+                    // Build JSON arguments
+                    StringBuilder args = new StringBuilder();
+                    args.append("{");
+                    args.append("\"").append(commandParam).append("\": \"ls -l\"");
+                    
+                    // Add description if there's a second parameter or if it seems appropriate
+                    if (paramNames.size() > 1) {
+                        String secondParam = paramNames.get(1);
+                        if (!secondParam.equals(commandParam)) {
+                            args.append(", \"").append(secondParam).append("\": \"List files in current directory\"");
+                        }
+                    }
+                    
+                    args.append("}");
+                    return args.toString();
+                }
+                
+                /**
+                 * Extract parameter names from the tool's JSON schema.
+                 */
+                @SuppressWarnings("unchecked")
+                private List<String> extractParameterNames(Object parameters) {
+                    List<String> names = new ArrayList<>();
+                    if (parameters instanceof Map) {
+                        Map<String, Object> paramMap = (Map<String, Object>) parameters;
+                        Object properties = paramMap.get("properties");
+                        if (properties instanceof Map) {
+                            names.addAll(((Map<String, Object>) properties).keySet());
+                        }
+                    }
+                    // Default fallback
+                    if (names.isEmpty()) {
+                        names.add("command");
+                    }
+                    return names;
+                }
+                
+                /**
+                 * Find the parameter name that most likely represents the command input.
+                 */
+                private String findCommandParameter(List<String> paramNames) {
+                    List<String> commandPatterns = List.of("command", "cmd", "shell", "script", "input", "code", "line");
+                    
+                    for (String pattern : commandPatterns) {
+                        for (String param : paramNames) {
+                            if (param.toLowerCase().contains(pattern)) {
+                                return param;
+                            }
+                        }
+                    }
+                    
+                    // Return first parameter as fallback
+                    return paramNames.get(0);
                 }
                 
                 private String[] splitIntoChunks(String str, int chunkSize) {
