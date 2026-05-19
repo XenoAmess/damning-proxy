@@ -90,19 +90,21 @@ To use this server as a custom provider in [OpenCode](https://opencode.ai), add 
   "$schema": "https://opencode.ai/config.json",
   "provider": {
     "badass-model": {
-      "type": "npm",
-      "package": "@ai-sdk/openai-compatible",
-      "baseURL": "http://localhost:12360/v1",
-      "apiKey": "sk-badass-model-demo-token",
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Badass Model (local)",
+      "options": {
+        "baseURL": "http://localhost:12360/v1",
+        "apiKey": "sk-badass-model-demo-token"
+      },
       "models": {
         "mock-gpt-4o": {
-          "contextWindow": 128000
+          "name": "Mock GPT-4o"
         },
         "mock-claude-3-sonnet": {
-          "contextWindow": 200000
+          "name": "Mock Claude 3 Sonnet"
         },
         "mock-llama-3-70b": {
-          "contextWindow": 128000
+          "name": "Mock Llama 3 70B"
         }
       }
     }
@@ -114,11 +116,11 @@ To use this server as a custom provider in [OpenCode](https://opencode.ai), add 
 
 | Field | Description |
 |-------|-------------|
-| `type` | Must be `"npm"` to use the ai-sdk package |
-| `package` | The OpenAI-compatible adapter from Vercel AI SDK |
-| `baseURL` | Your server URL + `/v1` path |
-| `apiKey` | Must match the `API_TOKEN` environment variable (default: `sk-badass-model-demo-token`) |
-| `models` | Maps model IDs to their capabilities. The IDs must match those returned by `GET /v1/models` |
+| `npm` | The AI SDK package to use. `@ai-sdk/openai-compatible` for OpenAI-compatible providers |
+| `name` | Display name for the provider in the OpenCode UI |
+| `options.baseURL` | Your server URL + `/v1` path |
+| `options.apiKey` | Must match the `API_TOKEN` environment variable (default: `sk-badass-model-demo-token`) |
+| `models` | Maps model IDs to their display names. The IDs must match those returned by `GET /v1/models` |
 
 ### Model IDs
 

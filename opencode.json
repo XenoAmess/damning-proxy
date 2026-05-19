@@ -9,6 +9,25 @@
           }
         }
       }
+    },
+   "badass-model": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Badass Model (local)",
+      "options": {
+        "baseURL": "http://localhost:12360/v1",
+        "apiKey": "sk-badass-model-demo-token"
+      },
+      "models": {
+        "mock-gpt-4o": {
+          "name": "Mock GPT-4o"
+        },
+        "mock-claude-3-sonnet": {
+          "name": "Mock Claude 3 Sonnet"
+        },
+        "mock-llama-3-70b": {
+          "name": "Mock Llama 3 70B"
+        }
+      }
     }
   }
 }
