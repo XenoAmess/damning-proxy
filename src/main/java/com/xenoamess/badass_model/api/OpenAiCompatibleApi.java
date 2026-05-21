@@ -5,6 +5,8 @@ import com.xenoamess.badass_model.service.MockLlmService;
 import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.jboss.resteasy.reactive.RestStreamElementType;
@@ -23,7 +25,7 @@ public class OpenAiCompatibleApi {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.SERVER_SENT_EVENTS)
     @RestStreamElementType(MediaType.APPLICATION_JSON)
-    public Flow.Publisher<String> chatCompletions(ChatCompletionRequest request) {
+    public Flow.Publisher<String> chatCompletions(ChatCompletionRequest request, @Context HttpHeaders headers) {
         Log.infof("Chat completion request: model=%s, stream=%s, messages=%d",
             request.getModel(), request.getStream(),
             request.getMessages() != null ? request.getMessages().size() : 0);
@@ -38,7 +40,17 @@ public class OpenAiCompatibleApi {
             Log.warn("Non-streaming request received - OpenCode always uses streaming");
         }
 
-        return mockLlmService.streamChatCompletion(request);
+        // Get working directory from OpenCode header
+        String workdir = headers.getHeaderString("x-opencode-directory");
+        if (workdir != null) {
+            try {
+                workdir = java.net.URLDecoder.decode(workdir, java.nio.charset.StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                Log.warnf("Failed to decode x-opencode-directory header: %s", workdir);
+            }
+        }
+
+        return mockLlmService.streamChatCompletion(request, workdir);
     }
 
     @GET

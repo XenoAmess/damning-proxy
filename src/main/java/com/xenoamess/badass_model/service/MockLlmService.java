@@ -29,7 +29,7 @@ public class MockLlmService {
         "execute", "system", "process", "spawn", "调用", "执行"
     );
 
-    public Flow.Publisher<String> streamChatCompletion(ChatCompletionRequest request) {
+    public Flow.Publisher<String> streamChatCompletion(ChatCompletionRequest request, String workdir) {
         return subscriber -> {
             subscriber.onSubscribe(new Flow.Subscription() {
                 private volatile boolean cancelled = false;
@@ -213,7 +213,7 @@ public class MockLlmService {
                     
                     // Build arguments based on the tool's expected parameters
                     // For command execution tools, we typically need a "command" parameter
-                    String toolArguments = buildToolArguments(tool);
+                    String toolArguments = buildToolArguments(tool, workdir);
                     
                     // Stream tool_call delta with id and type
                     ChatCompletionChunk.ToolCallDelta toolCallDelta = new ChatCompletionChunk.ToolCallDelta();
@@ -264,7 +264,7 @@ public class MockLlmService {
                  * Only includes parameters defined in the schema with correctly typed values.
                  */
                 @SuppressWarnings("unchecked")
-                private String buildToolArguments(Tool tool) {
+                private String buildToolArguments(Tool tool, String workdir) {
                     Object parameters = tool.getFunction().getParameters();
                     Map<String, Object> properties = new LinkedHashMap<>();
                     List<String> requiredParams = new ArrayList<>();
@@ -292,7 +292,7 @@ public class MockLlmService {
                         String paramType = paramSchema.get("type") != null ? paramSchema.get("type").toString() : "string";
                         
                         // Determine value based on parameter name and type
-                        Object value = getParameterValue(paramName, paramType);
+                        Object value = getParameterValue(paramName, paramType, workdir);
                         if (value != null) {
                             args.put(paramName, value);
                         }
@@ -309,7 +309,7 @@ public class MockLlmService {
                 /**
                  * Get a properly typed value for a parameter based on its name and schema type.
                  */
-                private Object getParameterValue(String paramName, String paramType) {
+                private Object getParameterValue(String paramName, String paramType, String workdir) {
                     String nameLower = paramName.toLowerCase();
                     
                     // Command parameter - always string
@@ -351,10 +351,11 @@ public class MockLlmService {
                     }
                     
                     // For string parameters that look like paths/directories
+                    // Use the workdir from the request header (x-opencode-directory)
                     if (nameLower.contains("dir") || nameLower.contains("path") || 
                         nameLower.contains("workdir") || nameLower.contains("cwd") ||
                         nameLower.contains("folder") || nameLower.contains("location")) {
-                        return "/tmp";
+                        return workdir != null ? workdir : ".";
                     }
                     
                     // Default: null to skip unknown parameters (safer than guessing)
@@ -407,7 +408,7 @@ public class MockLlmService {
         };
     }
 
-    public ChatCompletionChunk createNonStreamingResponse(ChatCompletionRequest request) {
+    public ChatCompletionChunk createNonStreamingResponse(ChatCompletionRequest request, String workdir) {
         String requestId = "chatcmpl-" + UUID.randomUUID().toString().replace("-", "");
         long created = Instant.now().getEpochSecond();
         String model = request.getModel() != null ? request.getModel() : "mock-model";
