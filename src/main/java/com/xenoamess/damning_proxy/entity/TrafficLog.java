@@ -54,6 +54,9 @@ public class TrafficLog extends PanacheEntityBase {
     @Column(name = "plugin_logs", length = 10000)
     public String pluginLogs;
 
+    @Column(name = "friendly_plugin_snapshots", length = 10000)
+    public String friendlyPluginSnapshots;
+
     public TrafficLog() {
     }
 }

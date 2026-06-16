@@ -15,6 +15,7 @@ public class PluginContext {
     private int responseStatus = 200;
 
     private final List<String> pluginLogs = new ArrayList<>();
+    private final FriendlyLogCollector friendlyLogCollector = new FriendlyLogCollector();
 
     private boolean stopped = false;
     private boolean returned = false;
@@ -72,6 +73,10 @@ public class PluginContext {
 
     public List<String> getPluginLogs() {
         return pluginLogs;
+    }
+
+    public FriendlyLogCollector getFriendlyLogCollector() {
+        return friendlyLogCollector;
     }
 
     public void log(String message) {

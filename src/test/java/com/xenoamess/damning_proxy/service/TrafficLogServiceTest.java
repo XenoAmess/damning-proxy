@@ -46,7 +46,7 @@ class TrafficLogServiceTest {
         trafficLogService.recordResponse(log, 200,
             Map.of("Content-Type", "application/json"),
             Map.of("id", "chatcmpl-1"),
-            150L, java.util.List.of("plugin log"));
+            150L, java.util.List.of("plugin log"), java.util.Collections.emptyList());
 
         TrafficLog found = logRepository.findById(log.id).orElseThrow();
         assertEquals(200, found.responseStatus);

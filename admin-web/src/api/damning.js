@@ -76,6 +76,10 @@ export function getLog(id) {
   return api.get(`/logs/${id}`)
 }
 
+export function getLogFriendly(id) {
+  return api.get(`/logs/${id}/friendly`)
+}
+
 export function deleteLog(id) {
   return api.delete(`/logs/${id}`)
 }

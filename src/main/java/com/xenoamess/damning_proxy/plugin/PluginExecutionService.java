@@ -34,13 +34,30 @@ public class PluginExecutionService {
             PluginEngine engine = findEngine(plugin.language);
             if (engine == null) {
                 context.log("No engine for language: " + plugin.language);
+                context.getFriendlyLogCollector().add(
+                    plugin.name, phase1.name(), context.getRequestBody(), context.getRequestBody(),
+                    true, "No engine for language: " + plugin.language
+                );
                 continue;
             }
 
+            Object beforeBody = phase1 == Plugin.ExecutionPhase.REQUEST
+                ? context.getRequestBody()
+                : context.getResponseBody();
             try {
                 engine.execute(plugin, context);
+                Object afterBody = phase1 == Plugin.ExecutionPhase.REQUEST
+                    ? context.getRequestBody()
+                    : context.getResponseBody();
+                context.getFriendlyLogCollector().add(
+                    plugin.name, phase1.name(), beforeBody, afterBody, false, null
+                );
             } catch (Exception e) {
                 context.log("Plugin error [" + plugin.name + "]: " + e.getMessage());
+                context.getFriendlyLogCollector().add(
+                    plugin.name, phase1.name(), beforeBody, beforeBody, true,
+                    "Plugin error [" + plugin.name + "]: " + e.getMessage()
+                );
             }
         }
     }

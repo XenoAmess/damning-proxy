@@ -77,7 +77,7 @@ public class OpenAiProxyService {
         if (context.isReturned()) {
             trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
                 context.getResponseHeaders(), context.getResponseBody(),
-                System.currentTimeMillis() - start, context.getPluginLogs());
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
             return Response.status(context.getResponseStatus())
                 .entity(context.getResponseBody())
                 .build();
@@ -95,7 +95,7 @@ public class OpenAiProxyService {
 
         trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
             context.getResponseHeaders(), context.getResponseBody(),
-            System.currentTimeMillis() - start, context.getPluginLogs());
+            System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
 
         return Response.status(context.getResponseStatus())
             .entity(context.getResponseBody())
@@ -118,7 +118,7 @@ public class OpenAiProxyService {
         if (context.isReturned()) {
             trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
                 context.getResponseHeaders(), context.getResponseBody(),
-                System.currentTimeMillis() - start, context.getPluginLogs());
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
             return Response.status(context.getResponseStatus())
                 .entity(context.getResponseBody())
                 .build();
@@ -142,7 +142,7 @@ public class OpenAiProxyService {
 
         trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
             context.getResponseHeaders(), context.getResponseBody(),
-            System.currentTimeMillis() - start, context.getPluginLogs());
+            System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
 
         return Response.status(context.getResponseStatus())
             .entity(context.getResponseBody())
@@ -165,7 +165,7 @@ public class OpenAiProxyService {
         if (context.isReturned()) {
             trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
                 context.getResponseHeaders(), context.getResponseBody(),
-                System.currentTimeMillis() - start, context.getPluginLogs());
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
             String returned = toJson(context.getResponseBody());
             return Multi.createFrom().item("data: " + returned + "\n\ndata: [DONE]\n\n");
         }
@@ -215,13 +215,13 @@ public class OpenAiProxyService {
                     pluginExecutionService.executeResponsePlugins(plugins, context);
                     executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 200,
                         context.getResponseHeaders(), context.getResponseBody(),
-                        System.currentTimeMillis() - start, context.getPluginLogs()));
+                        System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots()));
                     emitter.complete();
                 });
             }).onFailure(err -> {
                 Log.error("Streaming upstream failed", err);
                 executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 502,
-                    Map.of(), err.getMessage(), System.currentTimeMillis() - start, context.getPluginLogs()));
+                    Map.of(), err.getMessage(), System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots()));
                 emitter.fail(err);
             });
         });

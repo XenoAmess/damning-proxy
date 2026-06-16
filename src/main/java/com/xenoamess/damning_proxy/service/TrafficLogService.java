@@ -2,6 +2,7 @@ package com.xenoamess.damning_proxy.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xenoamess.damning_proxy.dto.PluginExecutionSnapshot;
 import com.xenoamess.damning_proxy.entity.TrafficLog;
 import com.xenoamess.damning_proxy.repository.LogRepository;
 import io.quarkus.logging.Log;
@@ -10,6 +11,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -25,6 +27,7 @@ public class TrafficLogService {
     private static final int MAX_BODY_LENGTH = 10000;
     private static final int MAX_HEADERS_LENGTH = 2000;
     private static final int MAX_PLUGIN_LOGS_LENGTH = 5000;
+    private static final int MAX_FRIENDLY_SNAPSHOTS_LENGTH = 8000;
 
     @Transactional
     public TrafficLog recordRequest(Long instanceId, Long profileId, String path, String method,
@@ -43,7 +46,8 @@ public class TrafficLogService {
     @Transactional
     public void recordResponse(TrafficLog log, int statusCode,
                                Map<String, String> responseHeaders, Object responseBody,
-                               long durationMs, List<String> pluginLogs) {
+                               long durationMs, List<String> pluginLogs,
+                               List<PluginExecutionSnapshot> friendlySnapshots) {
         TrafficLog existing = logRepository.findById(log.id).orElse(null);
         if (existing == null) {
             Log.warnf("TrafficLog not found for response recording: id=%s", log.id);
@@ -55,6 +59,7 @@ public class TrafficLogService {
         existing.durationMs = durationMs;
         existing.responseTime = LocalDateTime.now();
         existing.pluginLogs = serializePluginLogs(pluginLogs);
+        existing.friendlyPluginSnapshots = serializeFriendlySnapshots(friendlySnapshots);
         logRepository.save(existing);
     }
 
@@ -93,6 +98,19 @@ public class TrafficLogService {
             return truncate(json, MAX_PLUGIN_LOGS_LENGTH);
         } catch (JsonProcessingException e) {
             Log.warn("Failed to serialize plugin logs", e);
+            return null;
+        }
+    }
+
+    private String serializeFriendlySnapshots(List<PluginExecutionSnapshot> snapshots) {
+        if (snapshots == null || snapshots.isEmpty()) {
+            return null;
+        }
+        try {
+            String json = objectMapper.writeValueAsString(snapshots);
+            return truncate(json, MAX_FRIENDLY_SNAPSHOTS_LENGTH);
+        } catch (JsonProcessingException e) {
+            Log.warn("Failed to serialize friendly snapshots", e);
             return null;
         }
     }
