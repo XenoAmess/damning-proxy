@@ -6,10 +6,13 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 @Entity
-@Table(name = "plugin")
-public class Plugin extends PanacheEntityBase {
+@Table(name = "plugin_group")
+public class PluginGroup extends PanacheEntityBase {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,22 +21,17 @@ public class Plugin extends PanacheEntityBase {
     @Column(nullable = false)
     public String name;
 
+    @Column(nullable = false, unique = true)
+    public String slug;
+
     @Column(length = 2000)
     public String description;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    public Language language;
-
-    @Column(nullable = false, length = 10000)
-    public String script;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, name = "execution_phase")
-    public ExecutionPhase executionPhase = ExecutionPhase.BOTH;
-
     @Column(nullable = false)
     public boolean enabled = true;
+
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    public List<PluginGroupItem> items = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at")
@@ -43,17 +41,14 @@ public class Plugin extends PanacheEntityBase {
     @Column(name = "updated_at")
     public LocalDateTime updatedAt;
 
-    public Plugin() {
+    public PluginGroup() {
     }
 
-    public enum Language {
-        GROOVY,
-        JS
-    }
-
-    public enum ExecutionPhase {
-        REQUEST,
-        RESPONSE,
-        BOTH
+    public List<PluginGroupItem> sortedItems() {
+        return items.stream()
+            .sorted(Comparator.comparingInt((PluginGroupItem i) -> i.orderIndex)
+                .thenComparingInt(i -> i.priority)
+                .thenComparingLong(i -> i.id == null ? Long.MAX_VALUE : i.id))
+            .toList();
     }
 }

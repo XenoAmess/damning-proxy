@@ -5,6 +5,7 @@
     </div>
     <el-table :data="logs" v-loading="loading" @row-click="showDetail">
       <el-table-column prop="id" label="ID" width="60" />
+      <el-table-column prop="instanceId" label="Instance" width="80" />
       <el-table-column prop="profileId" label="Profile" width="80" />
       <el-table-column prop="requestMethod" label="方法" width="70" />
       <el-table-column prop="requestPath" label="路径" show-overflow-tooltip />

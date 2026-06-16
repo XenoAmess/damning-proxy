@@ -35,6 +35,13 @@ public class PanacheLogRepository implements LogRepository {
     }
 
     @Override
+    public List<TrafficLog> findByInstanceId(Long instanceId, int limit) {
+        return TrafficLog.find("instanceId", Sort.descending("requestTime"), instanceId)
+            .page(0, limit)
+            .list();
+    }
+
+    @Override
     public boolean deleteById(Long id) {
         return TrafficLog.deleteById(id);
     }

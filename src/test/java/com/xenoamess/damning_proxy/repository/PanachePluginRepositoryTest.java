@@ -23,44 +23,34 @@ class PanachePluginRepositoryTest {
         plugin.name = "AddHeader";
         plugin.language = Plugin.Language.GROOVY;
         plugin.script = "context.requestHeaders['X-Test'] = '1'";
-        plugin.priority = 10;
         plugin.executionPhase = Plugin.ExecutionPhase.REQUEST;
-        plugin.globalScope = true;
 
         Plugin saved = pluginRepository.save(plugin);
         assertNotNull(saved.id);
 
-        List<Plugin> globals = pluginRepository.findEnabledGlobal();
-        assertTrue(globals.stream().anyMatch(p -> p.id.equals(saved.id)));
+        List<Plugin> all = pluginRepository.listAll();
+        assertTrue(all.stream().anyMatch(p -> p.id.equals(saved.id)));
     }
 
     @Test
     @TestTransaction
-    void shouldFindPluginsByProfileSorted() {
-        Long profileId = 1L;
-
+    void shouldListPluginsSortedByName() {
         Plugin p1 = new Plugin();
-        p1.name = "P1";
+        p1.name = "B-Plugin";
         p1.language = Plugin.Language.JS;
         p1.script = "";
-        p1.priority = 20;
-        p1.profileId = profileId;
-        p1.globalScope = false;
         pluginRepository.save(p1);
 
         Plugin p2 = new Plugin();
-        p2.name = "P2";
+        p2.name = "A-Plugin";
         p2.language = Plugin.Language.GROOVY;
         p2.script = "";
-        p2.priority = 10;
-        p2.profileId = profileId;
-        p2.globalScope = false;
         pluginRepository.save(p2);
 
-        List<Plugin> found = pluginRepository.findEnabledByProfileId(profileId);
+        List<Plugin> found = pluginRepository.listAll();
         assertEquals(2, found.size());
-        assertEquals("P2", found.get(0).name);
-        assertEquals("P1", found.get(1).name);
+        assertEquals("A-Plugin", found.get(0).name);
+        assertEquals("B-Plugin", found.get(1).name);
     }
 
     @Test

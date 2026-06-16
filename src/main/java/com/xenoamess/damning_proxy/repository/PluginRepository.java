@@ -13,9 +13,5 @@ public interface PluginRepository {
 
     List<Plugin> listAll();
 
-    List<Plugin> findEnabledByProfileId(Long profileId);
-
-    List<Plugin> findEnabledGlobal();
-
     boolean deleteById(Long id);
 }

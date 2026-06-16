@@ -20,7 +20,11 @@ public class LogAdminApi {
 
     @GET
     public List<TrafficLog> list(@QueryParam("limit") @DefaultValue("100") int limit,
-                                   @QueryParam("profileId") Long profileId) {
+                                    @QueryParam("profileId") Long profileId,
+                                    @QueryParam("instanceId") Long instanceId) {
+        if (instanceId != null) {
+            return logRepository.findByInstanceId(instanceId, Math.min(limit, 1000));
+        }
         if (profileId != null) {
             return logRepository.findByProfileId(profileId, Math.min(limit, 1000));
         }

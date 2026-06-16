@@ -15,6 +15,8 @@ public interface LogRepository {
 
     List<TrafficLog> findByProfileId(Long profileId, int limit);
 
+    List<TrafficLog> findByInstanceId(Long instanceId, int limit);
+
     boolean deleteById(Long id);
 
     long deleteAll();

@@ -3,9 +3,13 @@ package com.xenoamess.damning_proxy.proxy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.xenoamess.damning_proxy.entity.PluginGroup;
+import com.xenoamess.damning_proxy.entity.ProxyInstance;
 import com.xenoamess.damning_proxy.entity.ProxyProfile;
 import com.xenoamess.damning_proxy.entity.TrafficLog;
+import com.xenoamess.damning_proxy.repository.InstanceRepository;
 import com.xenoamess.damning_proxy.repository.LogRepository;
+import com.xenoamess.damning_proxy.repository.PluginGroupRepository;
 import com.xenoamess.damning_proxy.repository.ProfileRepository;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
@@ -27,6 +31,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 class ProxyApiTest {
@@ -35,6 +40,12 @@ class ProxyApiTest {
 
     @Inject
     ProfileRepository profileRepository;
+
+    @Inject
+    PluginGroupRepository pluginGroupRepository;
+
+    @Inject
+    InstanceRepository instanceRepository;
 
     @Inject
     LogRepository logRepository;
@@ -47,6 +58,8 @@ class ProxyApiTest {
     void setUp() {
         wireMockServer = new WireMockServer(18089);
         wireMockServer.start();
+        instanceRepository.listAll().forEach(i -> instanceRepository.deleteById(i.id));
+        pluginGroupRepository.listAll().forEach(g -> pluginGroupRepository.deleteById(g.id));
         profileRepository.listAll().forEach(p -> profileRepository.deleteById(p.id));
         logRepository.deleteAll();
     }
@@ -57,7 +70,7 @@ class ProxyApiTest {
     }
 
     @Test
-    void shouldReturn404WhenProfileNotFound() {
+    void shouldReturn404WhenInstanceNotFound() {
         given()
             .when().get("/v1/proxy/nonexistent/models")
             .then()
@@ -65,10 +78,10 @@ class ProxyApiTest {
     }
 
     @Test
-    void shouldReturn403WhenProfileDisabled() {
-        ProxyProfile profile = new ProxyProfile("Disabled", "disabled", "http://localhost:18089");
-        profile.enabled = false;
-        saveProfile(profile);
+    void shouldReturn403WhenInstanceDisabled() {
+        ProxyProfile profile = saveProfile(new ProxyProfile("Disabled", "disabled", "http://localhost:18089"));
+        PluginGroup group = saveGroup(new PluginGroup());
+        ProxyInstance instance = createInstance("disabled", profile.id, group.id, false);
 
         given()
             .when().get("/v1/proxy/disabled/models")
@@ -84,9 +97,7 @@ class ProxyApiTest {
                 .withHeader("Content-Type", "application/json")
                 .withBody("{\"object\":\"list\",\"data\":[{\"id\":\"gpt-4\",\"object\":\"model\"}]}")));
 
-        ProxyProfile profile = new ProxyProfile("OpenAI", "openai", "http://localhost:18089/v1");
-        profile.bearerToken = "sk-test";
-        saveProfile(profile);
+        ProxyInstance instance = createInstance("openai", "http://localhost:18089/v1", "sk-test");
 
         given()
             .when().get("/v1/proxy/openai/models")
@@ -103,6 +114,7 @@ class ProxyApiTest {
         assertEquals("/v1/models", log.requestPath);
         assertEquals(200, log.responseStatus);
         assertNotNull(log.responseBody);
+        assertEquals(instance.id, log.instanceId);
     }
 
     @Test
@@ -113,9 +125,7 @@ class ProxyApiTest {
                 .withHeader("Content-Type", "application/json")
                 .withBody("{\"id\":\"chatcmpl-1\",\"object\":\"chat.completion\",\"model\":\"gpt-4\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"Hi\"}}]}")));
 
-        ProxyProfile profile = new ProxyProfile("OpenAI", "openai-chat", "http://localhost:18089/v1");
-        profile.bearerToken = "sk-test";
-        saveProfile(profile);
+        createInstance("openai-chat", "http://localhost:18089/v1", "sk-test");
 
         Map<String, Object> body = Map.of(
             "model", "gpt-4",
@@ -153,7 +163,9 @@ class ProxyApiTest {
 
         ProxyProfile profile = new ProxyProfile("Custom", "custom", "http://localhost:18089/v1");
         profile.customHeaders = "{\"X-Api-Key\":\"secret\",\"X-Project\":\"damning\"}";
-        saveProfile(profile);
+        profile = saveProfile(profile);
+        PluginGroup group = saveGroup(new PluginGroup());
+        ProxyInstance instance = createInstance("custom", profile.id, group.id, true);
 
         given()
             .contentType(ContentType.JSON)
@@ -168,7 +180,37 @@ class ProxyApiTest {
     }
 
     @Transactional
-    void saveProfile(ProxyProfile profile) {
+    ProxyProfile saveProfile(ProxyProfile profile) {
         profileRepository.save(profile);
+        return profile;
+    }
+
+    @Transactional
+    PluginGroup saveGroup(PluginGroup group) {
+        group.name = "Test Group";
+        group.slug = "test-group-" + System.nanoTime();
+        group.enabled = true;
+        pluginGroupRepository.save(group);
+        return group;
+    }
+
+    @Transactional
+    ProxyInstance createInstance(String slug, String baseUrl, String token) {
+        ProxyProfile profile = new ProxyProfile(slug, slug, baseUrl);
+        profile.bearerToken = token;
+        profileRepository.save(profile);
+        return createInstance(slug, profile.id, saveGroup(new PluginGroup()).id, true);
+    }
+
+    @Transactional
+    ProxyInstance createInstance(String slug, Long profileId, Long groupId, boolean enabled) {
+        ProxyInstance instance = new ProxyInstance();
+        instance.name = slug;
+        instance.slug = slug;
+        instance.profileId = profileId;
+        instance.pluginGroupId = groupId;
+        instance.enabled = enabled;
+        instanceRepository.save(instance);
+        return instance;
     }
 }

@@ -1,15 +1,23 @@
 <template>
   <el-container style="height: 100vh">
     <el-aside width="200px">
-      <div class="logo">大明proxy</div>
+      <div class="logo">damning-proxy</div>
       <el-menu :default-active="$route.path" router>
-        <el-menu-item index="/profiles">
-          <el-icon><Connection /></el-icon>
-          <span>上游配置</span>
+        <el-menu-item index="/instances">
+          <el-icon><Monitor /></el-icon>
+          <span>实例管理</span>
+        </el-menu-item>
+        <el-menu-item index="/plugin-groups">
+          <el-icon><Collection /></el-icon>
+          <span>插件组</span>
         </el-menu-item>
         <el-menu-item index="/plugins">
           <el-icon><MagicStick /></el-icon>
           <span>插件管理</span>
+        </el-menu-item>
+        <el-menu-item index="/profiles">
+          <el-icon><Connection /></el-icon>
+          <span>上游配置</span>
         </el-menu-item>
         <el-menu-item index="/logs">
           <el-icon><Document /></el-icon>
@@ -26,7 +34,7 @@
 </template>
 
 <script setup>
-import { Connection, MagicStick, Document } from '@element-plus/icons-vue'
+import { Monitor, Collection, MagicStick, Connection, Document } from '@element-plus/icons-vue'
 </script>
 
 <style scoped>

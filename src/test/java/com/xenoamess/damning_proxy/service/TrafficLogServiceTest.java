@@ -36,7 +36,7 @@ class TrafficLogServiceTest {
     @Test
     void shouldRecordRequestAndResponse() {
         TrafficLog log = trafficLogService.recordRequest(
-            1L, "/v1/chat/completions", "POST",
+            10L, 1L, "/v1/chat/completions", "POST",
             Map.of("Authorization", "Bearer test"),
             Map.of("model", "gpt-4")
         );
@@ -63,7 +63,7 @@ class TrafficLogServiceTest {
         }
 
         TrafficLog log = trafficLogService.recordRequest(
-            1L, "/v1/chat/completions", "POST", Map.of(), large.toString()
+            10L, 1L, "/v1/chat/completions", "POST", Map.of(), large.toString()
         );
 
         assertTrue(log.requestBody.length() < 15000);

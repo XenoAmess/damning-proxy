@@ -92,7 +92,6 @@ class AdminApiTest {
         plugin.name = "TestPlugin";
         plugin.language = Plugin.Language.GROOVY;
         plugin.script = "context.stop()";
-        plugin.priority = 5;
 
         given()
             .contentType(ContentType.JSON)

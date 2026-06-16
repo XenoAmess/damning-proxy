@@ -14,7 +14,7 @@
       "npm": "@ai-sdk/openai-compatible",
       "name": "damning-proxy (local)",
       "options": {
-        "baseURL": "http://localhost:12360/v1/proxy/default",
+        "baseURL": "http://localhost:12360/v1/proxy/minimax",
         "apiKey": "sk-damning-proxy-demo-token"
       },
       "models": {

@@ -8,8 +8,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "plugin")
-public class Plugin extends PanacheEntityBase {
+@Table(name = "proxy_instance")
+public class ProxyInstance extends PanacheEntityBase {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,19 +18,17 @@ public class Plugin extends PanacheEntityBase {
     @Column(nullable = false)
     public String name;
 
-    @Column(length = 2000)
-    public String description;
+    @Column(nullable = false, unique = true)
+    public String slug;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    public Language language;
+    @Column(name = "profile_id", nullable = false)
+    public Long profileId;
 
-    @Column(nullable = false, length = 10000)
-    public String script;
+    @Column(name = "plugin_group_id", nullable = false)
+    public Long pluginGroupId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, name = "execution_phase")
-    public ExecutionPhase executionPhase = ExecutionPhase.BOTH;
+    @Column(name = "default_model")
+    public String defaultModel;
 
     @Column(nullable = false)
     public boolean enabled = true;
@@ -43,17 +41,6 @@ public class Plugin extends PanacheEntityBase {
     @Column(name = "updated_at")
     public LocalDateTime updatedAt;
 
-    public Plugin() {
-    }
-
-    public enum Language {
-        GROOVY,
-        JS
-    }
-
-    public enum ExecutionPhase {
-        REQUEST,
-        RESPONSE,
-        BOTH
+    public ProxyInstance() {
     }
 }

@@ -27,9 +27,10 @@ public class TrafficLogService {
     private static final int MAX_PLUGIN_LOGS_LENGTH = 5000;
 
     @Transactional
-    public TrafficLog recordRequest(Long profileId, String path, String method,
+    public TrafficLog recordRequest(Long instanceId, Long profileId, String path, String method,
                                     Map<String, String> requestHeaders, Object requestBody) {
         TrafficLog log = new TrafficLog();
+        log.instanceId = instanceId;
         log.profileId = profileId;
         log.requestPath = path;
         log.requestMethod = method;

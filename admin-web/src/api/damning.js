@@ -36,6 +36,38 @@ export function deletePlugin(id) {
   return api.delete(`/plugins/${id}`)
 }
 
+export function listPluginGroups() {
+  return api.get('/plugin-groups')
+}
+
+export function createPluginGroup(data) {
+  return api.post('/plugin-groups', data)
+}
+
+export function updatePluginGroup(id, data) {
+  return api.put(`/plugin-groups/${id}`, data)
+}
+
+export function deletePluginGroup(id) {
+  return api.delete(`/plugin-groups/${id}`)
+}
+
+export function listInstances() {
+  return api.get('/instances')
+}
+
+export function createInstance(data) {
+  return api.post('/instances', data)
+}
+
+export function updateInstance(id, data) {
+  return api.put(`/instances/${id}`, data)
+}
+
+export function deleteInstance(id) {
+  return api.delete(`/instances/${id}`)
+}
+
 export function listLogs(params) {
   return api.get('/logs', { params })
 }

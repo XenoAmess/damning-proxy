@@ -14,6 +14,9 @@ public class TrafficLog extends PanacheEntityBase {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
 
+    @Column(name = "instance_id")
+    public Long instanceId;
+
     @Column(name = "profile_id")
     public Long profileId;
 

@@ -3,11 +3,15 @@ package com.xenoamess.damning_proxy.proxy;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xenoamess.damning_proxy.entity.Plugin;
+import com.xenoamess.damning_proxy.entity.PluginGroup;
+import com.xenoamess.damning_proxy.entity.PluginGroupItem;
+import com.xenoamess.damning_proxy.entity.ProxyInstance;
 import com.xenoamess.damning_proxy.entity.ProxyProfile;
 import com.xenoamess.damning_proxy.entity.TrafficLog;
 import com.xenoamess.damning_proxy.plugin.PluginContext;
 import com.xenoamess.damning_proxy.plugin.PluginExecutionService;
-import com.xenoamess.damning_proxy.repository.PluginRepository;
+import com.xenoamess.damning_proxy.repository.InstanceRepository;
+import com.xenoamess.damning_proxy.repository.PluginGroupRepository;
 import com.xenoamess.damning_proxy.repository.ProfileRepository;
 import com.xenoamess.damning_proxy.service.TrafficLogService;
 import io.quarkus.logging.Log;
@@ -34,10 +38,13 @@ import java.util.Optional;
 public class OpenAiProxyService {
 
     @Inject
+    InstanceRepository instanceRepository;
+
+    @Inject
     ProfileRepository profileRepository;
 
     @Inject
-    PluginRepository pluginRepository;
+    PluginGroupRepository pluginGroupRepository;
 
     @Inject
     PluginExecutionService pluginExecutionService;
@@ -51,16 +58,16 @@ public class OpenAiProxyService {
     @Inject
     ObjectMapper objectMapper;
 
-    public Response listModels(String profileSlug) {
-        ProxyProfile profile = findEnabledProfile(profileSlug);
-        List<Plugin> plugins = loadPlugins(profile);
+    public Response listModels(String instanceSlug) {
+        ProxyContext ctx = resolveInstance(instanceSlug);
+        List<Plugin> plugins = loadPlugins(ctx.group);
 
         long start = System.currentTimeMillis();
         TrafficLog trafficLog = trafficLogService.recordRequest(
-            profile.id, "/v1/models", "GET", Map.of(), null
+            ctx.instance.id, ctx.profile.id, "/v1/models", "GET", Map.of(), null
         );
 
-        PluginContext context = createRequestContext(profile, null);
+        PluginContext context = createRequestContext(ctx.profile, null);
         pluginExecutionService.executeRequestPlugins(plugins, context);
 
         if (context.isReturned()) {
@@ -73,8 +80,8 @@ public class OpenAiProxyService {
         }
 
         UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
-            "GET", profile.baseUrl, "/models",
-            toMultiMap(context.getRequestHeaders()), null, profile.timeoutMs
+            "GET", ctx.profile.baseUrl, "/models",
+            toMultiMap(context.getRequestHeaders()), null, ctx.profile.timeoutMs
         );
 
         context.setResponseStatus(upstream.statusCode);
@@ -91,17 +98,17 @@ public class OpenAiProxyService {
             .build();
     }
 
-    public Response chatCompletions(String profileSlug, Object requestBody) {
-        ProxyProfile profile = findEnabledProfile(profileSlug);
-        List<Plugin> plugins = loadPlugins(profile);
+    public Response chatCompletions(String instanceSlug, Object requestBody) {
+        ProxyContext ctx = resolveInstance(instanceSlug);
+        List<Plugin> plugins = loadPlugins(ctx.group);
 
         long start = System.currentTimeMillis();
         Map<String, String> initialHeaders = new HashMap<>();
         TrafficLog trafficLog = trafficLogService.recordRequest(
-            profile.id, "/v1/chat/completions", "POST", initialHeaders, requestBody
+            ctx.instance.id, ctx.profile.id, "/v1/chat/completions", "POST", initialHeaders, requestBody
         );
 
-        PluginContext context = createRequestContext(profile, requestBody);
+        PluginContext context = createRequestContext(ctx.profile, requestBody);
         pluginExecutionService.executeRequestPlugins(plugins, context);
 
         if (context.isReturned()) {
@@ -116,11 +123,11 @@ public class OpenAiProxyService {
         boolean streaming = isStreamingRequest(context.getRequestBody());
 
         if (streaming) {
-            return streamChatCompletions(profile, context, plugins, trafficLog, start);
+            return streamChatCompletions(ctx, context, plugins, trafficLog, start);
         } else {
             UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
-                "POST", profile.baseUrl, "/chat/completions",
-                toMultiMap(context.getRequestHeaders()), context.getRequestBody(), profile.timeoutMs
+                "POST", ctx.profile.baseUrl, "/chat/completions",
+                toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs
             );
 
             context.setResponseStatus(upstream.statusCode);
@@ -138,13 +145,11 @@ public class OpenAiProxyService {
         }
     }
 
-    private Response streamChatCompletions(ProxyProfile profile, PluginContext context,
+    private Response streamChatCompletions(ProxyContext ctx, PluginContext context,
                                            List<Plugin> plugins, TrafficLog trafficLog, long start) {
-        String requestJson = toJson(context.getRequestBody());
-
         Future<HttpClientResponse> upstreamFuture = upstreamHttpClient.sendStream(
-            "POST", profile.baseUrl, "/chat/completions",
-            toMultiMap(context.getRequestHeaders()), context.getRequestBody(), profile.timeoutMs
+            "POST", ctx.profile.baseUrl, "/chat/completions",
+            toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs
         );
 
         Multi<String> stream = Multi.createFrom().emitter(emitter -> {
@@ -176,23 +181,41 @@ public class OpenAiProxyService {
             .build();
     }
 
-    private ProxyProfile findEnabledProfile(String profileSlug) {
-        Optional<ProxyProfile> profileOpt = profileRepository.findBySlug(profileSlug);
-        if (profileOpt.isEmpty()) {
-            throw new WebApplicationException("Profile not found: " + profileSlug, Response.Status.NOT_FOUND);
+    private ProxyContext resolveInstance(String instanceSlug) {
+        Optional<ProxyInstance> instanceOpt = instanceRepository.findBySlug(instanceSlug);
+        if (instanceOpt.isEmpty()) {
+            throw new WebApplicationException("Instance not found: " + instanceSlug, Response.Status.NOT_FOUND);
         }
-        ProxyProfile profile = profileOpt.get();
+        ProxyInstance instance = instanceOpt.get();
+        if (!instance.enabled) {
+            throw new WebApplicationException("Instance disabled: " + instanceSlug, Response.Status.FORBIDDEN);
+        }
+
+        ProxyProfile profile = profileRepository.findById(instance.profileId)
+            .orElseThrow(() -> new WebApplicationException("Upstream profile not found for instance: " + instanceSlug, Response.Status.NOT_FOUND));
         if (!profile.enabled) {
-            throw new WebApplicationException("Profile disabled: " + profileSlug, Response.Status.FORBIDDEN);
+            throw new WebApplicationException("Upstream profile disabled for instance: " + instanceSlug, Response.Status.FORBIDDEN);
         }
-        return profile;
+
+        PluginGroup group = pluginGroupRepository.findById(instance.pluginGroupId)
+            .orElseThrow(() -> new WebApplicationException("Plugin group not found for instance: " + instanceSlug, Response.Status.NOT_FOUND));
+
+        return new ProxyContext(instance, profile, group);
     }
 
-    private List<Plugin> loadPlugins(ProxyProfile profile) {
+    private record ProxyContext(ProxyInstance instance, ProxyProfile profile, PluginGroup group) {
+    }
+
+    private List<Plugin> loadPlugins(PluginGroup group) {
         List<Plugin> plugins = new ArrayList<>();
-        plugins.addAll(pluginRepository.findEnabledGlobal());
-        plugins.addAll(pluginRepository.findEnabledByProfileId(profile.id));
-        plugins.sort((a, b) -> Integer.compare(a.priority, b.priority));
+        if (group == null || group.items == null) {
+            return plugins;
+        }
+        for (PluginGroupItem item : group.sortedItems()) {
+            if (item.enabled && item.plugin != null && item.plugin.enabled) {
+                plugins.add(item.plugin);
+            }
+        }
         return plugins;
     }
 
@@ -251,6 +274,7 @@ public class OpenAiProxyService {
         }
     }
 
+    @SuppressWarnings("unused")
     private String toJson(Object body) {
         if (body == null) {
             return "{}";

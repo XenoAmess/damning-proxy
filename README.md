@@ -7,9 +7,11 @@
 ## 特性
 
 - **OpenAI 协议代理**：对外暴露 OpenAI 兼容接口，转发到配置的上游源
-- **多配置管理**：支持配置多个上游 Profile，按子 URL 路由
-- **插件化报文篡改**：支持 Groovy / JavaScript 脚本插件，按顺序执行
-- **全量流量日志**：自动记录所有请求/响应，支持 Web 页增删改查
+- **实例化路由**：外部用户调用的是【实例】，每个实例绑定一个上游 Profile 和一个插件组
+- **上游配置管理**：独立管理上游 OpenAI 源地址、Token、自定义 Header 等
+- **插件组管理**：从插件库中挑选插件，指定执行顺序、优先级和启用状态
+- **插件库管理**：集中管理 Groovy / JavaScript 插件脚本
+- **全量流量日志**：按实例记录请求/响应，支持 Web 页查看与清理
 - **Web 管理后台**：基于 Vue 3 + Vite + Element Plus 的本地管理界面
 - **GraalVM Native Image** 支持
 
@@ -41,7 +43,7 @@ mvn quarkus:dev
 
 ```bash
 mvn clean package
-java -jar target/damning-proxy-1.0-SNAPSHOT-runner.jar
+java -jar target/quarkus-app/quarkus-run.jar
 ```
 
 Maven 构建会自动安装 Node、npm 依赖并构建前端界面。
@@ -53,14 +55,16 @@ mvn clean package -Pnative
 ./target/damning-proxy-1.0-SNAPSHOT-runner
 ```
 
+> 注意：native 构建需要 GraalVM 21，并提前用 `mvn clean package -DskipTests` 确认普通 JAR 可正常构建。
+
 ## 代理端点
-https://api.minimaxi.com/v1
-所有代理端点都基于 Profile 的 `slug`：
+
+所有代理端点都基于**实例**的 `slug`：
 
 | Method | Path | 说明 |
 |--------|------|------|
-| `POST` | `/v1/proxy/{slug}/chat/completions` | 聊天补全（支持 SSE 流式） |
-| `GET`  | `/v1/proxy/{slug}/models` | 模型列表 |
+| `POST` | `/v1/proxy/{instanceSlug}/chat/completions` | 聊天补全（支持 SSE 流式） |
+| `GET`  | `/v1/proxy/{instanceSlug}/models` | 模型列表 |
 
 示例：
 
@@ -68,8 +72,10 @@ https://api.minimaxi.com/v1
 curl -H "Authorization: Bearer sk-test" \
   -H "Content-Type: application/json" \
   -d '{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}],"stream":false}' \
-  http://localhost:12360/v1/proxy/openai/chat/completions
+  http://localhost:12360/v1/proxy/my-instance/chat/completions
 ```
+
+> 旧版按 Profile slug 直接访问的方式已替换为按 Instance slug 访问。首次启动时，系统会自动为每个已存在的 Profile 生成一个默认实例和一个默认插件组。
 
 ## Web 管理后台
 
@@ -77,9 +83,11 @@ curl -H "Authorization: Bearer sk-test" \
 
 后台支持：
 
+- **实例管理**：创建对外暴露的实例，绑定上游配置和插件组
+- **插件组**：从插件库挑选插件，配置执行顺序、优先级、启用状态
+- **插件管理**：编写 Groovy / JS 插件脚本，设置执行阶段（请求/响应/两者）
 - **上游配置**：配置多个 OpenAI 源，包含 baseURL、Bearer Token、自定义 Header、超时等
-- **插件管理**：编写 Groovy / JS 插件，设置执行阶段（请求/响应/两者）、优先级、作用域
-- **流量日志**：查看完整请求/响应、插件日志，支持删除和清空
+- **流量日志**：按实例查看完整请求/响应、插件日志，支持删除和清空
 
 ## 插件开发
 
@@ -121,9 +129,9 @@ context.returnResponse(200, [message: 'intercepted'], ['X-Custom': 'yes'])
   "provider": {
     "damning-proxy": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "大明proxy (local)",
+      "name": "damning-proxy (local)",
       "options": {
-        "baseURL": "http://localhost:12360/v1/proxy/openai",
+        "baseURL": "http://localhost:12360/v1/proxy/my-instance",
         "apiKey": "sk-test"
       },
       "models": {

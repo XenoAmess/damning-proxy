@@ -7,11 +7,7 @@
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="name" label="名称" />
       <el-table-column prop="language" label="语言" width="90" />
-      <el-table-column prop="priority" label="优先级" width="90" />
       <el-table-column prop="executionPhase" label="执行阶段" width="110" />
-      <el-table-column prop="globalScope" label="全局" width="80">
-        <template #default="{ row }">{{ row.globalScope ? '是' : '否' }}</template>
-      </el-table-column>
       <el-table-column prop="enabled" label="启用" width="80">
         <template #default="{ row }">
           <el-tag :type="row.enabled ? 'success' : 'info'">{{ row.enabled ? '是' : '否' }}</el-tag>
@@ -30,6 +26,9 @@
         <el-form-item label="名称" required>
           <el-input v-model="form.name" />
         </el-form-item>
+        <el-form-item label="描述">
+          <el-input v-model="form.description" type="textarea" :rows="2" />
+        </el-form-item>
         <el-form-item label="语言" required>
           <el-radio-group v-model="form.language">
             <el-radio-button label="GROOVY" />
@@ -42,15 +41,6 @@
             <el-radio-button label="RESPONSE" />
             <el-radio-button label="BOTH" />
           </el-radio-group>
-        </el-form-item>
-        <el-form-item label="优先级">
-          <el-input-number v-model="form.priority" :min="0" />
-        </el-form-item>
-        <el-form-item label="全局插件">
-          <el-switch v-model="form.globalScope" />
-        </el-form-item>
-        <el-form-item label="作用域 ProfileId" v-if="!form.globalScope">
-          <el-input-number v-model="form.profileId" :min="1" />
         </el-form-item>
         <el-form-item label="脚本" required>
           <el-input v-model="form.script" type="textarea" :rows="10"
@@ -78,12 +68,10 @@ const loading = ref(false)
 const visible = ref(false)
 const form = ref({
   name: '',
+  description: '',
   language: 'GROOVY',
   script: '',
-  priority: 0,
   executionPhase: 'BOTH',
-  globalScope: true,
-  profileId: null,
   enabled: true,
 })
 
@@ -100,12 +88,10 @@ async function load() {
 function openDialog(row) {
   form.value = row ? { ...row } : {
     name: '',
+    description: '',
     language: 'GROOVY',
     script: '',
-    priority: 0,
     executionPhase: 'BOTH',
-    globalScope: true,
-    profileId: null,
     enabled: true,
   }
   visible.value = true

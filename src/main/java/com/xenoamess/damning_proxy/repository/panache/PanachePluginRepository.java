@@ -5,7 +5,6 @@ import com.xenoamess.damning_proxy.repository.PluginRepository;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,13 +21,11 @@ public class PanachePluginRepository implements PluginRepository {
                 plugin.persistAndFlush();
             } else {
                 existing.name = plugin.name;
+                existing.description = plugin.description;
                 existing.language = plugin.language;
                 existing.script = plugin.script;
-                existing.priority = plugin.priority;
                 existing.executionPhase = plugin.executionPhase;
                 existing.enabled = plugin.enabled;
-                existing.globalScope = plugin.globalScope;
-                existing.profileId = plugin.profileId;
                 existing.persistAndFlush();
             }
         }
@@ -42,21 +39,7 @@ public class PanachePluginRepository implements PluginRepository {
 
     @Override
     public List<Plugin> listAll() {
-        return Plugin.listAll(Sort.by("priority"));
-    }
-
-    @Override
-    public List<Plugin> findEnabledByProfileId(Long profileId) {
-        return Plugin.find(
-            "enabled = true and globalScope = false and profileId = ?1",
-            Sort.by("priority"),
-            profileId
-        ).list();
-    }
-
-    @Override
-    public List<Plugin> findEnabledGlobal() {
-        return Plugin.find("enabled = true and globalScope = true", Sort.by("priority")).list();
+        return Plugin.listAll(Sort.by("name"));
     }
 
     @Override
