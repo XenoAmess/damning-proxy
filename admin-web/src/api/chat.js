@@ -39,21 +39,27 @@ export async function* chatCompletionStream(instanceSlug, body, token) {
     throw new Error(`HTTP ${response.status}: ${text}`)
   }
 
-  const reader = response.body.getReader()
-  const decoder = new TextDecoder('utf-8')
-  let buffer = ''
+  if (!response.body) {
+    throw new Error('Response body is null')
+  }
 
+  const reader = response.body
+    .pipeThrough(new TextDecoderStream())
+    .getReader()
+
+  let buffer = ''
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop()
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (!trimmed || !trimmed.startsWith('data:')) continue
-      const data = trimmed.slice(5).trimStart()
+    buffer += value
+    let lineEnd
+    while ((lineEnd = buffer.indexOf('\n')) !== -1) {
+      const line = buffer.slice(0, lineEnd).trim()
+      buffer = buffer.slice(lineEnd + 1)
+      if (!line || !line.startsWith('data:')) continue
+      const data = line.slice(5).trimStart()
       if (data === '[DONE]') return
+      if (!data) continue
       try {
         yield JSON.parse(data)
       } catch (e) {
@@ -65,7 +71,7 @@ export async function* chatCompletionStream(instanceSlug, body, token) {
   const remaining = buffer.trim()
   if (remaining && remaining.startsWith('data:')) {
     const data = remaining.slice(5).trimStart()
-    if (data !== '[DONE]') {
+    if (data && data !== '[DONE]') {
       try {
         yield JSON.parse(data)
       } catch (e) {

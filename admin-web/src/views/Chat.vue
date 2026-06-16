@@ -415,6 +415,7 @@ async function send() {
     _showReasoning: false,
   }
   currentSession.value.messages.push(assistantMsg)
+  const assistantIndex = currentSession.value.messages.length - 1
 
   try {
     if (config.value.stream) {
@@ -422,10 +423,10 @@ async function send() {
         const delta = chunk.choices?.[0]?.delta
         if (delta) {
           if (delta.content) {
-            assistantMsg.content += delta.content
+            currentSession.value.messages[assistantIndex].content += delta.content
           }
           if (delta.reasoning_content) {
-            assistantMsg.reasoning += delta.reasoning_content
+            currentSession.value.messages[assistantIndex].reasoning += delta.reasoning_content
           }
         }
         scrollToBottom()
@@ -434,16 +435,16 @@ async function send() {
       const res = await chatCompletion(config.value.instanceSlug, body, config.value.token)
       const data = res.data
       if (data.choices && data.choices[0]) {
-        assistantMsg.content = data.choices[0].message?.content || ''
-        assistantMsg.reasoning = data.choices[0].message?.reasoning_content || ''
+        currentSession.value.messages[assistantIndex].content = data.choices[0].message?.content || ''
+        currentSession.value.messages[assistantIndex].reasoning = data.choices[0].message?.reasoning_content || ''
       } else {
-        assistantMsg.content = JSON.stringify(data)
+        currentSession.value.messages[assistantIndex].content = JSON.stringify(data)
       }
       scrollToBottom()
     }
   } catch (e) {
-    assistantMsg.content = `请求失败: ${e.message}`
-    assistantMsg.error = true
+    currentSession.value.messages[assistantIndex].content = `请求失败: ${e.message}`
+    currentSession.value.messages[assistantIndex].error = true
     ElMessage.error(e.message)
   } finally {
     loading.value = false
