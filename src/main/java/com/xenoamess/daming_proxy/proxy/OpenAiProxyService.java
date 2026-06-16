@@ -73,7 +73,7 @@ public class OpenAiProxyService {
         }
 
         UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
-            "GET", profile.baseUrl, "/v1/models",
+            "GET", profile.baseUrl, "/models",
             toMultiMap(context.getRequestHeaders()), null, profile.timeoutMs
         );
 
@@ -119,7 +119,7 @@ public class OpenAiProxyService {
             return streamChatCompletions(profile, context, plugins, trafficLog, start);
         } else {
             UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
-                "POST", profile.baseUrl, "/v1/chat/completions",
+                "POST", profile.baseUrl, "/chat/completions",
                 toMultiMap(context.getRequestHeaders()), context.getRequestBody(), profile.timeoutMs
             );
 
@@ -143,7 +143,7 @@ public class OpenAiProxyService {
         String requestJson = toJson(context.getRequestBody());
 
         Future<HttpClientResponse> upstreamFuture = upstreamHttpClient.sendStream(
-            "POST", profile.baseUrl, "/v1/chat/completions",
+            "POST", profile.baseUrl, "/chat/completions",
             toMultiMap(context.getRequestHeaders()), context.getRequestBody(), profile.timeoutMs
         );
 

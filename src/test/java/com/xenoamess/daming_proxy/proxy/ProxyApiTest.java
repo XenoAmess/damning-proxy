@@ -84,7 +84,7 @@ class ProxyApiTest {
                 .withHeader("Content-Type", "application/json")
                 .withBody("{\"object\":\"list\",\"data\":[{\"id\":\"gpt-4\",\"object\":\"model\"}]}")));
 
-        ProxyProfile profile = new ProxyProfile("OpenAI", "openai", "http://localhost:18089");
+        ProxyProfile profile = new ProxyProfile("OpenAI", "openai", "http://localhost:18089/v1");
         profile.bearerToken = "sk-test";
         saveProfile(profile);
 
@@ -113,7 +113,7 @@ class ProxyApiTest {
                 .withHeader("Content-Type", "application/json")
                 .withBody("{\"id\":\"chatcmpl-1\",\"object\":\"chat.completion\",\"model\":\"gpt-4\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"Hi\"}}]}")));
 
-        ProxyProfile profile = new ProxyProfile("OpenAI", "openai-chat", "http://localhost:18089");
+        ProxyProfile profile = new ProxyProfile("OpenAI", "openai-chat", "http://localhost:18089/v1");
         profile.bearerToken = "sk-test";
         saveProfile(profile);
 
@@ -151,7 +151,7 @@ class ProxyApiTest {
                 .withHeader("Content-Type", "application/json")
                 .withBody("{\"ok\":true}")));
 
-        ProxyProfile profile = new ProxyProfile("Custom", "custom", "http://localhost:18089");
+        ProxyProfile profile = new ProxyProfile("Custom", "custom", "http://localhost:18089/v1");
         profile.customHeaders = "{\"X-Api-Key\":\"secret\",\"X-Project\":\"daming\"}";
         saveProfile(profile);
 
