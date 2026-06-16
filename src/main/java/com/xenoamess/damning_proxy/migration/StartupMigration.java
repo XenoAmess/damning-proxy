@@ -38,7 +38,7 @@ public class StartupMigration {
 
     @Transactional
     public void onStart(@Observes StartupEvent event) {
-        ensureSamplePlugins();
+        ensureSamplePluginsAndGroups();
 
         if (!instanceRepository.listAll().isEmpty()) {
             return;
@@ -87,7 +87,7 @@ public class StartupMigration {
         }
     }
 
-    private void ensureSamplePlugins() {
+    private void ensureSamplePluginsAndGroups() {
         if (pluginRepository.count() > 0) {
             return;
         }
@@ -109,6 +109,29 @@ public class StartupMigration {
         jsPlugin.script = buildJsScript();
         jsPlugin.enabled = true;
         pluginRepository.save(jsPlugin);
+
+        PluginGroup groovyGroup = createGroup("\u5927\u660e\u6218\u9524\u63d0\u793a\u8bcd\uff08Groovy\uff09", "sample-groovy", "\u9ed8\u8ba4\u7684 Groovy \u6837\u4f8b\u63d2\u4ef6\u7ec4", groovyPlugin);
+        pluginGroupRepository.save(groovyGroup);
+
+        PluginGroup jsGroup = createGroup("\u5927\u660e\u6218\u9524\u63d0\u793a\u8bcd\uff08JS\uff09", "sample-js", "\u9ed8\u8ba4\u7684 JavaScript \u6837\u4f8b\u63d2\u4ef6\u7ec4", jsPlugin);
+        pluginGroupRepository.save(jsGroup);
+    }
+
+    private PluginGroup createGroup(String name, String slug, String description, Plugin plugin) {
+        PluginGroup group = new PluginGroup();
+        group.name = name;
+        group.slug = slug;
+        group.description = description;
+        group.enabled = true;
+        PluginGroupItem item = new PluginGroupItem();
+        item.group = group;
+        item.plugin = plugin;
+        item.orderIndex = 0;
+        item.priority = 0;
+        item.enabled = true;
+        group.items = new ArrayList<>();
+        group.items.add(item);
+        return group;
     }
 
     private String buildGroovyScript() {

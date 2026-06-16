@@ -1,5 +1,6 @@
 package com.xenoamess.damning_proxy.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -16,6 +17,7 @@ public class PluginGroupItem extends PanacheEntityBase {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "group_id")
+    @JsonIgnore
     public PluginGroup group;
 
     @ManyToOne(optional = false, fetch = FetchType.EAGER)
