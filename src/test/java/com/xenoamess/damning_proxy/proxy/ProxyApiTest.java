@@ -152,7 +152,7 @@ class ProxyApiTest {
                 .withBody("{\"ok\":true}")));
 
         ProxyProfile profile = new ProxyProfile("Custom", "custom", "http://localhost:18089/v1");
-        profile.customHeaders = "{\"X-Api-Key\":\"secret\",\"X-Project\":\"daming\"}";
+        profile.customHeaders = "{\"X-Api-Key\":\"secret\",\"X-Project\":\"damning\"}";
         saveProfile(profile);
 
         given()
@@ -164,7 +164,7 @@ class ProxyApiTest {
 
         wireMockServer.verify(postRequestedFor(urlEqualTo("/v1/chat/completions"))
             .withHeader("X-Api-Key", WireMock.equalTo("secret"))
-            .withHeader("X-Project", WireMock.equalTo("daming")));
+            .withHeader("X-Project", WireMock.equalTo("damning")));
     }
 
     @Transactional
