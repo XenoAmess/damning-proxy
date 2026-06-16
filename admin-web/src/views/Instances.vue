@@ -23,6 +23,18 @@
           <el-tag :type="row.enabled ? 'success' : 'info'">{{ row.enabled ? '是' : '否' }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="OpenAI URL">
+        <template #default="{ row }">
+          <el-button
+            size="small"
+            link
+            type="primary"
+            @click="copyOpenAiUrl(row.slug)"
+          >
+            {{ openAiUrl(row.slug) }}
+          </el-button>
+        </template>
+      </el-table-column>
       <el-table-column label="操作" width="150">
         <template #default="{ row }">
           <el-button size="small" @click="openDialog(row)">编辑</el-button>
@@ -107,6 +119,21 @@ function profileName(id) {
 function groupName(id) {
   const g = groups.value.find(x => x.id === id)
   return g ? `${g.name} (${g.slug})` : id
+}
+
+function openAiUrl(slug) {
+  const origin = window.location.origin
+  return `${origin}/v1/proxy/${slug}`
+}
+
+async function copyOpenAiUrl(slug) {
+  const url = openAiUrl(slug)
+  try {
+    await navigator.clipboard.writeText(url)
+    ElMessage.success('已复制到剪贴板')
+  } catch (e) {
+    ElMessage.error('复制失败')
+  }
 }
 
 async function load() {
