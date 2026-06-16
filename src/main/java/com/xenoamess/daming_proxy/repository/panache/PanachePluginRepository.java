@@ -15,11 +15,11 @@ public class PanachePluginRepository implements PluginRepository {
     @Override
     public Plugin save(Plugin plugin) {
         if (plugin.id == null) {
-            plugin.persist();
+            plugin.persistAndFlush();
         } else {
             Plugin existing = findById(plugin.id).orElse(null);
             if (existing == null) {
-                plugin.persist();
+                plugin.persistAndFlush();
             } else {
                 existing.name = plugin.name;
                 existing.language = plugin.language;
@@ -29,7 +29,7 @@ public class PanachePluginRepository implements PluginRepository {
                 existing.enabled = plugin.enabled;
                 existing.globalScope = plugin.globalScope;
                 existing.profileId = plugin.profileId;
-                existing.persist();
+                existing.persistAndFlush();
             }
         }
         return plugin;

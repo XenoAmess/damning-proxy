@@ -13,11 +13,11 @@ public class PanacheProfileRepository implements ProfileRepository {
     @Override
     public ProxyProfile save(ProxyProfile profile) {
         if (profile.id == null) {
-            profile.persist();
+            profile.persistAndFlush();
         } else {
             ProxyProfile existing = findById(profile.id).orElse(null);
             if (existing == null) {
-                profile.persist();
+                profile.persistAndFlush();
             } else {
                 existing.name = profile.name;
                 existing.slug = profile.slug;
@@ -27,7 +27,7 @@ public class PanacheProfileRepository implements ProfileRepository {
                 existing.defaultModel = profile.defaultModel;
                 existing.timeoutMs = profile.timeoutMs;
                 existing.enabled = profile.enabled;
-                existing.persist();
+                existing.persistAndFlush();
             }
         }
         return profile;
