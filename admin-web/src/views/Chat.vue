@@ -83,7 +83,7 @@
             <div class="message-body">
               <div v-if="Array.isArray(msg.content)">
                 <template v-for="(part, pidx) in msg.content" :key="pidx">
-                  <div v-if="part.type === 'text'" class="text-part">{{ part.text }}</div>
+                  <div v-if="part.type === 'text'" class="text-part">{{ parseThink(part.text).text }}</div>
                   <div v-else-if="part.type === 'image_url'" class="image-part">
                     <img :src="part.image_url.url" alt="uploaded" />
                   </div>
@@ -92,14 +92,14 @@
                   </div>
                 </template>
               </div>
-              <div v-else class="text-part">{{ msg.content }}</div>
+              <div v-else class="text-part">{{ parseThink(msg.content).text }}</div>
 
-              <div v-if="msg.reasoning" class="reasoning-block">
+              <div v-if="msg.reasoning || parseThink(msg.content).reasoning" class="reasoning-block">
                 <div class="reasoning-toggle" @click="msg._showReasoning = !msg._showReasoning">
                   <el-icon><ArrowDown v-if="msg._showReasoning" /><ArrowRight v-else /></el-icon>
                   推理过程
                 </div>
-                <pre v-if="msg._showReasoning" class="reasoning-content">{{ msg.reasoning }}</pre>
+                <pre v-if="msg._showReasoning" class="reasoning-content">{{ msg.reasoning || parseThink(msg.content).reasoning }}</pre>
               </div>
             </div>
           </div>
@@ -471,6 +471,19 @@ function scrollToBottom() {
 function formatTime(ts) {
   const d = new Date(ts)
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+}
+
+function parseThink(content) {
+  if (typeof content !== 'string') {
+    return { text: content || '', reasoning: '' }
+  }
+  const match = content.match(/\u003cthink\u003e([\s\S]*?)\u003c\/think\u003e/)
+  if (!match) {
+    return { text: content, reasoning: '' }
+  }
+  const reasoning = match[1].trim()
+  const text = content.replace(/\u003cthink\u003e[\s\S]*?\u003c\/think\u003e/, '').trim()
+  return { text, reasoning }
 }
 </script>
 
