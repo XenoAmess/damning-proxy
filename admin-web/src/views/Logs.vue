@@ -18,6 +18,9 @@
         <div class="log-card-header">
           <div class="log-meta">
             <el-tag size="small" type="info">#{{ log.id }}</el-tag>
+            <el-tag v-if="log.instanceSlug" size="small" type="warning" class="instance-tag">
+              {{ log.instanceSlug }}
+            </el-tag>
             <span class="log-path">{{ log.requestMethod }} {{ log.requestPath }}</span>
             <el-tag
               size="small"
@@ -98,7 +101,8 @@
             {{ current.requestMethod }} {{ current.requestPath }}
           </div>
           <div class="detail-subtitle">
-            状态 <el-tag :type="statusType">{{ current.responseStatus || '-' }}</el-tag>
+            实例 <el-tag type="warning">{{ current.instanceSlug || current.instanceId || '-' }}</el-tag>
+            · 状态 <el-tag :type="statusType">{{ current.responseStatus || '-' }}</el-tag>
             <span v-if="current.durationMs"> · 耗时 {{ current.durationMs }}ms</span>
             <span v-if="current.model"> · 模型 {{ current.model }}</span>
           </div>
@@ -375,6 +379,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.instance-tag {
+  font-weight: 600;
 }
 
 .log-path {

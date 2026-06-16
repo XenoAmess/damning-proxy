@@ -17,6 +17,9 @@ public class TrafficLog extends PanacheEntityBase {
     @Column(name = "instance_id")
     public Long instanceId;
 
+    @Column(name = "instance_slug")
+    public String instanceSlug;
+
     @Column(name = "profile_id")
     public Long profileId;
 

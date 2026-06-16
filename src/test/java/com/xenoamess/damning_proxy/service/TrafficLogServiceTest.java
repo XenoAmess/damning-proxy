@@ -36,12 +36,13 @@ class TrafficLogServiceTest {
     @Test
     void shouldRecordRequestAndResponse() {
         TrafficLog log = trafficLogService.recordRequest(
-            10L, 1L, "/v1/chat/completions", "POST",
+            10L, "test-instance", 1L, "/v1/chat/completions", "POST",
             Map.of("Authorization", "Bearer test"),
             Map.of("model", "gpt-4")
         );
         assertNotNull(log.id);
         assertEquals("POST", log.requestMethod);
+        assertEquals("test-instance", log.instanceSlug);
 
         trafficLogService.recordResponse(log, 200,
             Map.of("Content-Type", "application/json"),
@@ -63,7 +64,7 @@ class TrafficLogServiceTest {
         }
 
         TrafficLog log = trafficLogService.recordRequest(
-            10L, 1L, "/v1/chat/completions", "POST", Map.of(), large.toString()
+            10L, "test-instance", 1L, "/v1/chat/completions", "POST", Map.of(), large.toString()
         );
 
         assertTrue(log.requestBody.length() < 15000);

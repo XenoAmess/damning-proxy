@@ -30,10 +30,11 @@ public class TrafficLogService {
     private static final int MAX_FRIENDLY_SNAPSHOTS_LENGTH = 8000;
 
     @Transactional
-    public TrafficLog recordRequest(Long instanceId, Long profileId, String path, String method,
+    public TrafficLog recordRequest(Long instanceId, String instanceSlug, Long profileId, String path, String method,
                                     Map<String, String> requestHeaders, Object requestBody) {
         TrafficLog log = new TrafficLog();
         log.instanceId = instanceId;
+        log.instanceSlug = instanceSlug;
         log.profileId = profileId;
         log.requestPath = path;
         log.requestMethod = method;

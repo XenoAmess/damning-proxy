@@ -78,6 +78,7 @@ public class LogAdminApi {
         TrafficLogFriendlyDto dto = new TrafficLogFriendlyDto();
         dto.id = log.id;
         dto.instanceId = log.instanceId;
+        dto.instanceSlug = log.instanceSlug;
         dto.profileId = log.profileId;
         dto.requestMethod = log.requestMethod;
         dto.requestPath = log.requestPath;

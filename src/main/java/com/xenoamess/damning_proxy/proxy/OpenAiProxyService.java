@@ -68,7 +68,7 @@ public class OpenAiProxyService {
 
         long start = System.currentTimeMillis();
         TrafficLog trafficLog = trafficLogService.recordRequest(
-            ctx.instance.id, ctx.profile.id, "/v1/models", "GET", Map.of(), null
+            ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/models", "GET", Map.of(), null
         );
 
         PluginContext context = createRequestContext(ctx.profile, null);
@@ -109,7 +109,7 @@ public class OpenAiProxyService {
         long start = System.currentTimeMillis();
         Map<String, String> initialHeaders = new HashMap<>();
         TrafficLog trafficLog = trafficLogService.recordRequest(
-            ctx.instance.id, ctx.profile.id, "/v1/chat/completions", "POST", initialHeaders, requestBody
+            ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/chat/completions", "POST", initialHeaders, requestBody
         );
 
         PluginContext context = createRequestContext(ctx.profile, requestBody);
@@ -156,7 +156,7 @@ public class OpenAiProxyService {
         long start = System.currentTimeMillis();
         Map<String, String> initialHeaders = new HashMap<>();
         TrafficLog trafficLog = trafficLogService.recordRequest(
-            ctx.instance.id, ctx.profile.id, "/v1/chat/completions", "POST", initialHeaders, requestBody
+            ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/chat/completions", "POST", initialHeaders, requestBody
         );
 
         PluginContext context = createRequestContext(ctx.profile, requestBody);

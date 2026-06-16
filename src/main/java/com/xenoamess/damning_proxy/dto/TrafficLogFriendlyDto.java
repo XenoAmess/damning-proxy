@@ -8,6 +8,7 @@ public class TrafficLogFriendlyDto {
 
     public Long id;
     public Long instanceId;
+    public String instanceSlug;
     public Long profileId;
     public String requestMethod;
     public String requestPath;
