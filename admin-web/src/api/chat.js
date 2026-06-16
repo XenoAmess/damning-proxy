@@ -50,8 +50,8 @@ export async function* chatCompletionStream(instanceSlug, body, token) {
     buffer = lines.pop()
     for (const line of lines) {
       const trimmed = line.trim()
-      if (!trimmed || !trimmed.startsWith('data: ')) continue
-      const data = trimmed.slice(6)
+      if (!trimmed || !trimmed.startsWith('data:')) continue
+      const data = trimmed.slice(5).trimStart()
       if (data === '[DONE]') return
       try {
         yield JSON.parse(data)
@@ -62,8 +62,8 @@ export async function* chatCompletionStream(instanceSlug, body, token) {
   }
 
   const remaining = buffer.trim()
-  if (remaining && remaining.startsWith('data: ')) {
-    const data = remaining.slice(6)
+  if (remaining && remaining.startsWith('data:')) {
+    const data = remaining.slice(5).trimStart()
     if (data !== '[DONE]') {
       try {
         yield JSON.parse(data)

@@ -123,44 +123,90 @@ public class OpenAiProxyService {
         boolean streaming = isStreamingRequest(context.getRequestBody());
 
         if (streaming) {
-            return streamChatCompletions(ctx, context, plugins, trafficLog, start);
-        } else {
-            UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
-                "POST", ctx.profile.baseUrl, "/chat/completions",
-                toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs
-            );
+            throw new jakarta.ws.rs.WebApplicationException("Streaming requests are not supported by this endpoint, use /chat/completions with Accept: text/event-stream", jakarta.ws.rs.core.Response.Status.BAD_REQUEST);
+        }
 
-            context.setResponseStatus(upstream.statusCode);
-            context.setResponseBody(parseJson(upstream.body));
+        UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
+            "POST", ctx.profile.baseUrl, "/chat/completions",
+            toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs
+        );
 
-            pluginExecutionService.executeResponsePlugins(plugins, context);
+        context.setResponseStatus(upstream.statusCode);
+        context.setResponseBody(parseJson(upstream.body));
 
+        pluginExecutionService.executeResponsePlugins(plugins, context);
+
+        trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
+            context.getResponseHeaders(), context.getResponseBody(),
+            System.currentTimeMillis() - start, context.getPluginLogs());
+
+        return Response.status(context.getResponseStatus())
+            .entity(context.getResponseBody())
+            .build();
+    }
+
+    public Multi<String> chatCompletionsStream(String instanceSlug, Object requestBody) {
+        ProxyContext ctx = resolveInstance(instanceSlug);
+        List<Plugin> plugins = loadPlugins(ctx.group);
+
+        long start = System.currentTimeMillis();
+        Map<String, String> initialHeaders = new HashMap<>();
+        TrafficLog trafficLog = trafficLogService.recordRequest(
+            ctx.instance.id, ctx.profile.id, "/v1/chat/completions", "POST", initialHeaders, requestBody
+        );
+
+        PluginContext context = createRequestContext(ctx.profile, requestBody);
+        pluginExecutionService.executeRequestPlugins(plugins, context);
+
+        if (context.isReturned()) {
             trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
                 context.getResponseHeaders(), context.getResponseBody(),
                 System.currentTimeMillis() - start, context.getPluginLogs());
-
-            return Response.status(context.getResponseStatus())
-                .entity(context.getResponseBody())
-                .build();
+            String returned = toJson(context.getResponseBody());
+            return Multi.createFrom().item("data: " + returned + "\n\ndata: [DONE]\n\n");
         }
+
+        return streamChatCompletions(ctx, context, plugins, trafficLog, start);
     }
 
-    private Response streamChatCompletions(ProxyContext ctx, PluginContext context,
+    private Multi<String> streamChatCompletions(ProxyContext ctx, PluginContext context,
                                            List<Plugin> plugins, TrafficLog trafficLog, long start) {
         Future<HttpClientResponse> upstreamFuture = upstreamHttpClient.sendStream(
             "POST", ctx.profile.baseUrl, "/chat/completions",
             toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs
         );
 
-        Multi<String> stream = Multi.createFrom().emitter(emitter -> {
+        return Multi.createFrom().emitter(emitter -> {
             StringBuilder responseBuffer = new StringBuilder();
+            StringBuilder sseBuffer = new StringBuilder();
             upstreamFuture.onSuccess(response -> {
                 response.handler(buffer -> {
                     String chunk = buffer.toString();
                     responseBuffer.append(chunk);
-                    emitter.emit(chunk);
+                    sseBuffer.append(chunk);
+                    String[] lines = sseBuffer.toString().split("\n", -1);
+                    sseBuffer.setLength(0);
+                    sseBuffer.append(lines[lines.length - 1]);
+                    for (int i = 0; i < lines.length - 1; i++) {
+                        String line = lines[i].trim();
+                        if (line.startsWith("data: ")) {
+                            String data = line.substring(6).trim();
+                            if ("[DONE]".equals(data)) {
+                                emitter.complete();
+                                return;
+                            }
+                            emitter.emit(data);
+                        }
+                    }
                 });
                 response.endHandler(v -> {
+                    String remaining = sseBuffer.toString().trim();
+                    if (remaining.startsWith("data: ")) {
+                        String data = remaining.substring(6).trim();
+                        if (!"[DONE]".equals(data)) {
+                            emitter.emit(data);
+                        }
+                    }
                     context.setResponseBody(responseBuffer.toString());
                     pluginExecutionService.executeResponsePlugins(plugins, context);
                     trafficLogService.recordResponse(trafficLog, 200,
@@ -175,10 +221,6 @@ public class OpenAiProxyService {
                 emitter.fail(err);
             });
         });
-
-        return Response.ok(stream)
-            .header(HttpHeaders.CONTENT_TYPE.toString(), MediaType.SERVER_SENT_EVENTS)
-            .build();
     }
 
     private ProxyContext resolveInstance(String instanceSlug) {
