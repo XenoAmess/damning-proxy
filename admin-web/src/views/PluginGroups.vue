@@ -25,7 +25,7 @@
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="visible" :title="form.id ? '编辑插件组' : '新增插件组'" width="800px">
+    <el-dialog v-model="visible" :title="form.id ? '编辑插件组' : '新增插件组'" width="800px" top="5vh" :close-on-click-modal="false">
       <el-form :model="form" label-width="100px">
         <el-form-item label="名称" required>
           <el-input v-model="form.name" />
@@ -54,28 +54,28 @@
             </div>
             <div class="selected">
               <div class="section-title">已选插件（按顺序执行）</div>
-              <el-table :data="form.items" border size="small">
-                <el-table-column label="插件" width="180">
+              <el-table :data="form.items" border size="small" class="selected-table">
+                <el-table-column label="插件" min-width="140" show-overflow-tooltip>
                   <template #default="{ row }">
                     {{ pluginName(row.pluginId) }}
                   </template>
                 </el-table-column>
-                <el-table-column label="顺序" width="90">
+                <el-table-column label="顺序" width="80">
                   <template #default="{ row }">
-                    <el-input-number v-model="row.orderIndex" :min="0" :controls="false" style="width: 70px" />
+                    <el-input-number v-model="row.orderIndex" :min="0" :controls="false" style="width: 60px" />
                   </template>
                 </el-table-column>
-                <el-table-column label="优先级" width="90">
+                <el-table-column label="优先级" width="80">
                   <template #default="{ row }">
-                    <el-input-number v-model="row.priority" :min="0" :controls="false" style="width: 70px" />
+                    <el-input-number v-model="row.priority" :min="0" :controls="false" style="width: 60px" />
                   </template>
                 </el-table-column>
-                <el-table-column label="启用" width="80">
+                <el-table-column label="启用" width="70">
                   <template #default="{ row }">
                     <el-switch v-model="row.enabled" />
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="140">
+                <el-table-column label="操作" width="130" fixed="right">
                   <template #default="{ $index }">
                     <el-button size="small" @click="moveUp($index)" :disabled="$index === 0">↑</el-button>
                     <el-button size="small" @click="moveDown($index)" :disabled="$index === form.items.length - 1">↓</el-button>
@@ -271,5 +271,8 @@ onMounted(load)
 .section-title {
   font-weight: bold;
   margin-bottom: 8px;
+}
+.selected-table {
+  width: 100%;
 }
 </style>
