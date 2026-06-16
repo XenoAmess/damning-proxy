@@ -10,6 +10,8 @@
       <div
         v-for="log in logs"
         :key="log.id"
+        :ref="el => setCardRef(log.id, el)"
+        :data-id="log.id"
         class="log-card"
         :class="{ error: log.responseStatus >= 400 }"
       >
@@ -34,7 +36,7 @@
           <template v-if="isChatLike(log)">
             <div class="summary-section">
               <div class="summary-label">📝 用户输入</div>
-              <div class="summary-text">{{ log._friendly?.userPrompt || '点击加载详情' }}</div>
+              <div class="summary-text">{{ log._friendly?.userPrompt || '-' }}</div>
             </div>
             <div class="summary-section">
               <div class="summary-label">🤖 模型输出</div>
@@ -194,7 +196,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listLogs, getLogFriendly, deleteLog, clearLogs } from '../api/damning.js'
 
@@ -203,6 +205,9 @@ const loading = ref(false)
 const detailVisible = ref(false)
 const activeTab = ref('summary')
 const current = ref(null)
+const cardRefs = ref({})
+const loadedFriendlyIds = ref(new Set())
+let observer = null
 
 const statusType = computed(() => {
   if (!current.value || !current.value.responseStatus) return 'info'
@@ -214,8 +219,42 @@ async function load() {
   try {
     const res = await listLogs({ limit: 100 })
     logs.value = res.data
+    await nextTick()
+    observeCards()
   } finally {
     loading.value = false
+  }
+}
+
+function observeCards() {
+  if (observer) {
+    observer.disconnect()
+  }
+  observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        const id = Number(entry.target.dataset.id)
+        loadFriendlyIfNeeded(id)
+      }
+    }
+  }, { rootMargin: '100px' })
+
+  for (const el of Object.values(cardRefs.value)) {
+    if (el) observer.observe(el)
+  }
+}
+
+async function loadFriendlyIfNeeded(id) {
+  if (loadedFriendlyIds.value.has(id)) return
+  loadedFriendlyIds.value.add(id)
+  try {
+    const res = await getLogFriendly(id)
+    const log = logs.value.find(l => l.id === id)
+    if (log) {
+      log._friendly = res.data
+    }
+  } catch (e) {
+    // ignore per-card load failures
   }
 }
 
@@ -224,12 +263,9 @@ async function openFriendly(id) {
   current.value = null
   activeTab.value = 'summary'
   try {
-    const res = await getLogFriendly(id)
-    current.value = res.data
+    await loadFriendlyIfNeeded(id)
     const log = logs.value.find(l => l.id === id)
-    if (log) {
-      log._friendly = res.data
-    }
+    current.value = log?._friendly || null
     if (!isChatLike(current.value)) {
       activeTab.value = 'rawRequest'
     }
@@ -256,6 +292,12 @@ function formatTime(value) {
   if (!value) return '-'
   const d = new Date(value)
   return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`
+}
+
+function setCardRef(id, el) {
+  if (el) {
+    cardRefs.value[id] = el
+  }
 }
 
 async function remove(id) {
@@ -285,6 +327,12 @@ async function clear() {
 }
 
 onMounted(load)
+onUnmounted(() => {
+  if (observer) {
+    observer.disconnect()
+    observer = null
+  }
+})
 </script>
 
 <style scoped>
