@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 
 @ApplicationScoped
 public class OpenAiProxyService {
@@ -57,6 +58,9 @@ public class OpenAiProxyService {
 
     @Inject
     ObjectMapper objectMapper;
+
+    @Inject
+    ExecutorService executorService;
 
     public Response listModels(String instanceSlug) {
         ProxyContext ctx = resolveInstance(instanceSlug);
@@ -209,15 +213,15 @@ public class OpenAiProxyService {
                     }
                     context.setResponseBody(responseBuffer.toString());
                     pluginExecutionService.executeResponsePlugins(plugins, context);
-                    trafficLogService.recordResponse(trafficLog, 200,
+                    executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 200,
                         context.getResponseHeaders(), context.getResponseBody(),
-                        System.currentTimeMillis() - start, context.getPluginLogs());
+                        System.currentTimeMillis() - start, context.getPluginLogs()));
                     emitter.complete();
                 });
             }).onFailure(err -> {
                 Log.error("Streaming upstream failed", err);
-                trafficLogService.recordResponse(trafficLog, 502,
-                    Map.of(), err.getMessage(), System.currentTimeMillis() - start, context.getPluginLogs());
+                executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 502,
+                    Map.of(), err.getMessage(), System.currentTimeMillis() - start, context.getPluginLogs()));
                 emitter.fail(err);
             });
         });
