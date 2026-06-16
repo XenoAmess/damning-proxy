@@ -168,10 +168,13 @@ import {
 import { listInstances, listProfiles } from '../api/damning.js'
 import { chatCompletion, chatCompletionStream, listModels } from '../api/chat.js'
 
+const TYPEWRITER_DELAY = 16
+const TYPEWRITER_CHUNK = 2
+
 const STORAGE_KEY = 'damning-proxy-chat-sessions'
 const CONFIG_KEY = 'damning-proxy-chat-config'
 
-const sessions = ref([])
+  const sessions = ref([])
 const currentSessionId = ref('')
 const instances = ref([])
 const profiles = ref([])
@@ -180,6 +183,8 @@ const pendingFiles = ref([])
 const loading = ref(false)
 const messagesRef = ref(null)
 const uploadRef = ref(null)
+const typewriterTarget = ref(null)
+const typewriterBuffer = ref('')
 
 const config = ref({
   instanceSlug: '',
@@ -435,33 +440,59 @@ async function send() {
         const delta = chunk.choices?.[0]?.delta
         if (delta) {
           if (delta.content) {
-            currentSession.value.messages[assistantIndex].content += delta.content
+            appendWithTypewriter(assistantIndex, delta.content)
           }
           if (delta.reasoning_content) {
             currentSession.value.messages[assistantIndex].reasoning += delta.reasoning_content
           }
         }
-        scrollToBottom()
       }
+      await flushTypewriter(assistantIndex)
     } else {
       const res = await chatCompletion(config.value.instanceSlug, body, config.value.token)
       const data = res.data
       if (data.choices && data.choices[0]) {
-        currentSession.value.messages[assistantIndex].content = data.choices[0].message?.content || ''
+        appendWithTypewriter(assistantIndex, data.choices[0].message?.content || '')
         currentSession.value.messages[assistantIndex].reasoning = data.choices[0].message?.reasoning_content || ''
+        await flushTypewriter(assistantIndex)
       } else {
         currentSession.value.messages[assistantIndex].content = JSON.stringify(data)
       }
-      scrollToBottom()
     }
   } catch (e) {
-    currentSession.value.messages[assistantIndex].content = `请求失败: ${e.message}`
+    await flushTypewriter(assistantIndex)
+    currentSession.value.messages[assistantIndex].content += `请求失败: ${e.message}`
     currentSession.value.messages[assistantIndex].error = true
     ElMessage.error(e.message)
   } finally {
     loading.value = false
     scrollToBottom()
   }
+}
+
+function appendWithTypewriter(index, text) {
+  if (typewriterTarget.value !== index) {
+    typewriterTarget.value = index
+    typewriterBuffer.value = ''
+  }
+  typewriterBuffer.value += text
+}
+
+async function flushTypewriter(index) {
+  const target = currentSession.value.messages[index]
+  if (!target) return
+  const buffer = typewriterBuffer.value
+  typewriterBuffer.value = ''
+  typewriterTarget.value = null
+  for (let i = 0; i < buffer.length; i += TYPEWRITER_CHUNK) {
+    target.content += buffer.slice(i, i + TYPEWRITER_CHUNK)
+    scrollToBottom()
+    await sleep(TYPEWRITER_DELAY)
+  }
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 function updateSessionTitle(text) {
