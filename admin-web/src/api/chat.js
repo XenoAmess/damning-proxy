@@ -22,6 +22,7 @@ export function chatCompletion(instanceSlug, body, token) {
 export async function* chatCompletionStream(instanceSlug, body, token) {
   const headers = {
     'Content-Type': 'application/json',
+    'Accept': 'text/event-stream',
   }
   if (token) {
     headers.Authorization = `Bearer ${token}`
