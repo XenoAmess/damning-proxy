@@ -214,8 +214,7 @@ public class OpenAiProxyService {
                             accumulateStreamContent(data, contentBuffer);
                         }
                     }
-                    String fullSse = responseBuffer.toString();
-                    Object parsedBody = parseStreamingResponse(fullSse, contentBuffer.toString());
+                    Object parsedBody = buildStreamingResponseBody(contentBuffer.toString());
                     context.setResponseBody(parsedBody);
                     pluginExecutionService.executeResponsePlugins(plugins, context);
                     executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 200,
@@ -261,6 +260,10 @@ public class OpenAiProxyService {
             Log.warn("Failed to parse streaming response for log", e);
         }
         return Map.of("choices", List.of(Map.of("delta", Map.of("content", content.toString()))));
+    }
+
+    private Object buildStreamingResponseBody(String accumulatedContent) {
+        return Map.of("choices", List.of(Map.of("delta", Map.of("content", accumulatedContent == null ? "" : accumulatedContent))));
     }
 
     private void accumulateStreamContent(String data, StringBuilder buffer) {
