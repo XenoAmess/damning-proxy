@@ -20,7 +20,7 @@ class PanacheProfileRepositoryTest {
     @Test
     @TestTransaction
     void shouldSaveAndFindProfile() {
-        ProxyProfile profile = new ProxyProfile("OpenAI", "openai", "https://api.openai.com/v1");
+        ProxyProfile profile = new ProxyProfile("OpenAI", "repo-openai", "https://api.openai.com/v1");
         profile.bearerToken = "sk-test";
         profile.timeoutMs = 10000;
 
@@ -29,17 +29,17 @@ class PanacheProfileRepositoryTest {
 
         Optional<ProxyProfile> found = profileRepository.findById(saved.id);
         assertTrue(found.isPresent());
-        assertEquals("openai", found.get().slug);
+        assertEquals("repo-openai", found.get().slug);
         assertEquals("sk-test", found.get().bearerToken);
     }
 
     @Test
     @TestTransaction
     void shouldFindBySlug() {
-        ProxyProfile profile = new ProxyProfile("Azure", "azure", "https://azure.openai.com");
+        ProxyProfile profile = new ProxyProfile("Azure", "repo-azure", "https://azure.openai.com");
         profileRepository.save(profile);
 
-        Optional<ProxyProfile> found = profileRepository.findBySlug("azure");
+        Optional<ProxyProfile> found = profileRepository.findBySlug("repo-azure");
         assertTrue(found.isPresent());
         assertEquals("Azure", found.get().name);
     }
@@ -47,8 +47,8 @@ class PanacheProfileRepositoryTest {
     @Test
     @TestTransaction
     void shouldListAllProfiles() {
-        profileRepository.save(new ProxyProfile("A", "a", "http://a"));
-        profileRepository.save(new ProxyProfile("B", "b", "http://b"));
+        profileRepository.save(new ProxyProfile("A", "repo-a", "http://a"));
+        profileRepository.save(new ProxyProfile("B", "repo-b", "http://b"));
 
         List<ProxyProfile> all = profileRepository.listAll();
         assertTrue(all.size() >= 2);
@@ -57,7 +57,7 @@ class PanacheProfileRepositoryTest {
     @Test
     @TestTransaction
     void shouldDeleteProfile() {
-        ProxyProfile profile = new ProxyProfile("DeleteMe", "delete-me", "http://x");
+        ProxyProfile profile = new ProxyProfile("DeleteMe", "repo-delete-me", "http://x");
         profileRepository.save(profile);
 
         boolean deleted = profileRepository.deleteById(profile.id);

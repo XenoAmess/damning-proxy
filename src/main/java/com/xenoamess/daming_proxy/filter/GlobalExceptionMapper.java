@@ -1,20 +1,16 @@
 package com.xenoamess.daming_proxy.filter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xenoamess.daming_proxy.dto.ErrorResponse;
 import io.quarkus.logging.Log;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
 
+import java.util.Map;
+
 @Provider
 public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
-
-    @Inject
-    ObjectMapper objectMapper;
 
     @Override
     public Response toResponse(Exception exception) {
@@ -25,9 +21,12 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
             if (originalResponse.getStatus() == 400) {
                 return Response.status(400)
                     .type(MediaType.APPLICATION_JSON)
-                    .entity(new ErrorResponse(new ErrorResponse.Error(
-                        exception.getMessage(), "invalid_request_error", null, null
-                    )))
+                    .entity(Map.of(
+                        "error", Map.of(
+                            "message", exception.getMessage(),
+                            "type", "invalid_request_error"
+                        )
+                    ))
                     .build();
             }
             return originalResponse;
@@ -35,12 +34,12 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
 
         return Response.status(500)
             .type(MediaType.APPLICATION_JSON)
-            .entity(new ErrorResponse(new ErrorResponse.Error(
-                "Internal server error: " + exception.getMessage(),
-                "internal_error",
-                null,
-                null
-            )))
+            .entity(Map.of(
+                "error", Map.of(
+                    "message", "Internal server error: " + exception.getMessage(),
+                    "type", "internal_error"
+                )
+            ))
             .build();
     }
 }

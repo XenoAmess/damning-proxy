@@ -1,89 +1,119 @@
-# daming-proxy
+# daming-proxy（大明proxy）
 
-A high-performance, OpenAI-compatible API server built with **Java 21**, **Quarkus**, and **GraalVM Native Image** support.
+一个基于 **Java 21**、**Quarkus**、**GraalVM Native Image** 的 OpenAI 协议代理服务器。
 
-## Features
+大明proxy 可以代理多个上游 OpenAI 接口，并通过 **Groovy / JavaScript 插件** 按顺序篡改出入报文，实现自定义的模型映射、请求改写、响应替换、日志审计等功能。
 
-- **OpenAI-compatible Chat Completions API** (`POST /v1/chat/completions`) with SSE streaming
-- **Models API** (`GET /v1/models`) for model discovery
-- **Bearer Token Authentication**
-- **GraalVM Native Image** ready — compiles to a fast-starting, low-memory native binary
-- **Mock LLM Service** included for testing and development
+## 特性
 
-## Tech Stack
+- **OpenAI 协议代理**：对外暴露 OpenAI 兼容接口，转发到配置的上游源
+- **多配置管理**：支持配置多个上游 Profile，按子 URL 路由
+- **插件化报文篡改**：支持 Groovy / JavaScript 脚本插件，按顺序执行
+- **全量流量日志**：自动记录所有请求/响应，支持 Web 页增删改查
+- **Web 管理后台**：基于 Vue 3 + Vite + Element Plus 的本地管理界面
+- **GraalVM Native Image** 支持
 
-| Technology | Version |
-|-----------|---------|
+## 技术栈
+
+| 技术 | 版本 |
+|-----|------|
 | Java | 21 |
 | Quarkus | 3.15.1 |
 | Maven | 3.9+ |
-| GraalVM | 23.1+ (for native compilation) |
+| H2 | （默认，便于切换 PG/MySQL） |
+| Vue | 3 |
+| Vite | 6 |
+| Element Plus | 2 |
 
-## Quick Start
+## 快速开始
 
-### 1. Run in Development Mode
+### 1. 开发模式运行
 
 ```bash
 mvn quarkus:dev
 ```
 
-The server starts on `http://localhost:12360`.
+服务启动在 `http://localhost:12360`。
 
-### 2. Build and Run JAR
+浏览器访问 `http://localhost:12360/` 会自动跳转到管理后台。
+
+### 2. 构建并运行 JAR
 
 ```bash
 mvn clean package
 java -jar target/daming-proxy-1.0-SNAPSHOT-runner.jar
 ```
 
-### 3. Build Native Image (requires GraalVM)
+Maven 构建会自动安装 Node、npm 依赖并构建前端界面。
+
+### 3. 构建 Native Image（需要 GraalVM）
 
 ```bash
 mvn clean package -Pnative
 ./target/daming-proxy-1.0-SNAPSHOT-runner
 ```
 
-## API Endpoints
+## 代理端点
 
-| Method | Path | Description | Auth Required |
-|--------|------|-------------|---------------|
-| `POST` | `/v1/chat/completions` | Streaming chat completions | Yes |
-| `GET` | `/v1/models` | List available models | Yes |
-| `GET` | `/v1/health` | Health check | No |
+所有代理端点都基于 Profile 的 `slug`：
 
-### Authentication
+| Method | Path | 说明 |
+|--------|------|------|
+| `POST` | `/v1/proxy/{slug}/chat/completions` | 聊天补全（支持 SSE 流式） |
+| `GET`  | `/v1/proxy/{slug}/models` | 模型列表 |
 
-All protected endpoints require a Bearer token:
+示例：
 
-```
-Authorization: Bearer sk-daming-proxy-demo-token
-```
-
-The token can be customized via the `API_TOKEN` environment variable.
-
-### Test with cURL
-
-**List models:**
 ```bash
-curl -H "Authorization: Bearer sk-daming-proxy-demo-token" \
-  http://localhost:12360/v1/models
-```
-
-**Chat completions (streaming):**
-```bash
-curl -N -H "Authorization: Bearer sk-daming-proxy-demo-token" \
+curl -H "Authorization: Bearer sk-test" \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "mock-gpt-4o",
-    "messages": [{"role": "user", "content": "Hello!"}],
-    "stream": true
-  }' \
-  http://localhost:12360/v1/chat/completions
+  -d '{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}],"stream":false}' \
+  http://localhost:12360/v1/proxy/openai/chat/completions
 ```
 
-## Connect with OpenCode
+## Web 管理后台
 
-To use this server as a custom provider in [OpenCode](https://opencode.ai), add the following configuration to your `opencode.json`:
+启动后访问 `http://localhost:12360/admin/index.html`。
+
+后台支持：
+
+- **上游配置**：配置多个 OpenAI 源，包含 baseURL、Bearer Token、自定义 Header、超时等
+- **插件管理**：编写 Groovy / JS 插件，设置执行阶段（请求/响应/两者）、优先级、作用域
+- **流量日志**：查看完整请求/响应、插件日志，支持删除和清空
+
+## 插件开发
+
+插件通过 `context` 对象访问和修改请求/响应：
+
+```javascript
+// JS 示例：修改请求模型名
+var body = context.getRequestBody();
+body.model = 'gpt-4o';
+context.setRequestBody(body);
+context.log('rewrote model to gpt-4o');
+```
+
+```groovy
+// Groovy 示例：直接返回自定义响应
+context.returnResponse(200, [message: 'intercepted'], ['X-Custom': 'yes'])
+```
+
+### context API
+
+| 方法 | 说明 |
+|------|------|
+| `getRequestBody()` / `setRequestBody(obj)` | 请求体读写 |
+| `getRequestHeaders()` / `setRequestHeader(k, v)` | 请求头读写 |
+| `getResponseBody()` / `setResponseBody(obj)` | 响应体读写 |
+| `getResponseHeaders()` / `setResponseHeader(k, v)` | 响应头读写 |
+| `getResponseStatus()` / `setResponseStatus(code)` | 响应状态码读写 |
+| `log(message)` | 记录插件日志 |
+| `stop()` | 终止后续插件执行 |
+| `returnResponse(status, body, headers)` | 直接返回响应，跳过上游 |
+
+## 连接 OpenCode
+
+在 `opencode.json` 中配置大明proxy 作为自定义 provider：
 
 ```json
 {
@@ -91,115 +121,84 @@ To use this server as a custom provider in [OpenCode](https://opencode.ai), add 
   "provider": {
     "daming-proxy": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "Daming Proxy (local)",
+      "name": "大明proxy (local)",
       "options": {
-        "baseURL": "http://localhost:12360/v1",
-        "apiKey": "sk-daming-proxy-demo-token"
+        "baseURL": "http://localhost:12360/v1/proxy/openai",
+        "apiKey": "sk-test"
       },
       "models": {
-        "mock-gpt-4o": {
-          "name": "Mock GPT-4o"
-        },
-        "mock-claude-3-sonnet": {
-          "name": "Mock Claude 3 Sonnet"
-        },
-        "mock-llama-3-70b": {
-          "name": "Mock Llama 3 70B"
-        }
+        "gpt-4": { "name": "GPT-4" },
+        "gpt-4o": { "name": "GPT-4o" }
       }
     }
   }
 }
 ```
 
-### Configuration Explained
+`models` 中的 ID 需要与上游 `/v1/models` 返回的模型 ID 一致。
 
-| Field | Description |
-|-------|-------------|
-| `npm` | The AI SDK package to use. `@ai-sdk/openai-compatible` for OpenAI-compatible providers |
-| `name` | Display name for the provider in the OpenCode UI |
-| `options.baseURL` | Your server URL + `/v1` path |
-| `options.apiKey` | Must match the `API_TOKEN` environment variable (default: `sk-daming-proxy-demo-token`) |
-| `models` | Maps model IDs to their display names. The IDs must match those returned by `GET /v1/models` |
+## 配置说明
 
-### Model IDs
+### application.properties
 
-The server exposes these mock models via `/v1/models`:
+```properties
+quarkus.http.port=12360
 
-- `mock-gpt-4o`
-- `mock-claude-3-sonnet`
-- `mock-llama-3-70b`
+# 数据库（默认 H2 文件型，可切换为 PostgreSQL/MySQL）
+quarkus.datasource.db-kind=h2
+quarkus.datasource.jdbc.url=jdbc:h2:file:${user.home}/.daming-proxy/data
 
-### Switching Models in OpenCode
+# CORS
+quarkus.http.cors=true
+quarkus.http.cors.origins=*
+```
 
-After configuring, you can switch to your custom provider in OpenCode:
+### 环境变量
 
-1. Open the model selector in OpenCode
-2. Choose `daming-proxy` as the provider
-3. Select one of the configured models (`mock-gpt-4o`, etc.)
+| 变量 | 说明 |
+|------|------|
+| `API_TOKEN` | 旧全局认证 token（已不再使用，各 Profile 独立配置 token） |
 
-## Project Structure
+## 项目结构
 
 ```
 src/
 ├── main/
 │   ├── java/com/xenoamess/daming_proxy/
-│   │   ├── Main.java                    # Application entry point
-│   │   ├── api/
-│   │   │   └── OpenAiCompatibleApi.java # REST API endpoints
-│   │   ├── dto/                         # Request/response DTOs
-│   │   │   ├── ChatCompletionRequest.java
-│   │   │   ├── ChatCompletionChunk.java
-│   │   │   ├── ChatMessage.java
-│   │   │   ├── ModelListResponse.java
-│   │   │   └── ...
-│   │   ├── filter/
-│   │   │   ├── BearerTokenFilter.java   # Auth filter
-│   │   │   └── GlobalExceptionMapper.java
-│   │   └── service/
-│   │       └── MockLlmService.java      # Mock LLM streaming logic
+│   │   ├── api/              # REST API（代理、管理、首页）
+│   │   ├── api/admin/        # 管理后台 REST API
+│   │   ├── entity/           # 领域实体
+│   │   ├── plugin/           # 插件上下文与执行引擎
+│   │   ├── plugin/engine/    # Groovy / JS 引擎
+│   │   ├── proxy/            # OpenAI 代理核心
+│   │   ├── repository/       # 仓库接口
+│   │   ├── repository/panache/ # Panache H2 实现
+│   │   └── service/          # 业务服务（日志服务）
 │   └── resources/
-│       └── application.properties       # Quarkus config
-└── test/
-    └── java/.../OpenAiCompatibleApiTest.java
+│       ├── application.properties
+│       └── META-INF/resources/admin/  # 前端构建产物
+├── test/
+│   └── java/.../             # 单元测试与集成测试
+└── admin-web/                # Vue 3 管理后台源码
 ```
 
-## Configuration
+## 开发
 
-### Application Properties (`application.properties`)
-
-```properties
-quarkus.http.port=12360
-
-# CORS (enabled for OpenCode client)
-quarkus.http.cors=true
-quarkus.http.cors.origins=*
-
-# Logging
-quarkus.log.level=INFO
-```
-
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `API_TOKEN` | `sk-daming-proxy-demo-token` | Bearer token for API authentication |
-
-## Development
-
-### Run Tests
+### 运行测试
 
 ```bash
 mvn test
 ```
 
-### Dev Mode with Hot Reload
+### 前端开发
 
 ```bash
-mvn quarkus:dev
+cd admin-web
+npm install
+npm run dev
 ```
 
-Press `r` in the terminal to run tests, `h` for help.
+开发服务器代理 `/api` 到 `http://localhost:12360`。
 
 ## License
 
