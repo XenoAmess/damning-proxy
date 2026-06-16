@@ -1,4 +1,4 @@
-# daming-proxy（大明proxy）
+# damning-proxy（大明proxy）
 
 一个基于 **Java 21**、**Quarkus**、**GraalVM Native Image** 的 OpenAI 协议代理服务器。
 
@@ -41,7 +41,7 @@ mvn quarkus:dev
 
 ```bash
 mvn clean package
-java -jar target/daming-proxy-1.0-SNAPSHOT-runner.jar
+java -jar target/damning-proxy-1.0-SNAPSHOT-runner.jar
 ```
 
 Maven 构建会自动安装 Node、npm 依赖并构建前端界面。
@@ -50,7 +50,7 @@ Maven 构建会自动安装 Node、npm 依赖并构建前端界面。
 
 ```bash
 mvn clean package -Pnative
-./target/daming-proxy-1.0-SNAPSHOT-runner
+./target/damning-proxy-1.0-SNAPSHOT-runner
 ```
 
 ## 代理端点
@@ -119,7 +119,7 @@ context.returnResponse(200, [message: 'intercepted'], ['X-Custom': 'yes'])
 {
   "$schema": "https://opencode.ai/config.json",
   "provider": {
-    "daming-proxy": {
+    "damning-proxy": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "大明proxy (local)",
       "options": {
@@ -146,7 +146,7 @@ quarkus.http.port=12360
 
 # 数据库（默认 H2 文件型，可切换为 PostgreSQL/MySQL）
 quarkus.datasource.db-kind=h2
-quarkus.datasource.jdbc.url=jdbc:h2:file:${user.home}/.daming-proxy/data
+quarkus.datasource.jdbc.url=jdbc:h2:file:${user.home}/.damning-proxy/data
 
 # CORS
 quarkus.http.cors=true
@@ -164,7 +164,7 @@ quarkus.http.cors.origins=*
 ```
 src/
 ├── main/
-│   ├── java/com/xenoamess/daming_proxy/
+│   ├── java/com/xenoamess/damning_proxy/
 │   │   ├── api/              # REST API（代理、管理、首页）
 │   │   ├── api/admin/        # 管理后台 REST API
 │   │   ├── entity/           # 领域实体

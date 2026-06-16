@@ -61,7 +61,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listProfiles, createProfile, updateProfile, deleteProfile } from '../api/daming.js'
+import { listProfiles, createProfile, updateProfile, deleteProfile } from '../api/damning.js'
 
 const profiles = ref([])
 const loading = ref(false)

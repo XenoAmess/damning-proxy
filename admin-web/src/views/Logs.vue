@@ -43,7 +43,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listLogs, deleteLog, clearLogs } from '../api/daming.js'
+import { listLogs, deleteLog, clearLogs } from '../api/damning.js'
 
 const logs = ref([])
 const loading = ref(false)

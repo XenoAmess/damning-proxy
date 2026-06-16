@@ -10,12 +10,12 @@
         }
       }
     },
-    "daming-proxy": {
+    "damning-proxy": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "大明proxy (local)",
       "options": {
         "baseURL": "http://localhost:12360/v1/proxy/default",
-        "apiKey": "sk-daming-proxy-demo-token"
+        "apiKey": "sk-damning-proxy-demo-token"
       },
       "models": {
         "mock-gpt-4o": {

@@ -71,7 +71,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listPlugins, createPlugin, updatePlugin, deletePlugin } from '../api/daming.js'
+import { listPlugins, createPlugin, updatePlugin, deletePlugin } from '../api/damning.js'
 
 const plugins = ref([])
 const loading = ref(false)
