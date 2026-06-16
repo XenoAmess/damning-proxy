@@ -76,7 +76,7 @@
             <div class="message-body">
               <div v-if="Array.isArray(msg.content)">
                 <template v-for="(part, pidx) in msg.content" :key="pidx">
-                  <div v-if="part.type === 'text'" class="text-part">{{ parseThink(part.text).text }}</div>
+                  <div v-if="part.type === 'text'" class="text-part markdown-body" v-html="renderMarkdown(parseThink(part.text).text)"></div>
                   <div v-else-if="part.type === 'image_url'" class="image-part">
                     <img :src="part.image_url.url" alt="uploaded" />
                   </div>
@@ -85,7 +85,7 @@
                   </div>
                 </template>
               </div>
-              <div v-else class="text-part">{{ parseThink(msg.content).text }}</div>
+              <div v-else class="text-part markdown-body" v-html="renderMarkdown(parseThink(msg.content).text)"></div>
 
               <div v-if="msg.reasoning || parseThink(msg.content).reasoning" class="reasoning-block">
                 <div class="reasoning-toggle" @click="msg._showReasoning = !msg._showReasoning">
@@ -160,6 +160,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { marked } from 'marked'
 import {
   Plus, Delete, User, ChatLineRound, Paperclip, Promotion,
   ArrowDown, ArrowRight,
@@ -484,6 +485,11 @@ function formatTime(ts) {
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 }
 
+function renderMarkdown(text) {
+  if (typeof text !== 'string') return ''
+  return marked.parse(text, { breaks: true, gfm: true })
+}
+
 function parseThink(content) {
   if (typeof content !== 'string') {
     return { text: content || '', reasoning: '' }
@@ -636,7 +642,53 @@ function parseThink(content) {
 }
 
 .text-part {
-  white-space: pre-wrap;
+  white-space: normal;
+}
+
+.text-part :deep(pre) {
+  background: #f5f7fa;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.text-part :deep(code) {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.9em;
+}
+
+.text-part :deep(p) {
+  margin: 0 0 8px;
+}
+
+.text-part :deep(p):last-child {
+  margin-bottom: 0;
+}
+
+.text-part :deep(ul), .text-part :deep(ol) {
+  margin: 0 0 8px 20px;
+  padding: 0;
+}
+
+.text-part :deep(li) {
+  margin-bottom: 4px;
+}
+
+.text-part :deep(table) {
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+
+.text-part :deep(th), .text-part :deep(td) {
+  border: 1px solid #e4e7ed;
+  padding: 6px 10px;
+}
+
+.text-part :deep(blockquote) {
+  margin: 0 0 8px;
+  padding-left: 12px;
+  border-left: 4px solid #dcdfe6;
+  color: #606266;
 }
 
 .image-part img {
