@@ -13,5 +13,7 @@ public interface PluginRepository {
 
     List<Plugin> listAll();
 
+    long count();
+
     boolean deleteById(Long id);
 }

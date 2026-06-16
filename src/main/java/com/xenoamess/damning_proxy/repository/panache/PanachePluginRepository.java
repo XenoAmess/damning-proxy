@@ -43,6 +43,11 @@ public class PanachePluginRepository implements PluginRepository {
     }
 
     @Override
+    public long count() {
+        return Plugin.count();
+    }
+
+    @Override
     public boolean deleteById(Long id) {
         return Plugin.deleteById(id);
     }
