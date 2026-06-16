@@ -42,6 +42,7 @@ public class UpstreamHttpClient {
                     .setMethod(io.vertx.core.http.HttpMethod.valueOf(method))
                     .setHost(uri.getHost())
                     .setPort(resolvePort(uri))
+                    .setSsl(isSsl(uri))
                     .setURI(uri.getPath() + (uri.getQuery() != null ? "?" + uri.getQuery() : ""))
                     .setTimeout(timeoutMs > 0 ? timeoutMs : 30000))
                 .compose(req -> {
@@ -90,6 +91,7 @@ public class UpstreamHttpClient {
                 .setMethod(io.vertx.core.http.HttpMethod.valueOf(method))
                 .setHost(uri.getHost())
                 .setPort(resolvePort(uri))
+                .setSsl(isSsl(uri))
                 .setURI(uri.getPath() + (uri.getQuery() != null ? "?" + uri.getQuery() : ""))
                 .setTimeout(timeoutMs > 0 ? timeoutMs : 30000))
             .compose(req -> {
@@ -124,7 +126,11 @@ public class UpstreamHttpClient {
         if (port != -1) {
             return port;
         }
-        return "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
+        return isSsl(uri) ? 443 : 80;
+    }
+
+    private boolean isSsl(URI uri) {
+        return "https".equalsIgnoreCase(uri.getScheme());
     }
 
     private boolean isStreamingResponse(MultiMap headers) {

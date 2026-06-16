@@ -54,7 +54,7 @@ mvn clean package -Pnative
 ```
 
 ## 代理端点
-
+https://api.minimaxi.com/v1
 所有代理端点都基于 Profile 的 `slug`：
 
 | Method | Path | 说明 |
