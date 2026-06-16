@@ -1,0 +1,53 @@
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: '/api',
+})
+
+export function listProfiles() {
+  return api.get('/profiles')
+}
+
+export function createProfile(data) {
+  return api.post('/profiles', data)
+}
+
+export function updateProfile(id, data) {
+  return api.put(`/profiles/${id}`, data)
+}
+
+export function deleteProfile(id) {
+  return api.delete(`/profiles/${id}`)
+}
+
+export function listPlugins() {
+  return api.get('/plugins')
+}
+
+export function createPlugin(data) {
+  return api.post('/plugins', data)
+}
+
+export function updatePlugin(id, data) {
+  return api.put(`/plugins/${id}`, data)
+}
+
+export function deletePlugin(id) {
+  return api.delete(`/plugins/${id}`)
+}
+
+export function listLogs(params) {
+  return api.get('/logs', { params })
+}
+
+export function getLog(id) {
+  return api.get(`/logs/${id}`)
+}
+
+export function deleteLog(id) {
+  return api.delete(`/logs/${id}`)
+}
+
+export function clearLogs() {
+  return api.post('/logs/clear')
+}

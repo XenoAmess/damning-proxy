@@ -39,3 +39,8 @@ build/
 .DS_Store
 
 **/.idea
+
+# Admin UI generated files
+admin-web/node_modules/
+admin-web/dist/
+src/main/resources/META-INF/resources/admin/
