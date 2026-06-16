@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.xenoamess.daming_proxy.entity.ProxyProfile;
+import com.xenoamess.daming_proxy.entity.TrafficLog;
+import com.xenoamess.daming_proxy.repository.LogRepository;
 import com.xenoamess.daming_proxy.repository.ProfileRepository;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
@@ -23,6 +25,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @QuarkusTest
 class ProxyApiTest {
@@ -33,6 +37,9 @@ class ProxyApiTest {
     ProfileRepository profileRepository;
 
     @Inject
+    LogRepository logRepository;
+
+    @Inject
     ObjectMapper objectMapper;
 
     @BeforeEach
@@ -41,6 +48,7 @@ class ProxyApiTest {
         wireMockServer = new WireMockServer(18089);
         wireMockServer.start();
         profileRepository.listAll().forEach(p -> profileRepository.deleteById(p.id));
+        logRepository.deleteAll();
     }
 
     @AfterEach
@@ -90,6 +98,11 @@ class ProxyApiTest {
 
         wireMockServer.verify(getRequestedFor(urlEqualTo("/v1/models"))
             .withHeader("Authorization", WireMock.equalTo("Bearer sk-test")));
+
+        TrafficLog log = logRepository.listRecent(1).get(0);
+        assertEquals("/v1/models", log.requestPath);
+        assertEquals(200, log.responseStatus);
+        assertNotNull(log.responseBody);
     }
 
     @Test
@@ -122,6 +135,12 @@ class ProxyApiTest {
 
         wireMockServer.verify(postRequestedFor(urlEqualTo("/v1/chat/completions"))
             .withHeader("Authorization", WireMock.equalTo("Bearer sk-test")));
+
+        TrafficLog log = logRepository.listRecent(1).get(0);
+        assertEquals("/v1/chat/completions", log.requestPath);
+        assertEquals(200, log.responseStatus);
+        assertNotNull(log.requestBody);
+        assertNotNull(log.responseBody);
     }
 
     @Test

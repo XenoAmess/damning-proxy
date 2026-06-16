@@ -4,10 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xenoamess.daming_proxy.entity.Plugin;
 import com.xenoamess.daming_proxy.entity.ProxyProfile;
+import com.xenoamess.daming_proxy.entity.TrafficLog;
 import com.xenoamess.daming_proxy.plugin.PluginContext;
 import com.xenoamess.daming_proxy.plugin.PluginExecutionService;
 import com.xenoamess.daming_proxy.repository.PluginRepository;
 import com.xenoamess.daming_proxy.repository.ProfileRepository;
+import com.xenoamess.daming_proxy.service.TrafficLogService;
 import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Multi;
 import io.vertx.core.Future;
@@ -23,7 +25,9 @@ import jakarta.ws.rs.core.Response;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @ApplicationScoped
@@ -42,16 +46,27 @@ public class OpenAiProxyService {
     UpstreamHttpClient upstreamHttpClient;
 
     @Inject
+    TrafficLogService trafficLogService;
+
+    @Inject
     ObjectMapper objectMapper;
 
     public Response listModels(String profileSlug) {
         ProxyProfile profile = findEnabledProfile(profileSlug);
         List<Plugin> plugins = loadPlugins(profile);
 
+        long start = System.currentTimeMillis();
+        TrafficLog trafficLog = trafficLogService.recordRequest(
+            profile.id, "/v1/models", "GET", Map.of(), null
+        );
+
         PluginContext context = createRequestContext(profile, null);
         pluginExecutionService.executeRequestPlugins(plugins, context);
 
         if (context.isReturned()) {
+            trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
+                context.getResponseHeaders(), context.getResponseBody(),
+                System.currentTimeMillis() - start, context.getPluginLogs());
             return Response.status(context.getResponseStatus())
                 .entity(context.getResponseBody())
                 .build();
@@ -67,6 +82,10 @@ public class OpenAiProxyService {
 
         pluginExecutionService.executeResponsePlugins(plugins, context);
 
+        trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
+            context.getResponseHeaders(), context.getResponseBody(),
+            System.currentTimeMillis() - start, context.getPluginLogs());
+
         return Response.status(context.getResponseStatus())
             .entity(context.getResponseBody())
             .build();
@@ -76,10 +95,19 @@ public class OpenAiProxyService {
         ProxyProfile profile = findEnabledProfile(profileSlug);
         List<Plugin> plugins = loadPlugins(profile);
 
+        long start = System.currentTimeMillis();
+        Map<String, String> initialHeaders = new HashMap<>();
+        TrafficLog trafficLog = trafficLogService.recordRequest(
+            profile.id, "/v1/chat/completions", "POST", initialHeaders, requestBody
+        );
+
         PluginContext context = createRequestContext(profile, requestBody);
         pluginExecutionService.executeRequestPlugins(plugins, context);
 
         if (context.isReturned()) {
+            trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
+                context.getResponseHeaders(), context.getResponseBody(),
+                System.currentTimeMillis() - start, context.getPluginLogs());
             return Response.status(context.getResponseStatus())
                 .entity(context.getResponseBody())
                 .build();
@@ -88,7 +116,7 @@ public class OpenAiProxyService {
         boolean streaming = isStreamingRequest(context.getRequestBody());
 
         if (streaming) {
-            return streamChatCompletions(profile, context, plugins);
+            return streamChatCompletions(profile, context, plugins, trafficLog, start);
         } else {
             UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
                 "POST", profile.baseUrl, "/v1/chat/completions",
@@ -100,13 +128,18 @@ public class OpenAiProxyService {
 
             pluginExecutionService.executeResponsePlugins(plugins, context);
 
+            trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
+                context.getResponseHeaders(), context.getResponseBody(),
+                System.currentTimeMillis() - start, context.getPluginLogs());
+
             return Response.status(context.getResponseStatus())
                 .entity(context.getResponseBody())
                 .build();
         }
     }
 
-    private Response streamChatCompletions(ProxyProfile profile, PluginContext context, List<Plugin> plugins) {
+    private Response streamChatCompletions(ProxyProfile profile, PluginContext context,
+                                           List<Plugin> plugins, TrafficLog trafficLog, long start) {
         String requestJson = toJson(context.getRequestBody());
 
         Future<HttpClientResponse> upstreamFuture = upstreamHttpClient.sendStream(
@@ -115,11 +148,25 @@ public class OpenAiProxyService {
         );
 
         Multi<String> stream = Multi.createFrom().emitter(emitter -> {
+            StringBuilder responseBuffer = new StringBuilder();
             upstreamFuture.onSuccess(response -> {
-                response.handler(buffer -> emitter.emit(buffer.toString()));
-                response.endHandler(v -> emitter.complete());
+                response.handler(buffer -> {
+                    String chunk = buffer.toString();
+                    responseBuffer.append(chunk);
+                    emitter.emit(chunk);
+                });
+                response.endHandler(v -> {
+                    context.setResponseBody(responseBuffer.toString());
+                    pluginExecutionService.executeResponsePlugins(plugins, context);
+                    trafficLogService.recordResponse(trafficLog, 200,
+                        context.getResponseHeaders(), context.getResponseBody(),
+                        System.currentTimeMillis() - start, context.getPluginLogs());
+                    emitter.complete();
+                });
             }).onFailure(err -> {
                 Log.error("Streaming upstream failed", err);
+                trafficLogService.recordResponse(trafficLog, 502,
+                    Map.of(), err.getMessage(), System.currentTimeMillis() - start, context.getPluginLogs());
                 emitter.fail(err);
             });
         });
