@@ -19,6 +19,10 @@
           <el-icon><Connection /></el-icon>
           <span>上游配置</span>
         </el-menu-item>
+        <el-menu-item index="/chat">
+          <el-icon><ChatDotRound /></el-icon>
+          <span>对话测试</span>
+        </el-menu-item>
         <el-menu-item index="/logs">
           <el-icon><Document /></el-icon>
           <span>流量日志</span>
@@ -34,7 +38,7 @@
 </template>
 
 <script setup>
-import { Monitor, Collection, MagicStick, Connection, Document } from '@element-plus/icons-vue'
+import { Monitor, Collection, MagicStick, Connection, Document, ChatDotRound } from '@element-plus/icons-vue'
 </script>
 
 <style scoped>
