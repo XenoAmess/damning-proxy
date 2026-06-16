@@ -14,7 +14,6 @@ export function chatCompletion(instanceSlug, body, token) {
   }
   return proxy.post(`/${instanceSlug}/chat/completions`, body, {
     headers,
-    responseType: 'text',
     adapter: 'fetch',
   })
 }
