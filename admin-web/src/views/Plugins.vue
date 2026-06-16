@@ -2,6 +2,17 @@
   <div>
     <div class="toolbar">
       <el-button type="primary" @click="openDialog()">新增插件</el-button>
+      <el-button @click="exportPlugins">导出插件</el-button>
+      <el-upload
+        action="#"
+        :auto-upload="false"
+        :show-file-list="false"
+        :on-change="handleImport"
+        accept=".json"
+        class="upload-inline"
+      >
+        <el-button>导入插件</el-button>
+      </el-upload>
     </div>
     <el-table :data="plugins" v-loading="loading">
       <el-table-column prop="id" label="ID" width="60" />
@@ -122,6 +133,55 @@ async function remove(id) {
     if (e !== 'cancel') {
       ElMessage.error('删除失败')
     }
+  }
+}
+
+function exportPlugins() {
+  const data = plugins.value.map(p => ({
+    name: p.name,
+    description: p.description,
+    language: p.language,
+    executionPhase: p.executionPhase,
+    script: p.script,
+    enabled: p.enabled,
+  }))
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `plugins-${new Date().toISOString().slice(0, 10)}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  ElMessage.success('导出成功')
+}
+
+async function handleImport(file) {
+  const raw = file.raw
+  if (!raw) return
+  try {
+    const text = await raw.text()
+    const list = JSON.parse(text)
+    if (!Array.isArray(list)) {
+      ElMessage.error('文件格式错误：应为插件数组')
+      return
+    }
+    for (const item of list) {
+      const payload = {
+        name: item.name,
+        description: item.description || '',
+        language: item.language || 'GROOVY',
+        executionPhase: item.executionPhase || 'BOTH',
+        script: item.script || '',
+        enabled: item.enabled !== false,
+      }
+      await createPlugin(payload)
+    }
+    ElMessage.success('导入成功')
+    await load()
+  } catch (e) {
+    ElMessage.error('导入失败: ' + (e.message || e))
   }
 }
 
