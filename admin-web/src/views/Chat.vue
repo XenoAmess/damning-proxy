@@ -52,10 +52,11 @@
         <div class="toolbar-right">
           <el-input
             v-model="config.token"
-            placeholder="Bearer Token（可选）"
+            placeholder="使用上游配置中的 Bearer Token"
             type="password"
             show-password
             style="width: 220px"
+            disabled
           />
           <el-button style="margin-left: 12px" @click="clearCurrentHistory">清空当前</el-button>
         </div>
@@ -171,7 +172,7 @@ import {
   Plus, Delete, User, ChatLineRound, Paperclip, Promotion,
   ArrowDown, ArrowRight,
 } from '@element-plus/icons-vue'
-import { listInstances } from '../api/damning.js'
+import { listInstances, listProfiles } from '../api/damning.js'
 import { chatCompletion, chatCompletionStream, listModels } from '../api/chat.js'
 
 const STORAGE_KEY = 'damning-proxy-chat-sessions'
@@ -180,6 +181,7 @@ const CONFIG_KEY = 'damning-proxy-chat-config'
 const sessions = ref([])
 const currentSessionId = ref('')
 const instances = ref([])
+const profiles = ref([])
 const inputText = ref('')
 const pendingFiles = ref([])
 const loading = ref(false)
@@ -189,7 +191,7 @@ const uploadRef = ref(null)
 const config = ref({
   instanceSlug: '',
   model: '',
-  token: 'sk-test',
+  token: '',
   stream: true,
 })
 
@@ -302,10 +304,16 @@ function clearCurrentHistory() {
 
 async function loadInstances() {
   try {
-    const res = await listInstances()
-    instances.value = res.data
+    const [instRes, profileRes] = await Promise.all([
+      listInstances(),
+      listProfiles(),
+    ])
+    instances.value = instRes.data
+    profiles.value = profileRes.data
+    updateTokenFromProfile()
     if (!config.value.instanceSlug && instances.value.length > 0) {
       config.value.instanceSlug = instances.value[0].slug
+      updateTokenFromProfile()
     }
     if (config.value.instanceSlug) {
       await loadModels()
@@ -315,7 +323,18 @@ async function loadInstances() {
   }
 }
 
+function updateTokenFromProfile() {
+  const instance = instances.value.find(i => i.slug === config.value.instanceSlug)
+  if (!instance) {
+    config.value.token = ''
+    return
+  }
+  const profile = profiles.value.find(p => p.id === instance.profileId)
+  config.value.token = profile && profile.bearerToken ? profile.bearerToken : ''
+}
+
 async function onInstanceChange() {
+  updateTokenFromProfile()
   await loadModels()
 }
 
