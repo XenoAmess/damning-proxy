@@ -26,6 +26,14 @@ public class PluginContext {
         return requestHeaders;
     }
 
+    public String getRequestHeader(String key) {
+        return requestHeaders.get(key);
+    }
+
+    public void setRequestHeader(String key, String value) {
+        requestHeaders.put(key, value);
+    }
+
     public Object getRequestBody() {
         return requestBody;
     }
@@ -36,6 +44,14 @@ public class PluginContext {
 
     public Map<String, String> getResponseHeaders() {
         return responseHeaders;
+    }
+
+    public String getResponseHeader(String key) {
+        return responseHeaders.get(key);
+    }
+
+    public void setResponseHeader(String key, String value) {
+        responseHeaders.put(key, value);
     }
 
     public Object getResponseBody() {
