@@ -50,14 +50,6 @@
           />
         </div>
         <div class="toolbar-right">
-          <el-input
-            v-model="config.token"
-            placeholder="使用上游配置中的 Bearer Token"
-            type="password"
-            show-password
-            style="width: 220px"
-            disabled
-          />
           <el-button style="margin-left: 12px" @click="clearCurrentHistory">清空当前</el-button>
         </div>
       </div>
