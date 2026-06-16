@@ -183,6 +183,7 @@ public class OpenAiProxyService {
         return Multi.createFrom().emitter(emitter -> {
             StringBuilder responseBuffer = new StringBuilder();
             StringBuilder sseBuffer = new StringBuilder();
+            StringBuilder contentBuffer = new StringBuilder();
             upstreamFuture.onSuccess(response -> {
                 response.handler(buffer -> {
                     String chunk = buffer.toString();
@@ -200,6 +201,7 @@ public class OpenAiProxyService {
                                 return;
                             }
                             emitter.emit(data);
+                            accumulateStreamContent(data, contentBuffer);
                         }
                     }
                 });
@@ -209,9 +211,12 @@ public class OpenAiProxyService {
                         String data = remaining.substring(6).trim();
                         if (!"[DONE]".equals(data)) {
                             emitter.emit(data);
+                            accumulateStreamContent(data, contentBuffer);
                         }
                     }
-                    context.setResponseBody(responseBuffer.toString());
+                    String fullSse = responseBuffer.toString();
+                    Object parsedBody = parseStreamingResponse(fullSse, contentBuffer.toString());
+                    context.setResponseBody(parsedBody);
                     pluginExecutionService.executeResponsePlugins(plugins, context);
                     executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 200,
                         context.getResponseHeaders(), context.getResponseBody(),
@@ -225,6 +230,57 @@ public class OpenAiProxyService {
                 emitter.fail(err);
             });
         });
+    }
+
+    private Object parseStreamingResponse(String rawSse, String accumulatedContent) {
+        if (rawSse == null || rawSse.isBlank()) {
+            return Map.of("choices", List.of(Map.of("delta", Map.of("content", accumulatedContent))));
+        }
+        StringBuilder content = new StringBuilder(accumulatedContent);
+        try {
+            for (String line : rawSse.split("\n")) {
+                String trimmed = line.trim();
+                if (!trimmed.startsWith("data: ")) continue;
+                String data = trimmed.substring(6).trim();
+                if ("[DONE]".equals(data)) continue;
+                JsonNode node = objectMapper.readTree(data);
+                JsonNode choices = node.get("choices");
+                if (choices == null || !choices.isArray() || choices.isEmpty()) continue;
+                JsonNode delta = choices.get(0).get("delta");
+                if (delta == null) continue;
+                JsonNode reasoning = delta.get("reasoning_content");
+                JsonNode c = delta.get("content");
+                if (reasoning != null && !reasoning.isNull()) {
+                    content.append(reasoning.asText());
+                }
+                if (c != null && !c.isNull()) {
+                    content.append(c.asText());
+                }
+            }
+        } catch (IOException e) {
+            Log.warn("Failed to parse streaming response for log", e);
+        }
+        return Map.of("choices", List.of(Map.of("delta", Map.of("content", content.toString()))));
+    }
+
+    private void accumulateStreamContent(String data, StringBuilder buffer) {
+        try {
+            JsonNode node = objectMapper.readTree(data);
+            JsonNode choices = node.get("choices");
+            if (choices == null || !choices.isArray() || choices.isEmpty()) return;
+            JsonNode delta = choices.get(0).get("delta");
+            if (delta == null) return;
+            JsonNode reasoning = delta.get("reasoning_content");
+            JsonNode content = delta.get("content");
+            if (reasoning != null && !reasoning.isNull()) {
+                buffer.append(reasoning.asText());
+            }
+            if (content != null && !content.isNull()) {
+                buffer.append(content.asText());
+            }
+        } catch (IOException e) {
+            // ignore malformed chunk
+        }
     }
 
     private ProxyContext resolveInstance(String instanceSlug) {
