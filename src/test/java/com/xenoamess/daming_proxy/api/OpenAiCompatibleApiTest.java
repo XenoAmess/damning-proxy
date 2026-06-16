@@ -1,4 +1,4 @@
-package com.xenoamess.badass_model.api;
+package com.xenoamess.daming_proxy.api;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @QuarkusTest
 public class OpenAiCompatibleApiTest {
 
-    private static final String TEST_TOKEN = "sk-badass-model-demo-token";
+    private static final String TEST_TOKEN = "sk-daming-proxy-demo-token";
 
     @Test
     public void testHealthEndpoint() {

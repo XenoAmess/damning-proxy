@@ -1,8 +1,8 @@
-package com.xenoamess.badass_model.service;
+package com.xenoamess.daming_proxy.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xenoamess.badass_model.dto.*;
+import com.xenoamess.daming_proxy.dto.*;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;

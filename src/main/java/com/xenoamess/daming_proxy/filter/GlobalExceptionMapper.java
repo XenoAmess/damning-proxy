@@ -1,7 +1,7 @@
-package com.xenoamess.badass_model.filter;
+package com.xenoamess.daming_proxy.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xenoamess.badass_model.dto.ErrorResponse;
+import com.xenoamess.daming_proxy.dto.ErrorResponse;
 import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.WebApplicationException;

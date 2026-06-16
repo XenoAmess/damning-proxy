@@ -1,4 +1,4 @@
-package com.xenoamess.badass_model.dto;
+package com.xenoamess.daming_proxy.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -1,4 +1,4 @@
-# badass-model
+# daming-proxy
 
 A high-performance, OpenAI-compatible API server built with **Java 21**, **Quarkus**, and **GraalVM Native Image** support.
 
@@ -33,14 +33,14 @@ The server starts on `http://localhost:12360`.
 
 ```bash
 mvn clean package
-java -jar target/badass-model-1.0-SNAPSHOT-runner.jar
+java -jar target/daming-proxy-1.0-SNAPSHOT-runner.jar
 ```
 
 ### 3. Build Native Image (requires GraalVM)
 
 ```bash
 mvn clean package -Pnative
-./target/badass-model-1.0-SNAPSHOT-runner
+./target/daming-proxy-1.0-SNAPSHOT-runner
 ```
 
 ## API Endpoints
@@ -56,7 +56,7 @@ mvn clean package -Pnative
 All protected endpoints require a Bearer token:
 
 ```
-Authorization: Bearer sk-badass-model-demo-token
+Authorization: Bearer sk-daming-proxy-demo-token
 ```
 
 The token can be customized via the `API_TOKEN` environment variable.
@@ -65,13 +65,13 @@ The token can be customized via the `API_TOKEN` environment variable.
 
 **List models:**
 ```bash
-curl -H "Authorization: Bearer sk-badass-model-demo-token" \
+curl -H "Authorization: Bearer sk-daming-proxy-demo-token" \
   http://localhost:12360/v1/models
 ```
 
 **Chat completions (streaming):**
 ```bash
-curl -N -H "Authorization: Bearer sk-badass-model-demo-token" \
+curl -N -H "Authorization: Bearer sk-daming-proxy-demo-token" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "mock-gpt-4o",
@@ -89,12 +89,12 @@ To use this server as a custom provider in [OpenCode](https://opencode.ai), add 
 {
   "$schema": "https://opencode.ai/config.json",
   "provider": {
-    "badass-model": {
+    "daming-proxy": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "Badass Model (local)",
+      "name": "Daming Proxy (local)",
       "options": {
         "baseURL": "http://localhost:12360/v1",
-        "apiKey": "sk-badass-model-demo-token"
+        "apiKey": "sk-daming-proxy-demo-token"
       },
       "models": {
         "mock-gpt-4o": {
@@ -119,7 +119,7 @@ To use this server as a custom provider in [OpenCode](https://opencode.ai), add 
 | `npm` | The AI SDK package to use. `@ai-sdk/openai-compatible` for OpenAI-compatible providers |
 | `name` | Display name for the provider in the OpenCode UI |
 | `options.baseURL` | Your server URL + `/v1` path |
-| `options.apiKey` | Must match the `API_TOKEN` environment variable (default: `sk-badass-model-demo-token`) |
+| `options.apiKey` | Must match the `API_TOKEN` environment variable (default: `sk-daming-proxy-demo-token`) |
 | `models` | Maps model IDs to their display names. The IDs must match those returned by `GET /v1/models` |
 
 ### Model IDs
@@ -135,7 +135,7 @@ The server exposes these mock models via `/v1/models`:
 After configuring, you can switch to your custom provider in OpenCode:
 
 1. Open the model selector in OpenCode
-2. Choose `badass-model` as the provider
+2. Choose `daming-proxy` as the provider
 3. Select one of the configured models (`mock-gpt-4o`, etc.)
 
 ## Project Structure
@@ -143,7 +143,7 @@ After configuring, you can switch to your custom provider in OpenCode:
 ```
 src/
 ├── main/
-│   ├── java/com/xenoamess/badass_model/
+│   ├── java/com/xenoamess/daming_proxy/
 │   │   ├── Main.java                    # Application entry point
 │   │   ├── api/
 │   │   │   └── OpenAiCompatibleApi.java # REST API endpoints
@@ -183,7 +183,7 @@ quarkus.log.level=INFO
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `API_TOKEN` | `sk-badass-model-demo-token` | Bearer token for API authentication |
+| `API_TOKEN` | `sk-daming-proxy-demo-token` | Bearer token for API authentication |
 
 ## Development
 

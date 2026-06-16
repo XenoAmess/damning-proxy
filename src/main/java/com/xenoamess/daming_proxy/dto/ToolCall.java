@@ -1,20 +1,30 @@
-package com.xenoamess.badass_model.dto;
+package com.xenoamess.daming_proxy.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class Tool {
+public class ToolCall {
 
+    private String id;
     private String type;
     private Function function;
 
-    public Tool() {
+    public ToolCall() {
     }
 
-    public Tool(String type, Function function) {
+    public ToolCall(String id, String type, Function function) {
+        this.id = id;
         this.type = type;
         this.function = function;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getType() {
@@ -36,16 +46,14 @@ public class Tool {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class Function {
         private String name;
-        private String description;
-        private Object parameters;
+        private String arguments;
 
         public Function() {
         }
 
-        public Function(String name, String description, Object parameters) {
+        public Function(String name, String arguments) {
             this.name = name;
-            this.description = description;
-            this.parameters = parameters;
+            this.arguments = arguments;
         }
 
         public String getName() {
@@ -56,20 +64,12 @@ public class Tool {
             this.name = name;
         }
 
-        public String getDescription() {
-            return description;
+        public String getArguments() {
+            return arguments;
         }
 
-        public void setDescription(String description) {
-            this.description = description;
-        }
-
-        public Object getParameters() {
-            return parameters;
-        }
-
-        public void setParameters(Object parameters) {
-            this.parameters = parameters;
+        public void setArguments(String arguments) {
+            this.arguments = arguments;
         }
     }
 }

@@ -1,30 +1,20 @@
-package com.xenoamess.badass_model.dto;
+package com.xenoamess.daming_proxy.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ToolCall {
+public class Tool {
 
-    private String id;
     private String type;
     private Function function;
 
-    public ToolCall() {
+    public Tool() {
     }
 
-    public ToolCall(String id, String type, Function function) {
-        this.id = id;
+    public Tool(String type, Function function) {
         this.type = type;
         this.function = function;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
     }
 
     public String getType() {
@@ -46,14 +36,16 @@ public class ToolCall {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class Function {
         private String name;
-        private String arguments;
+        private String description;
+        private Object parameters;
 
         public Function() {
         }
 
-        public Function(String name, String arguments) {
+        public Function(String name, String description, Object parameters) {
             this.name = name;
-            this.arguments = arguments;
+            this.description = description;
+            this.parameters = parameters;
         }
 
         public String getName() {
@@ -64,12 +56,20 @@ public class ToolCall {
             this.name = name;
         }
 
-        public String getArguments() {
-            return arguments;
+        public String getDescription() {
+            return description;
         }
 
-        public void setArguments(String arguments) {
-            this.arguments = arguments;
+        public void setDescription(String description) {
+            this.description = description;
+        }
+
+        public Object getParameters() {
+            return parameters;
+        }
+
+        public void setParameters(Object parameters) {
+            this.parameters = parameters;
         }
     }
 }

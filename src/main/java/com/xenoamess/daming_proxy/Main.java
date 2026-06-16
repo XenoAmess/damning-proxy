@@ -1,4 +1,4 @@
-package com.xenoamess.badass_model;
+package com.xenoamess.daming_proxy;
 
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.annotations.QuarkusMain;

@@ -1,7 +1,7 @@
-package com.xenoamess.badass_model.api;
+package com.xenoamess.daming_proxy.api;
 
-import com.xenoamess.badass_model.dto.*;
-import com.xenoamess.badass_model.service.MockLlmService;
+import com.xenoamess.daming_proxy.dto.*;
+import com.xenoamess.daming_proxy.service.MockLlmService;
 import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -64,19 +64,19 @@ public class OpenAiCompatibleApi {
                 "mock-gpt-4o",
                 "model",
                 1700000000L,
-                "badass-model"
+                "daming-proxy"
             ),
             new ModelListResponse.Model(
                 "mock-claude-3-sonnet",
                 "model",
                 1700000000L,
-                "badass-model"
+                "daming-proxy"
             ),
             new ModelListResponse.Model(
                 "mock-llama-3-70b",
                 "model",
                 1700000000L,
-                "badass-model"
+                "daming-proxy"
             )
         );
 

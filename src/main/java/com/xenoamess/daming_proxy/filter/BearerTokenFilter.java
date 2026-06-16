@@ -1,4 +1,4 @@
-package com.xenoamess.badass_model.filter;
+package com.xenoamess.daming_proxy.filter;
 
 import io.quarkus.logging.Log;
 import jakarta.ws.rs.container.ContainerRequestContext;
@@ -12,7 +12,7 @@ import java.io.IOException;
 public class BearerTokenFilter implements ContainerRequestFilter {
 
     // You can configure this via application.properties
-    private static final String EXPECTED_TOKEN = System.getenv().getOrDefault("API_TOKEN", "sk-badass-model-demo-token");
+    private static final String EXPECTED_TOKEN = System.getenv().getOrDefault("API_TOKEN", "sk-daming-proxy-demo-token");
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {

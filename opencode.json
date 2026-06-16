@@ -10,12 +10,12 @@
         }
       }
     },
-   "badass-model": {
+   "daming-proxy": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "Badass Model (local)",
+      "name": "Daming Proxy (local)",
       "options": {
         "baseURL": "http://localhost:12360/v1",
-        "apiKey": "sk-badass-model-demo-token"
+        "apiKey": "sk-daming-proxy-demo-token"
       },
       "models": {
         "mock-gpt-4o": {
