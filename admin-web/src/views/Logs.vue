@@ -31,14 +31,22 @@
         </div>
 
         <div class="log-card-body" @click="openFriendly(log.id)">
-          <div class="summary-section">
-            <div class="summary-label">📝 用户输入</div>
-            <div class="summary-text">{{ log._friendly?.userPrompt || '点击加载详情' }}</div>
-          </div>
-          <div class="summary-section">
-            <div class="summary-label">🤖 模型输出</div>
-            <div class="summary-text">{{ log._friendly?.modelOutput || '-' }}</div>
-          </div>
+          <template v-if="isChatLike(log)">
+            <div class="summary-section">
+              <div class="summary-label">📝 用户输入</div>
+              <div class="summary-text">{{ log._friendly?.userPrompt || '点击加载详情' }}</div>
+            </div>
+            <div class="summary-section">
+              <div class="summary-label">🤖 模型输出</div>
+              <div class="summary-text">{{ log._friendly?.modelOutput || '-' }}</div>
+            </div>
+          </template>
+          <template v-else>
+            <div class="summary-section">
+              <div class="summary-label">📦 请求类型</div>
+              <div class="summary-text">{{ log.requestMethod }} {{ log.requestPath }}</div>
+            </div>
+          </template>
 
           <div v-if="log._friendly?.requestPipeline?.length" class="pipeline-row">
             <div class="pipeline-title">请求插件流水线</div>
@@ -95,7 +103,7 @@
         </div>
 
         <el-tabs v-model="activeTab">
-          <el-tab-pane label="对话摘要" name="summary">
+          <el-tab-pane v-if="isChatLike(current)" label="对话摘要" name="summary">
             <div class="chat-flow">
               <div class="chat-bubble user">
                 <div class="chat-role">用户</div>
@@ -222,10 +230,17 @@ async function openFriendly(id) {
     if (log) {
       log._friendly = res.data
     }
+    if (!isChatLike(current.value)) {
+      activeTab.value = 'rawRequest'
+    }
   } catch (e) {
     ElMessage.error('加载详情失败')
     detailVisible.value = false
   }
+}
+
+function isChatLike(log) {
+  return log && log.requestPath && log.requestPath.includes('/chat/completions')
 }
 
 function formatJson(value) {
