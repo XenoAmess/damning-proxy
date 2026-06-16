@@ -24,30 +24,32 @@
           <el-tag :type="row.enabled ? 'success' : 'info'">{{ row.enabled ? '是' : '否' }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="150">
+      <el-table-column label="操作" width="220">
         <template #default="{ row }">
-          <el-button size="small" @click="openDialog(row)">编辑</el-button>
-          <el-button size="small" type="danger" @click="remove(row.id)">删除</el-button>
+          <el-button size="small" @click="openDialog(row, false)">查看</el-button>
+          <el-button size="small" type="primary" @click="copyPlugin(row)">复制</el-button>
+          <el-button v-if="!isSample(row)" size="small" @click="openDialog(row, true)">编辑</el-button>
+          <el-button v-if="!isSample(row)" size="small" type="danger" @click="remove(row.id)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="visible" :title="form.id ? '编辑插件' : '新增插件'" width="700px">
+    <el-dialog v-model="visible" :title="form.id ? (readOnly ? '查看插件' : '编辑插件') : '新增插件'" width="700px">
       <el-form :model="form" label-width="120px">
         <el-form-item label="名称" required>
-          <el-input v-model="form.name" />
+          <el-input v-model="form.name" :disabled="readOnly" />
         </el-form-item>
         <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" :rows="2" />
+          <el-input v-model="form.description" type="textarea" :rows="2" :disabled="readOnly" />
         </el-form-item>
         <el-form-item label="语言" required>
-          <el-radio-group v-model="form.language">
+          <el-radio-group v-model="form.language" :disabled="readOnly">
             <el-radio-button label="GROOVY" />
             <el-radio-button label="JS" />
           </el-radio-group>
         </el-form-item>
         <el-form-item label="执行阶段" required>
-          <el-radio-group v-model="form.executionPhase">
+          <el-radio-group v-model="form.executionPhase" :disabled="readOnly">
             <el-radio-button label="REQUEST" />
             <el-radio-button label="RESPONSE" />
             <el-radio-button label="BOTH" />
@@ -55,15 +57,15 @@
         </el-form-item>
         <el-form-item label="脚本" required>
           <el-input v-model="form.script" type="textarea" :rows="10"
-            placeholder="// context 对象提供 request/response 访问" />
+            placeholder="// context 对象提供 request/response 访问" :disabled="readOnly" />
         </el-form-item>
         <el-form-item label="启用">
-          <el-switch v-model="form.enabled" />
+          <el-switch v-model="form.enabled" :disabled="readOnly" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="visible = false">取消</el-button>
-        <el-button type="primary" @click="save">保存</el-button>
+        <el-button v-if="!readOnly" type="primary" @click="save">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -77,6 +79,7 @@ import { listPlugins, createPlugin, updatePlugin, deletePlugin } from '../api/da
 const plugins = ref([])
 const loading = ref(false)
 const visible = ref(false)
+const readOnly = ref(false)
 const form = ref({
   name: '',
   description: '',
@@ -96,7 +99,8 @@ async function load() {
   }
 }
 
-function openDialog(row) {
+function openDialog(row, editable = true) {
+  readOnly.value = row ? !editable : false
   form.value = row ? { ...row } : {
     name: '',
     description: '',
@@ -108,9 +112,26 @@ function openDialog(row) {
   visible.value = true
 }
 
+function isSample(row) {
+  return row && (row.name === '大明战锤提示词（Groovy）' || row.name === '大明战锤提示词（JS）')
+}
+
+function copyPlugin(row) {
+  form.value = {
+    name: row.name + '（副本）',
+    description: row.description || '',
+    language: row.language,
+    script: row.script,
+    executionPhase: row.executionPhase,
+    enabled: row.enabled,
+  }
+  readOnly.value = false
+  visible.value = true
+}
+
 async function save() {
   try {
-    if (form.value.id) {
+    if (form.value.id && !readOnly.value) {
       await updatePlugin(form.value.id, form.value)
     } else {
       await createPlugin(form.value)
