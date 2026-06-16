@@ -117,7 +117,7 @@
               </div>
               <div class="chat-bubble assistant">
                 <div class="chat-role">模型</div>
-                <pre class="chat-text">{{ current.modelOutput || '-' }}</pre>
+                <div class="chat-text markdown-body" v-html="renderModelOutput(current.modelOutput)"></div>
               </div>
             </div>
           </el-tab-pane>
@@ -202,6 +202,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { marked } from 'marked'
 import { listLogs, getLogFriendly, deleteLog, clearLogs } from '../api/damning.js'
 
 const logs = ref([])
@@ -281,6 +282,29 @@ async function openFriendly(id) {
 
 function isChatLike(log) {
   return log && log.requestPath && log.requestPath.includes('/chat/completions')
+}
+
+function renderModelOutput(text) {
+  if (typeof text !== 'string') return ''
+  const parsed = parseThink(text)
+  let html = marked.parse(parsed.text, { breaks: true, gfm: true })
+  if (parsed.reasoning) {
+    html = `<div class="reasoning-block"><div class="reasoning-label">推理过程</div><pre>${parsed.reasoning}</pre></div>` + html
+  }
+  return html
+}
+
+function parseThink(content) {
+  if (typeof content !== 'string') {
+    return { text: content || '', reasoning: '' }
+  }
+  const match = content.match(/<think>([\s\S]*?)<\/think>/)
+  if (!match) {
+    return { text: content, reasoning: '' }
+  }
+  const reasoning = match[1].trim()
+  const text = content.replace(/<think>[\s\S]*?<\/think>/, '').trim()
+  return { text, reasoning }
 }
 
 function formatJson(value) {
