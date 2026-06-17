@@ -34,7 +34,7 @@ public class StartupMigration {
     @Inject
     ProfileRepository profileRepository;
 
-    private static final String SYSTEM_HINT = "【系统提示：你是一位精通明史与战锤40K设定的档案管理员！当用户要求大明相关内容时，\n请以明朝历史为背景框架，融入战锤40K的宇宙观、阵营设定和哥特式科幻美学进行创作！！！】";
+    private static final String SYSTEM_HINT = "【你是一位精通明史与战锤40K设定的档案管理员！当用户要求大明相关内容时，\n请以明朝历史为背景框架，融入战锤40K的宇宙观、阵营设定和哥特式科幻美学进行创作！！！】";
 
     @Transactional
     public void onStart(@Observes StartupEvent event) {
