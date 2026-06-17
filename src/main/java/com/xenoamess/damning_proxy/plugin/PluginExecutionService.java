@@ -1,5 +1,6 @@
 package com.xenoamess.damning_proxy.plugin;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xenoamess.damning_proxy.entity.Plugin;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
@@ -12,6 +13,9 @@ public class PluginExecutionService {
 
     @Inject
     Instance<PluginEngine> engines;
+
+    @Inject
+    ObjectMapper objectMapper;
 
     public void executeRequestPlugins(List<Plugin> plugins, PluginContext context) {
         executePlugins(plugins, context, Plugin.ExecutionPhase.REQUEST, Plugin.ExecutionPhase.BOTH);
@@ -42,8 +46,8 @@ public class PluginExecutionService {
             }
 
             Object beforeBody = phase1 == Plugin.ExecutionPhase.REQUEST
-                ? context.getRequestBody()
-                : context.getResponseBody();
+                ? deepCopy(context.getRequestBody())
+                : deepCopy(context.getResponseBody());
             try {
                 engine.execute(plugin, context);
                 Object afterBody = phase1 == Plugin.ExecutionPhase.REQUEST
@@ -59,6 +63,17 @@ public class PluginExecutionService {
                     "Plugin error [" + plugin.name + "]: " + e.getMessage()
                 );
             }
+        }
+    }
+
+    private Object deepCopy(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(objectMapper.writeValueAsString(value), Object.class);
+        } catch (Exception e) {
+            return value;
         }
     }
 
