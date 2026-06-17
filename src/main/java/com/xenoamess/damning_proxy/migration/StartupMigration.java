@@ -87,11 +87,43 @@ public class StartupMigration {
         }
     }
 
-    private void ensureSamplePluginsAndGroups() {
-        if (pluginRepository.count() > 0) {
-            return;
+    private Plugin ensureSamplePlugin(Plugin sample) {
+        Plugin plugin = pluginRepository.listAll().stream()
+            .filter(p -> sample.name.equals(p.name))
+            .findFirst()
+            .orElse(null);
+        if (plugin == null) {
+            plugin = new Plugin();
+            plugin.name = sample.name;
         }
+        plugin.description = sample.description;
+        plugin.language = sample.language;
+        plugin.executionPhase = sample.executionPhase;
+        plugin.script = sample.script;
+        plugin.enabled = sample.enabled;
+        return pluginRepository.save(plugin);
+    }
 
+    private PluginGroup ensureSampleGroup(String name, String slug, String description, Plugin plugin) {
+        PluginGroup group = pluginGroupRepository.findBySlug(slug).orElse(null);
+        if (group == null) {
+            group = createGroup(name, slug, description, plugin);
+        } else {
+            group.name = name;
+            group.description = description;
+            group.items.clear();
+            PluginGroupItem item = new PluginGroupItem();
+            item.group = group;
+            item.plugin = plugin;
+            item.orderIndex = 0;
+            item.priority = 0;
+            item.enabled = true;
+            group.items.add(item);
+        }
+        return pluginGroupRepository.save(group);
+    }
+
+    private void ensureSamplePluginsAndGroups() {
         Plugin groovyPlugin = new Plugin();
         groovyPlugin.name = "大明战锤提示词（Groovy）";
         groovyPlugin.description = "在请求阶段将提示追加到 system 消息末尾，若不存在 system 则在开头添加（Groovy 示例）";
@@ -99,7 +131,7 @@ public class StartupMigration {
         groovyPlugin.executionPhase = Plugin.ExecutionPhase.REQUEST;
         groovyPlugin.script = buildGroovyScript();
         groovyPlugin.enabled = true;
-        pluginRepository.save(groovyPlugin);
+        groovyPlugin = ensureSamplePlugin(groovyPlugin);
 
         Plugin jsPlugin = new Plugin();
         jsPlugin.name = "大明战锤提示词（JS）";
@@ -108,13 +140,10 @@ public class StartupMigration {
         jsPlugin.executionPhase = Plugin.ExecutionPhase.REQUEST;
         jsPlugin.script = buildJsScript();
         jsPlugin.enabled = true;
-        pluginRepository.save(jsPlugin);
+        jsPlugin = ensureSamplePlugin(jsPlugin);
 
-        PluginGroup groovyGroup = createGroup("大明战锤提示词（Groovy）", "sample-groovy", "默认的 Groovy 样例插件组", groovyPlugin);
-        pluginGroupRepository.save(groovyGroup);
-
-        PluginGroup jsGroup = createGroup("大明战锤提示词（JS）", "sample-js", "默认的 JavaScript 样例插件组", jsPlugin);
-        pluginGroupRepository.save(jsGroup);
+        ensureSampleGroup("大明战锤提示词（Groovy）", "sample-groovy", "默认的 Groovy 样例插件组", groovyPlugin);
+        ensureSampleGroup("大明战锤提示词（JS）", "sample-js", "默认的 JavaScript 样例插件组", jsPlugin);
     }
 
     private PluginGroup createGroup(String name, String slug, String description, Plugin plugin) {
