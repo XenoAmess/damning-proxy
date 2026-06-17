@@ -51,6 +51,8 @@
         </div>
         <div class="toolbar-right">
           <el-button style="margin-left: 12px" @click="clearCurrentHistory">清空当前</el-button>
+          <el-button style="margin-left: 12px" type="primary" :disabled="selectedMessages.length === 0" @click="generateImage">生成图片</el-button>
+          <el-checkbox v-model="selectMode" style="margin-left: 12px">选择模式</el-checkbox>
         </div>
       </div>
 
@@ -63,8 +65,16 @@
           v-for="(msg, index) in currentMessages"
           :key="index"
           class="message"
-          :class="msg.role"
+          :class="[msg.role, { selected: isSelected(index), selectable: selectMode }]"
+          @click="selectMode && toggleSelect(index)"
         >
+          <el-checkbox
+            v-if="selectMode"
+            v-model="selectedIndices[index]"
+            class="select-checkbox"
+            size="large"
+            @click.stop
+          />
           <div class="message-avatar">
             <el-avatar :size="36" :icon="msg.role === 'user' ? User : ChatLineRound" />
           </div>
@@ -93,6 +103,36 @@
                   推理过程
                 </div>
                 <pre v-if="msg._showReasoning" class="reasoning-content">{{ msg.reasoning || parseThink(msg.content).reasoning }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-show="false" class="image-export-container" ref="imageExportRef">
+          <div class="image-export-header">对话记录</div>
+          <div
+            v-for="(msg, index) in selectedMessages"
+            :key="index"
+            class="image-export-message"
+            :class="msg.role"
+          >
+            <div class="image-export-role">{{ msg.role === 'user' ? '我' : '助手' }}</div>
+            <div class="image-export-content">
+              <div v-if="Array.isArray(msg.content)">
+                <template v-for="(part, pidx) in msg.content" :key="pidx">
+                  <div v-if="part.type === 'text'" v-html="renderMarkdown(parseThink(part.text).text)"></div>
+                  <div v-else-if="part.type === 'image_url'" class="image-export-image">
+                    [图片]
+                  </div>
+                  <div v-else-if="part.type === 'file'" class="image-export-file">
+                    📎 {{ part.file.name }}
+                  </div>
+                </template>
+              </div>
+              <div v-else v-html="renderMarkdown(parseThink(msg.content).text)"></div>
+              <div v-if="msg.reasoning || parseThink(msg.content).reasoning" class="image-export-reasoning">
+                <div class="image-export-reasoning-title">推理过程</div>
+                <pre>{{ msg.reasoning || parseThink(msg.content).reasoning }}</pre>
               </div>
             </div>
           </div>
@@ -167,6 +207,7 @@ import {
 } from '@element-plus/icons-vue'
 import { listInstances, listProfiles } from '../api/damning.js'
 import { chatCompletion, chatCompletionStream, listModels } from '../api/chat.js'
+import html2canvas from 'html2canvas'
 
 const TYPEWRITER_DELAY = 16
 const TYPEWRITER_CHUNK = 2
@@ -174,7 +215,7 @@ const TYPEWRITER_CHUNK = 2
 const STORAGE_KEY = 'damning-proxy-chat-sessions'
 const CONFIG_KEY = 'damning-proxy-chat-config'
 
-  const sessions = ref([])
+const sessions = ref([])
 const currentSessionId = ref('')
 const instances = ref([])
 const profiles = ref([])
@@ -185,6 +226,47 @@ const messagesRef = ref(null)
 const uploadRef = ref(null)
 const typewriterTarget = ref(null)
 const typewriterBuffer = ref('')
+const imageExportRef = ref(null)
+const selectMode = ref(false)
+const selectedIndices = ref([])
+
+const selectedMessages = computed(() => {
+  if (!currentSession.value) return []
+  return currentSession.value.messages.filter((_, index) => selectedIndices.value[index])
+})
+
+watch(currentMessages, () => {
+  selectedIndices.value = currentMessages.value.map(() => false)
+}, { immediate: true })
+
+function toggleSelect(index) {
+  selectedIndices.value[index] = !selectedIndices.value[index]
+}
+
+function isSelected(index) {
+  return !!selectedIndices.value[index]
+}
+
+async function generateImage() {
+  if (selectedMessages.value.length === 0) return
+  await nextTick()
+  try {
+    const canvas = await html2canvas(imageExportRef.value, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+    })
+    const link = document.createElement('a')
+    link.download = `chat-${new Date().toISOString().slice(0, 10)}-${Date.now()}.png`
+    link.href = canvas.toDataURL('image/png')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    ElMessage.success('图片已生成并下载')
+  } catch (e) {
+    ElMessage.error('生成图片失败: ' + (e.message || e))
+  }
+}
 
 const config = ref({
   instanceSlug: '',
