@@ -238,6 +238,21 @@ const imageExportRef = ref(null)
 const selectMode = ref(false)
 const selectedIndices = ref([])
 
+const config = ref({
+  instanceSlug: '',
+  model: '',
+  token: '',
+  stream: true,
+})
+
+const currentSession = computed(() =>
+  sessions.value.find(s => s.id === currentSessionId.value)
+)
+
+const currentMessages = computed(() => {
+  return currentSession.value ? currentSession.value.messages : []
+})
+
 const selectedMessages = computed(() => {
   if (!currentSession.value) return []
   return currentSession.value.messages.filter((_, index) => selectedIndices.value[index])
@@ -295,21 +310,6 @@ async function copyMessage(msg) {
     ElMessage.error('复制失败')
   }
 }
-
-const config = ref({
-  instanceSlug: '',
-  model: '',
-  token: '',
-  stream: true,
-})
-
-const currentSession = computed(() =>
-  sessions.value.find(s => s.id === currentSessionId.value)
-)
-
-const currentMessages = computed(() => {
-  return currentSession.value ? currentSession.value.messages : []
-})
 
 const instanceOptions = computed(() =>
   instances.value.map(i => ({ value: i.slug, label: `${i.name} (${i.slug})` }))
