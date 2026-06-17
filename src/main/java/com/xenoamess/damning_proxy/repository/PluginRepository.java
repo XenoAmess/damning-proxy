@@ -15,5 +15,9 @@ public interface PluginRepository {
 
     long count();
 
+    List<Plugin> findByScript(String script);
+
+    Optional<Plugin> findSampleByScript(String script);
+
     boolean deleteById(Long id);
 }

@@ -88,19 +88,18 @@ public class StartupMigration {
     }
 
     private Plugin ensureSamplePlugin(Plugin sample) {
-        Plugin plugin = pluginRepository.listAll().stream()
-            .filter(p -> sample.name.equals(p.name))
-            .findFirst()
-            .orElse(null);
+        Plugin plugin = pluginRepository.findSampleByScript(sample.script).orElse(null);
         if (plugin == null) {
             plugin = new Plugin();
-            plugin.name = sample.name;
+            plugin.sample = true;
         }
+        plugin.name = sample.name;
         plugin.description = sample.description;
         plugin.language = sample.language;
         plugin.executionPhase = sample.executionPhase;
         plugin.script = sample.script;
         plugin.enabled = sample.enabled;
+        plugin.sample = true;
         return pluginRepository.save(plugin);
     }
 

@@ -14,7 +14,8 @@
         <el-button>导入插件</el-button>
       </el-upload>
     </div>
-    <el-table :data="plugins" v-loading="loading">
+    <el-table :data="plugins" v-loading="loading" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="name" label="名称" />
       <el-table-column prop="language" label="语言" width="90" />
@@ -74,13 +75,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listPlugins, createPlugin, updatePlugin, deletePlugin } from '../api/damning.js'
+import { listPlugins, createPlugin, updatePlugin, deletePlugin, exportPlugins as exportPluginsApi, importPlugins } from '../api/damning.js'
 import CodeEditor from '../components/CodeEditor.vue'
 
 const plugins = ref([])
 const loading = ref(false)
 const visible = ref(false)
 const readOnly = ref(false)
+const selectedIds = ref([])
 const form = ref({
   name: '',
   description: '',
@@ -114,7 +116,11 @@ function openDialog(row, editable = true) {
 }
 
 function isSample(row) {
-  return row && (row.name === '大明战锤提示词（Groovy）' || row.name === '大明战锤提示词（JS）')
+  return row && row.sample === true
+}
+
+function handleSelectionChange(rows) {
+  selectedIds.value = rows.map(r => r.id)
 }
 
 function copyPlugin(row) {
@@ -158,25 +164,23 @@ async function remove(id) {
   }
 }
 
-function exportPlugins() {
-  const data = plugins.value.map(p => ({
-    name: p.name,
-    description: p.description,
-    language: p.language,
-    executionPhase: p.executionPhase,
-    script: p.script,
-    enabled: p.enabled,
-  }))
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `plugins-${new Date().toISOString().slice(0, 10)}.json`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-  ElMessage.success('导出成功')
+async function exportPlugins() {
+  try {
+    const res = await exportPluginsApi(selectedIds.value)
+    const data = res.data
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `plugins-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (e) {
+    ElMessage.error(e.response?.data || '导出失败')
+  }
 }
 
 async function handleImport(file) {
@@ -189,18 +193,8 @@ async function handleImport(file) {
       ElMessage.error('文件格式错误：应为插件数组')
       return
     }
-    for (const item of list) {
-      const payload = {
-        name: item.name,
-        description: item.description || '',
-        language: item.language || 'GROOVY',
-        executionPhase: item.executionPhase || 'BOTH',
-        script: item.script || '',
-        enabled: item.enabled !== false,
-      }
-      await createPlugin(payload)
-    }
-    ElMessage.success('导入成功')
+    const res = await importPlugins(list)
+    ElMessage.success(`导入成功：新增 ${res.data.imported} 个，跳过 ${res.data.skipped} 个`)
     await load()
   } catch (e) {
     ElMessage.error('导入失败: ' + (e.message || e))

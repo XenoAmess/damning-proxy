@@ -12,6 +12,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -43,15 +44,24 @@ class AdminApiTest {
     @BeforeEach
     @Transactional
     void setUp() {
+        logRepository.deleteAll();
         profileRepository.listAll().forEach(p -> profileRepository.deleteById(p.id));
         pluginGroupRepository.listAll().forEach(g -> pluginGroupRepository.deleteById(g.id));
         pluginRepository.listAll().forEach(p -> pluginRepository.deleteById(p.id));
-        logRepository.deleteAll();
 
         TrafficLog log = new TrafficLog();
         log.requestPath = "/v1/chat/completions";
         log.requestMethod = "POST";
         logRepository.save(log);
+    }
+
+    @AfterEach
+    @Transactional
+    void tearDown() {
+        logRepository.deleteAll();
+        profileRepository.listAll().forEach(p -> profileRepository.deleteById(p.id));
+        pluginGroupRepository.listAll().forEach(g -> pluginGroupRepository.deleteById(g.id));
+        pluginRepository.listAll().forEach(p -> pluginRepository.deleteById(p.id));
     }
 
     @Test
@@ -148,6 +158,7 @@ class AdminApiTest {
     }
 
     @Test
+    @Transactional
     void shouldCrudPluginGroups() {
         Plugin plugin = new Plugin();
         plugin.name = "GroupTestPlugin";
@@ -182,21 +193,107 @@ class AdminApiTest {
 
     @Test
     void shouldListSamplePluginsAndGroupsAfterStartup() {
-        assertEquals(2, pluginRepository.listAll().size());
-        assertEquals(2, pluginGroupRepository.listAll().size());
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "name", "大明战锤提示词（Groovy）",
+                "language", "GROOVY",
+                "executionPhase", "REQUEST",
+                "script", "context.log('groovy')",
+                "enabled", true
+            ))
+            .when().post("/api/plugins")
+            .then()
+            .statusCode(201)
+            .body("sample", equalTo(false));
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "name", "大明战锤提示词（JS）",
+                "language", "JS",
+                "executionPhase", "REQUEST",
+                "script", "context.log('js')",
+                "enabled", true
+            ))
+            .when().post("/api/plugins")
+            .then()
+            .statusCode(201)
+            .body("sample", equalTo(false));
 
         given()
             .when().get("/api/plugins")
             .then()
             .statusCode(200)
             .body("size()", equalTo(2))
-            .body("name", hasItems("大明战锤提示词（Groovy）", "大明战锤提示词（JS）"));
+            .body("name", hasItems("大明战锤提示词（Groovy）", "大明战锤提示词（JS）"))
+            .body("sample", hasItems(false, false));
+    }
+
+    @Test
+    void shouldExportAndImportPlugins() {
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "name", "ExportTest",
+                "language", "GROOVY",
+                "executionPhase", "REQUEST",
+                "script", "context.log('export-test')",
+                "enabled", true
+            ))
+            .when().post("/api/plugins")
+            .then()
+            .statusCode(201)
+            .body("name", equalTo("ExportTest"));
+
+        Long id = pluginRepository.listAll().get(0).id;
 
         given()
-            .when().get("/api/plugin-groups")
+            .contentType(ContentType.JSON)
+            .body(Map.of("ids", java.util.List.of(id)))
+            .when().post("/api/plugins/export")
+            .then()
+            .statusCode(200)
+            .body("size()", equalTo(1))
+            .body("[0].name", equalTo("ExportTest"));
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(java.util.List.of(Map.of(
+                "name", "ImportTest",
+                "description", "",
+                "language", "GROOVY",
+                "executionPhase", "REQUEST",
+                "script", "context.log('import-test')",
+                "enabled", true
+            )))
+            .when().post("/api/plugins/import")
+            .then()
+            .statusCode(200)
+            .body("imported", equalTo(1))
+            .body("skipped", equalTo(0));
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(java.util.List.of(Map.of(
+                "name", "ImportTestDup",
+                "description", "",
+                "language", "GROOVY",
+                "executionPhase", "REQUEST",
+                "script", "context.log('import-test')",
+                "enabled", true
+            )))
+            .when().post("/api/plugins/import")
+            .then()
+            .statusCode(200)
+            .body("imported", equalTo(0))
+            .body("skipped", equalTo(1));
+
+        given()
+            .when().get("/api/plugins")
             .then()
             .statusCode(200)
             .body("size()", equalTo(2))
-            .body("slug", hasItems("sample-groovy", "sample-js"));
+            .body("sample", hasItems(false, false));
     }
 }

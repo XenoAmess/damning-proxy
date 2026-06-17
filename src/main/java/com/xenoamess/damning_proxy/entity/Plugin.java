@@ -35,6 +35,9 @@ public class Plugin extends PanacheEntityBase {
     @Column(nullable = false)
     public boolean enabled = true;
 
+    @Column(nullable = false)
+    public boolean sample = false;
+
     @CreationTimestamp
     @Column(name = "created_at")
     public LocalDateTime createdAt;

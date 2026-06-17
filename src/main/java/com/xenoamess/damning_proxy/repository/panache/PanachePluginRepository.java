@@ -26,6 +26,7 @@ public class PanachePluginRepository implements PluginRepository {
                 existing.script = plugin.script;
                 existing.executionPhase = plugin.executionPhase;
                 existing.enabled = plugin.enabled;
+                existing.sample = plugin.sample;
                 existing.persistAndFlush();
             }
         }
@@ -45,6 +46,16 @@ public class PanachePluginRepository implements PluginRepository {
     @Override
     public long count() {
         return Plugin.count();
+    }
+
+    @Override
+    public List<Plugin> findByScript(String script) {
+        return Plugin.find("script", script).list();
+    }
+
+    @Override
+    public Optional<Plugin> findSampleByScript(String script) {
+        return Plugin.find("sample = true and script = ?1", script).firstResultOptional();
     }
 
     @Override

@@ -36,6 +36,14 @@ export function deletePlugin(id) {
   return api.delete(`/plugins/${id}`)
 }
 
+export function exportPlugins(ids) {
+  return api.post('/plugins/export', { ids })
+}
+
+export function importPlugins(data) {
+  return api.post('/plugins/import', data)
+}
+
 export function listPluginGroups() {
   return api.get('/plugin-groups')
 }
