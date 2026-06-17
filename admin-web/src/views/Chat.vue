@@ -82,6 +82,14 @@
             <div class="message-header">
               <span class="role-name">{{ msg.role === 'user' ? '我' : '助手' }}</span>
               <span class="message-time" v-if="msg.time">{{ formatTime(msg.time) }}</span>
+              <el-button
+                link
+                size="small"
+                class="copy-btn"
+                :icon="CopyDocument"
+                @click.stop="copyMessage(msg)"
+                title="复制"
+              />
             </div>
             <div class="message-body">
               <div v-if="Array.isArray(msg.content)">
@@ -203,7 +211,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { marked } from 'marked'
 import {
   Plus, Delete, User, ChatLineRound, Paperclip, Promotion,
-  ArrowDown, ArrowRight,
+  ArrowDown, ArrowRight, CopyDocument,
 } from '@element-plus/icons-vue'
 import { listInstances, listProfiles } from '../api/damning.js'
 import { chatCompletion, chatCompletionStream, listModels } from '../api/chat.js'
@@ -265,6 +273,26 @@ async function generateImage() {
     ElMessage.success('图片已生成并下载')
   } catch (e) {
     ElMessage.error('生成图片失败: ' + (e.message || e))
+  }
+}
+
+function extractTextContent(msg) {
+  if (!msg || msg.content == null) return ''
+  if (Array.isArray(msg.content)) {
+    return msg.content
+      .filter(part => part.type === 'text')
+      .map(part => part.text)
+      .join('\n')
+  }
+  return msg.content
+}
+
+async function copyMessage(msg) {
+  try {
+    await navigator.clipboard.writeText(extractTextContent(msg))
+    ElMessage.success('复制成功')
+  } catch (e) {
+    ElMessage.error('复制失败')
   }
 }
 
@@ -737,6 +765,25 @@ function parseThink(content) {
   gap: 8px;
   margin-bottom: 6px;
   font-size: 13px;
+}
+
+.message.user .message-header {
+  flex-direction: row-reverse;
+}
+
+.copy-btn {
+  margin-left: auto;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.copy-btn:hover {
+  opacity: 1;
+}
+
+.message.user .copy-btn {
+  margin-left: 0;
+  margin-right: auto;
 }
 
 .role-name {
