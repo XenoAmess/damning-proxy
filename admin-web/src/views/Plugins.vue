@@ -56,8 +56,8 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="脚本" required>
-          <el-input v-model="form.script" type="textarea" :rows="10"
-            placeholder="// context 对象提供 request/response 访问" :disabled="readOnly" />
+          <CodeEditor v-model="form.script" :language="form.language" :read-only="readOnly"
+            placeholder="// context 对象提供 request/response 访问" />
         </el-form-item>
         <el-form-item label="启用">
           <el-switch v-model="form.enabled" :disabled="readOnly" />
@@ -75,6 +75,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listPlugins, createPlugin, updatePlugin, deletePlugin } from '../api/damning.js'
+import CodeEditor from '../components/CodeEditor.vue'
 
 const plugins = ref([])
 const loading = ref(false)
