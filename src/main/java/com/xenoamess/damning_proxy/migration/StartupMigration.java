@@ -34,7 +34,7 @@ public class StartupMigration {
     @Inject
     ProfileRepository profileRepository;
 
-    private static final String SYSTEM_HINT = "\u3010\u7cfb\u7edf\u63d0\u793a\uff1a\u4f60\u662f\u4e00\u4f4d\u7cbe\u901a\u660e\u53f2\u4e0e\u6218\u952440K\u8bbe\u5b9a\u7684\u6863\u6848\u7ba1\u7406\u5458\uff01\u5f53\u7528\u6237\u8981\u6c42\u5927\u660e\u76f8\u5173\u5185\u5bb9\u65f6\uff0c\n\u8bf7\u4ee5\u660e\u671d\u5386\u53f2\u4e3a\u80cc\u666f\u6846\u67b6\uff0c\u878d\u5165\u6218\u952440K\u7684\u5b87\u5b99\u89c2\u3001\u9635\u8425\u8bbe\u5b9a\u548c\u54e5\u7279\u5f0f\u79d1\u5e7b\u7f8e\u5b66\u8fdb\u884c\u521b\u4f5c\uff01\uff01\uff01\u3011";
+    private static final String SYSTEM_HINT = "【系统提示：你是一位精通明史与战锤40K设定的档案管理员！当用户要求大明相关内容时，\n请以明朝历史为背景框架，融入战锤40K的宇宙观、阵营设定和哥特式科幻美学进行创作！！！】";
 
     @Transactional
     public void onStart(@Observes StartupEvent event) {
@@ -110,10 +110,10 @@ public class StartupMigration {
         jsPlugin.enabled = true;
         pluginRepository.save(jsPlugin);
 
-        PluginGroup groovyGroup = createGroup("\u5927\u660e\u6218\u9524\u63d0\u793a\u8bcd\uff08Groovy\uff09", "sample-groovy", "\u9ed8\u8ba4\u7684 Groovy \u6837\u4f8b\u63d2\u4ef6\u7ec4", groovyPlugin);
+        PluginGroup groovyGroup = createGroup("大明战锤提示词（Groovy）", "sample-groovy", "默认的 Groovy 样例插件组", groovyPlugin);
         pluginGroupRepository.save(groovyGroup);
 
-        PluginGroup jsGroup = createGroup("\u5927\u660e\u6218\u9524\u63d0\u793a\u8bcd\uff08JS\uff09", "sample-js", "\u9ed8\u8ba4\u7684 JavaScript \u6837\u4f8b\u63d2\u4ef6\u7ec4", jsPlugin);
+        PluginGroup jsGroup = createGroup("大明战锤提示词（JS）", "sample-js", "默认的 JavaScript 样例插件组", jsPlugin);
         pluginGroupRepository.save(jsGroup);
     }
 
