@@ -105,21 +105,8 @@ public class StartupMigration {
     }
 
     private PluginGroup ensureSampleGroup(String name, String slug, String description, Plugin plugin) {
-        PluginGroup group = pluginGroupRepository.findBySlug(slug).orElse(null);
-        if (group == null) {
-            group = createGroup(name, slug, description, plugin);
-        } else {
-            group.name = name;
-            group.description = description;
-            group.items.clear();
-            PluginGroupItem item = new PluginGroupItem();
-            item.group = group;
-            item.plugin = plugin;
-            item.orderIndex = 0;
-            item.priority = 0;
-            item.enabled = true;
-            group.items.add(item);
-        }
+        pluginGroupRepository.findBySlug(slug).ifPresent(g -> pluginGroupRepository.deleteById(g.id));
+        PluginGroup group = createGroup(name, slug, description, plugin);
         return pluginGroupRepository.save(group);
     }
 
