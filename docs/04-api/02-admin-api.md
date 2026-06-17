@@ -1,0 +1,191 @@
+# 02 管理后台端点
+
+> 最后更新：2026-06-17  
+> 对应源码版本：当前工作区
+
+管理后台端点前缀为 `/api`，所有接口均返回 JSON，当前无认证。
+
+代码位置：`src/main/java/com/xenoamess/damning_proxy/api/admin/`
+
+---
+
+## 上游配置 /api/profiles
+
+`src/main/java/com/xenoamess/damning_proxy/api/admin/ProfileAdminApi.java:16`
+
+| Method | Path | 说明 |
+|---|---|---|
+| `GET` | `/api/profiles` | 列出所有 Profile |
+| `GET` | `/api/profiles/{id}` | 获取单个 Profile |
+| `POST` | `/api/profiles` | 创建 Profile |
+| `PUT` | `/api/profiles/{id}` | 更新 Profile |
+| `DELETE` | `/api/profiles/{id}` | 删除 Profile |
+
+### 创建/更新请求体示例
+
+```json
+{
+  "name": "OpenAI",
+  "slug": "openai",
+  "baseUrl": "https://api.openai.com/v1",
+  "bearerToken": "sk-xxxxxxxx",
+  "customHeaders": "{\"X-Project\": \"demo\"}",
+  "defaultModel": "gpt-4",
+  "timeoutMs": 30000,
+  "enabled": true
+}
+```
+
+- `slug` 必填且唯一。
+- `customHeaders` 为 JSON 字符串。
+
+---
+
+## 实例 /api/instances
+
+`src/main/java/com/xenoamess/damning_proxy/api/admin/InstanceAdminApi.java:19`
+
+| Method | Path | 说明 |
+|---|---|---|
+| `GET` | `/api/instances` | 列出所有 Instance |
+| `GET` | `/api/instances/{id}` | 获取单个 Instance |
+| `POST` | `/api/instances` | 创建 Instance |
+| `PUT` | `/api/instances/{id}` | 更新 Instance |
+| `DELETE` | `/api/instances/{id}` | 删除 Instance |
+
+### 创建/更新请求体示例
+
+```json
+{
+  "name": "My Instance",
+  "slug": "my-instance",
+  "profileId": 1,
+  "pluginGroupId": 1,
+  "defaultModel": "gpt-4",
+  "enabled": true
+}
+```
+
+- `slug` 必填且唯一。
+- `profileId` 和 `pluginGroupId` 必须存在。
+
+---
+
+## 插件 /api/plugins
+
+`src/main/java/com/xenoamess/damning_proxy/api/admin/PluginAdminApi.java:16`
+
+| Method | Path | 说明 |
+|---|---|---|
+| `GET` | `/api/plugins` | 列出所有 Plugin |
+| `GET` | `/api/plugins/{id}` | 获取单个 Plugin |
+| `POST` | `/api/plugins` | 创建 Plugin |
+| `PUT` | `/api/plugins/{id}` | 更新 Plugin |
+| `DELETE` | `/api/plugins/{id}` | 删除 Plugin |
+
+### 创建/更新请求体示例
+
+```json
+{
+  "name": "Model Mapper",
+  "description": "Rewrite model name",
+  "language": "JS",
+  "script": "var body = context.getRequestBody(); body.model = 'gpt-4o'; context.setRequestBody(body);",
+  "executionPhase": "REQUEST",
+  "enabled": true
+}
+```
+
+- `language` 取值：`GROOVY` 或 `JS`。
+- `executionPhase` 取值：`REQUEST`、`RESPONSE`、`BOTH`。
+- `script` 最大长度 10000。
+
+---
+
+## 插件组 /api/plugin-groups
+
+`src/main/java/com/xenoamess/damning_proxy/api/admin/PluginGroupAdminApi.java:21`
+
+| Method | Path | 说明 |
+|---|---|---|
+| `GET` | `/api/plugin-groups` | 列出所有 PluginGroup |
+| `GET` | `/api/plugin-groups/{id}` | 获取单个 PluginGroup |
+| `POST` | `/api/plugin-groups` | 创建 PluginGroup |
+| `PUT` | `/api/plugin-groups/{id}` | 更新 PluginGroup |
+| `DELETE` | `/api/plugin-groups/{id}` | 删除 PluginGroup |
+
+### 创建/更新请求体示例
+
+```json
+{
+  "name": "Default Group",
+  "slug": "default",
+  "description": "default group",
+  "enabled": true,
+  "items": [
+    {
+      "pluginId": 1,
+      "orderIndex": 0,
+      "priority": 0,
+      "enabled": true
+    }
+  ]
+}
+```
+
+- `slug` 必填且唯一。
+- `items` 中每个 item 引用一个 `pluginId`。
+- 排序规则：`orderIndex` → `priority` → `id`。
+
+---
+
+## 日志 /api/logs
+
+`src/main/java/com/xenoamess/damning_proxy/api/admin/LogAdminApi.java:23`
+
+| Method | Path | 说明 |
+|---|---|---|
+| `GET` | `/api/logs?limit=100&profileId=&instanceId=` | 列出日志 |
+| `GET` | `/api/logs/{id}` | 获取原始日志 |
+| `GET` | `/api/logs/{id}/friendly` | 获取友好格式日志 |
+| `DELETE` | `/api/logs/{id}` | 删除单条日志 |
+| `POST` | `/api/logs/clear` | 清空所有日志 |
+
+### 查询参数
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| `limit` | int | 最大返回条数，默认 100，最大 1000 |
+| `profileId` | Long | 按上游 Profile 筛选 |
+| `instanceId` | Long | 按 Instance 筛选 |
+
+### 友好日志结构
+
+`src/main/java/com/xenoamess/damning_proxy/dto/TrafficLogFriendlyDto.java`
+
+友好日志额外提取：
+
+- `userPrompt`：用户提示词
+- `modelOutput`：模型输出
+- `model`：请求模型名
+- `requestPipeline`：请求阶段插件执行快照
+- `responsePipeline`：响应阶段插件执行快照
+
+---
+
+## 状态码
+
+| 状态码 | 说明 |
+|---|---|
+| 200 | GET/PUT 成功 |
+| 201 | POST 创建成功 |
+| 204 | DELETE 成功 |
+| 400 | 参数错误（如缺少 slug、profileId 不存在） |
+| 404 | 资源不存在 |
+| 409 | slug 冲突 |
+
+---
+
+## 前端 API 封装
+
+前端统一封装在 `admin-web/src/api/damning.js`。
