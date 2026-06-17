@@ -94,7 +94,7 @@ public class StartupMigration {
 
         Plugin groovyPlugin = new Plugin();
         groovyPlugin.name = "大明战锤提示词（Groovy）";
-        groovyPlugin.description = "在请求阶段给用户 prompt 前后追加系统提示（Groovy 示例）";
+        groovyPlugin.description = "在请求阶段将提示追加到 system 消息末尾，若不存在 system 则在开头添加（Groovy 示例）";
         groovyPlugin.language = Plugin.Language.GROOVY;
         groovyPlugin.executionPhase = Plugin.ExecutionPhase.REQUEST;
         groovyPlugin.script = buildGroovyScript();
@@ -103,7 +103,7 @@ public class StartupMigration {
 
         Plugin jsPlugin = new Plugin();
         jsPlugin.name = "大明战锤提示词（JS）";
-        jsPlugin.description = "在请求阶段给用户 prompt 前后追加系统提示（JavaScript 示例）";
+        jsPlugin.description = "在请求阶段将提示追加到 system 消息末尾，若不存在 system 则在开头添加（JavaScript 示例）";
         jsPlugin.language = Plugin.Language.JS;
         jsPlugin.executionPhase = Plugin.ExecutionPhase.REQUEST;
         jsPlugin.script = buildJsScript();
@@ -139,23 +139,35 @@ public class StartupMigration {
             "if (body == null) return\n" +
             "def messages = body.get(\"messages\")\n" +
             "if (!(messages instanceof List)) return\n" +
+            "def systemMessage = null\n" +
             "for (def m : messages) {\n" +
             "    if (m == null) continue\n" +
-            "    def role = m.get(\"role\")\n" +
-            "    def content = m.get(\"content\")\n" +
-            "    if (\"user\".equals(role) && content instanceof String) {\n" +
-            "        m.put(\"content\", \"" + escapeJavaString(SYSTEM_HINT) + "\\n\" + content + \"\\n" + escapeJavaString(SYSTEM_HINT) + "\")\n" +
+            "    if (\"system\".equals(m.get(\"role\"))) {\n" +
+            "        systemMessage = m\n" +
+            "        break\n" +
             "    }\n" +
+            "}\n" +
+            "if (systemMessage != null) {\n" +
+            "    def content = systemMessage.get(\"content\")\n" +
+            "    if (content instanceof String) {\n" +
+            "        systemMessage.put(\"content\", content + \"\\n\" + \"" + escapeJavaString(SYSTEM_HINT) + "\")\n" +
+            "    }\n" +
+            "} else {\n" +
+            "    def newSystem = new LinkedHashMap()\n" +
+            "    newSystem.put(\"role\", \"system\")\n" +
+            "    newSystem.put(\"content\", \"" + escapeJavaString(SYSTEM_HINT) + "\")\n" +
+            "    messages.add(0, newSystem)\n" +
             "}\n";
     }
 
     private String buildJsScript() {
         return "const body = context.getRequestBody();\n" +
             "if (!body || !Array.isArray(body.messages)) return;\n" +
-            "for (const m of body.messages) {\n" +
-            "    if (m && m.role === 'user' && typeof m.content === 'string') {\n" +
-            "        m.content = \"" + escapeJavaString(SYSTEM_HINT) + "\\n\" + m.content + \"\\n" + escapeJavaString(SYSTEM_HINT) + "\";\n" +
-            "    }\n" +
+            "const systemMessage = body.messages.find(m => m && m.role === 'system');\n" +
+            "if (systemMessage && typeof systemMessage.content === 'string') {\n" +
+            "    systemMessage.content += \"\\n\" + \"" + escapeJavaString(SYSTEM_HINT) + "\";\n" +
+            "} else {\n" +
+            "    body.messages.unshift({ role: 'system', content: \"" + escapeJavaString(SYSTEM_HINT) + "\" });\n" +
             "}\n";
     }
 
