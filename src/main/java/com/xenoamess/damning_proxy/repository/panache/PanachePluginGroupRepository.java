@@ -38,8 +38,9 @@ public class PanachePluginGroupRepository implements PluginGroupRepository {
         existing.description = group.description;
         existing.enabled = group.enabled;
 
+        List<PluginGroupItem> newItems = new ArrayList<>(group.items);
         existing.items.clear();
-        for (PluginGroupItem item : group.items) {
+        for (PluginGroupItem item : newItems) {
             PluginGroupItem managed = new PluginGroupItem();
             managed.group = existing;
             managed.plugin = em.getReference(Plugin.class, item.plugin.id);
