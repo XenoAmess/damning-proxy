@@ -2,8 +2,20 @@
   <div>
     <div class="toolbar">
       <el-button type="primary" @click="openDialog()">新增配置</el-button>
+      <el-button @click="exportProfiles">导出配置</el-button>
+      <el-upload
+        action="#"
+        :auto-upload="false"
+        :show-file-list="false"
+        :on-change="handleImport"
+        accept=".json"
+        class="upload-inline"
+      >
+        <el-button>导入配置</el-button>
+      </el-upload>
     </div>
-    <el-table :data="profiles" v-loading="loading">
+    <el-table :data="profiles" v-loading="loading" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="name" label="名称" />
       <el-table-column prop="slug" label="标识" />
@@ -61,11 +73,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listProfiles, createProfile, updateProfile, deleteProfile } from '../api/damning.js'
+import { listProfiles, createProfile, updateProfile, deleteProfile, exportProfiles as exportProfilesApi, importProfiles } from '../api/damning.js'
 
 const profiles = ref([])
 const loading = ref(false)
 const visible = ref(false)
+const selectedIds = ref([])
 const form = ref({
   name: '',
   slug: '',
@@ -85,6 +98,10 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+function handleSelectionChange(rows) {
+  selectedIds.value = rows.map(r => r.id)
 }
 
 function openDialog(row) {
@@ -129,11 +146,54 @@ async function remove(id) {
   }
 }
 
+async function exportProfiles() {
+  try {
+    const res = await exportProfilesApi(selectedIds.value)
+    const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `profiles-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (e) {
+    ElMessage.error(e.response?.data || '导出失败')
+  }
+}
+
+async function handleImport(file) {
+  const raw = file.raw
+  if (!raw) return
+  try {
+    const text = await raw.text()
+    const list = JSON.parse(text)
+    if (!Array.isArray(list)) {
+      ElMessage.error('文件格式错误：应为配置数组')
+      return
+    }
+    const res = await importProfiles(list)
+    ElMessage.success(`导入成功：新增 ${res.data.imported} 个，跳过 ${res.data.skipped} 个`)
+    await load()
+  } catch (e) {
+    ElMessage.error('导入失败: ' + (e.message || e))
+  }
+}
+
 onMounted(load)
 </script>
 
 <style scoped>
 .toolbar {
   margin-bottom: 16px;
+}
+.upload-inline {
+  display: inline-block;
+  margin-left: 12px;
+}
+.upload-inline :deep(.el-upload) {
+  display: inline-block;
 }
 </style>

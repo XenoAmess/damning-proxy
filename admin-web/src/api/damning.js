@@ -20,6 +20,14 @@ export function deleteProfile(id) {
   return api.delete(`/profiles/${id}`)
 }
 
+export function exportProfiles(ids) {
+  return api.post('/profiles/export', { ids })
+}
+
+export function importProfiles(data) {
+  return api.post('/profiles/import', data)
+}
+
 export function listPlugins() {
   return api.get('/plugins')
 }
