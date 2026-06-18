@@ -52,6 +52,8 @@
 | `POST` | `/api/instances` | 创建 Instance |
 | `PUT` | `/api/instances/{id}` | 更新 Instance |
 | `DELETE` | `/api/instances/{id}` | 删除 Instance |
+| `POST` | `/api/instances/export` | 导出 Instance（按 `ids` 或全部） |
+| `POST` | `/api/instances/import` | 导入 Instance |
 
 ### 创建/更新请求体示例
 
@@ -69,6 +71,49 @@
 - `slug` 必填且唯一。
 - `profileId` 和 `pluginGroupId` 必须存在。
 
+### 导出/导入示例
+
+`POST /api/instances/export`
+
+```json
+{
+  "ids": [1, 2]
+}
+```
+
+返回：
+
+```json
+[
+  {
+    "name": "My Instance",
+    "slug": "my-instance",
+    "profileSlug": "openai",
+    "pluginGroupSlug": "default",
+    "defaultModel": "gpt-4",
+    "enabled": true
+  }
+]
+```
+
+`POST /api/instances/import`
+
+```json
+[
+  {
+    "name": "My Instance",
+    "slug": "my-instance",
+    "profileSlug": "openai",
+    "pluginGroupSlug": "default",
+    "defaultModel": "gpt-4",
+    "enabled": true
+  }
+]
+```
+
+- 导入时通过 `profileSlug` 和 `pluginGroupSlug` 解析为本地 ID。
+- `slug` 已存在则跳过，返回 `{ "imported": n, "skipped": n }`。
+
 ---
 
 ## 插件 /api/plugins
@@ -82,6 +127,8 @@
 | `POST` | `/api/plugins` | 创建 Plugin |
 | `PUT` | `/api/plugins/{id}` | 更新 Plugin |
 | `DELETE` | `/api/plugins/{id}` | 删除 Plugin |
+| `POST` | `/api/plugins/export` | 导出 Plugin（按 `ids` 或全部） |
+| `POST` | `/api/plugins/import` | 导入 Plugin |
 
 ### 创建/更新请求体示例
 
@@ -100,6 +147,35 @@
 - `executionPhase` 取值：`REQUEST`、`RESPONSE`、`BOTH`。
 - `script` 最大长度 10000。
 
+### 导出/导入示例
+
+`POST /api/plugins/export`
+
+```json
+{
+  "ids": [1, 2]
+}
+```
+
+返回插件数组。
+
+`POST /api/plugins/import`
+
+```json
+[
+  {
+    "name": "Model Mapper",
+    "description": "",
+    "language": "JS",
+    "executionPhase": "REQUEST",
+    "script": "...",
+    "enabled": true
+  }
+]
+```
+
+- 按 `script` 去重，已存在则跳过，返回 `{ "imported": n, "skipped": n }`。
+
 ---
 
 ## 插件组 /api/plugin-groups
@@ -113,6 +189,8 @@
 | `POST` | `/api/plugin-groups` | 创建 PluginGroup |
 | `PUT` | `/api/plugin-groups/{id}` | 更新 PluginGroup |
 | `DELETE` | `/api/plugin-groups/{id}` | 删除 PluginGroup |
+| `POST` | `/api/plugin-groups/export` | 导出 PluginGroup（按 `ids` 或全部） |
+| `POST` | `/api/plugin-groups/import` | 导入 PluginGroup |
 
 ### 创建/更新请求体示例
 
@@ -136,6 +214,62 @@
 - `slug` 必填且唯一。
 - `items` 中每个 item 引用一个 `pluginId`。
 - 排序规则：`orderIndex` → `priority` → `id`。
+
+### 导出/导入示例
+
+`POST /api/plugin-groups/export`
+
+```json
+{
+  "ids": [1, 2]
+}
+```
+
+返回：
+
+```json
+[
+  {
+    "name": "Default Group",
+    "slug": "default",
+    "description": "default group",
+    "enabled": true,
+    "items": [
+      {
+        "pluginScript": "context.log('demo')",
+        "orderIndex": 0,
+        "priority": 0,
+        "enabled": true
+      }
+    ]
+  }
+]
+```
+
+`POST /api/plugin-groups/import`
+
+```json
+[
+  {
+    "name": "Default Group",
+    "slug": "default",
+    "description": "default group",
+    "enabled": true,
+    "items": [
+      {
+        "pluginScript": "context.log('demo')",
+        "orderIndex": 0,
+        "priority": 0,
+        "enabled": true
+      }
+    ]
+  }
+]
+```
+
+- 导出时使用 `pluginScript` 代替本地 `pluginId`，便于跨环境迁移。
+- 导入时按 `pluginScript` 查找本地插件，找不到的 item 会被忽略。
+- `slug` 已存在则跳过，返回 `{ "imported": n, "skipped": n }`。
 
 ---
 

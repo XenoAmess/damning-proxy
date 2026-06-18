@@ -12,6 +12,7 @@ import jakarta.ws.rs.core.Response;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Path("/api/instances")
 @Produces(MediaType.APPLICATION_JSON)
@@ -89,6 +90,76 @@ public class InstanceAdminApi {
     public Response delete(@PathParam("id") Long id) {
         boolean deleted = instanceRepository.deleteById(id);
         return deleted ? Response.noContent().build() : Response.status(Response.Status.NOT_FOUND).build();
+    }
+
+    @POST
+    @Path("/export")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response export(ExportRequest request) {
+        List<ProxyInstance> instances;
+        if (request != null && request.ids != null && !request.ids.isEmpty()) {
+            instances = request.ids.stream()
+                .map(id -> instanceRepository.findById(id).orElse(null))
+                .filter(i -> i != null)
+                .collect(Collectors.toList());
+        } else {
+            instances = instanceRepository.listAll();
+        }
+        List<ExportInstance> exportInstances = instances.stream()
+            .map(i -> new ExportInstance(
+                i.name,
+                i.slug,
+                profileRepository.findById(i.profileId).map(p -> p.slug).orElse(null),
+                pluginGroupRepository.findById(i.pluginGroupId).map(g -> g.slug).orElse(null),
+                i.defaultModel,
+                i.enabled))
+            .collect(Collectors.toList());
+        return Response.ok(exportInstances).build();
+    }
+
+    @POST
+    @Path("/import")
+    @Transactional
+    public Response importInstances(List<ExportInstance> instances) {
+        if (instances == null || instances.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("No instances to import").build();
+        }
+        int imported = 0;
+        int skipped = 0;
+        for (ExportInstance ei : instances) {
+            if (ei.slug == null || ei.slug.isBlank()) {
+                continue;
+            }
+            if (instanceRepository.findBySlug(ei.slug).isPresent()) {
+                skipped++;
+                continue;
+            }
+            Long profileId = profileRepository.findBySlug(ei.profileSlug).map(p -> p.id).orElse(null);
+            Long pluginGroupId = pluginGroupRepository.findBySlug(ei.pluginGroupSlug).map(g -> g.id).orElse(null);
+            if (profileId == null || pluginGroupId == null) {
+                continue;
+            }
+            ProxyInstance instance = new ProxyInstance();
+            instance.name = ei.name;
+            instance.slug = ei.slug;
+            instance.profileId = profileId;
+            instance.pluginGroupId = pluginGroupId;
+            instance.defaultModel = ei.defaultModel;
+            instance.enabled = ei.enabled;
+            instanceRepository.save(instance);
+            imported++;
+        }
+        return Response.ok(new ImportResult(imported, skipped)).build();
+    }
+
+    public record ExportRequest(List<Long> ids) {
+    }
+
+    public record ExportInstance(String name, String slug, String profileSlug, String pluginGroupSlug,
+                                 String defaultModel, boolean enabled) {
+    }
+
+    public record ImportResult(int imported, int skipped) {
     }
 
     private Response validate(InstanceRequest request) {

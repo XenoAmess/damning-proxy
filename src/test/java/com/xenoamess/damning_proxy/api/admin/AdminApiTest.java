@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xenoamess.damning_proxy.entity.Plugin;
 import com.xenoamess.damning_proxy.entity.ProxyProfile;
 import com.xenoamess.damning_proxy.entity.TrafficLog;
+import com.xenoamess.damning_proxy.repository.InstanceRepository;
 import com.xenoamess.damning_proxy.repository.LogRepository;
 import com.xenoamess.damning_proxy.repository.PluginGroupRepository;
 import com.xenoamess.damning_proxy.repository.PluginRepository;
@@ -41,10 +42,14 @@ class AdminApiTest {
     @Inject
     PluginGroupRepository pluginGroupRepository;
 
+    @Inject
+    InstanceRepository instanceRepository;
+
     @BeforeEach
     @Transactional
     void setUp() {
         logRepository.deleteAll();
+        instanceRepository.listAll().forEach(i -> instanceRepository.deleteById(i.id));
         profileRepository.listAll().forEach(p -> profileRepository.deleteById(p.id));
         pluginGroupRepository.listAll().forEach(g -> pluginGroupRepository.deleteById(g.id));
         pluginRepository.listAll().forEach(p -> pluginRepository.deleteById(p.id));
@@ -59,6 +64,7 @@ class AdminApiTest {
     @Transactional
     void tearDown() {
         logRepository.deleteAll();
+        instanceRepository.listAll().forEach(i -> instanceRepository.deleteById(i.id));
         profileRepository.listAll().forEach(p -> profileRepository.deleteById(p.id));
         pluginGroupRepository.listAll().forEach(g -> pluginGroupRepository.deleteById(g.id));
         pluginRepository.listAll().forEach(p -> pluginRepository.deleteById(p.id));
@@ -295,5 +301,183 @@ class AdminApiTest {
             .statusCode(200)
             .body("size()", equalTo(2))
             .body("sample", hasItems(false, false));
+    }
+
+    @Test
+    void shouldExportAndImportPluginGroups() {
+        Long pluginId = given()
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "name", "GroupExportPlugin",
+                "language", "GROOVY",
+                "executionPhase", "REQUEST",
+                "script", "context.log('group-export')",
+                "enabled", true
+            ))
+            .when().post("/api/plugins")
+            .then()
+            .statusCode(201)
+            .extract().jsonPath().getLong("id");
+
+        Long groupId = given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("name", "ExportGroup", "slug", "export-group", "description", "desc", "enabled", true,
+                "items", java.util.List.of(Map.of("pluginId", pluginId, "orderIndex", 0, "priority", 0, "enabled", true))))
+            .when().post("/api/plugin-groups")
+            .then()
+            .statusCode(201)
+            .body("slug", equalTo("export-group"))
+            .extract().jsonPath().getLong("id");
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("ids", java.util.List.of(groupId)))
+            .when().post("/api/plugin-groups/export")
+            .then()
+            .statusCode(200)
+            .body("size()", equalTo(1))
+            .body("[0].slug", equalTo("export-group"))
+            .body("[0].items.size()", equalTo(1))
+            .body("[0].items[0].pluginScript", equalTo("context.log('group-export')"));
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(java.util.List.of(Map.of(
+                "name", "ImportGroup",
+                "slug", "import-group",
+                "description", "desc",
+                "enabled", true,
+                "items", java.util.List.of(Map.of(
+                    "pluginScript", "context.log('group-export')",
+                    "orderIndex", 0,
+                    "priority", 0,
+                    "enabled", true
+                ))
+            )))
+            .when().post("/api/plugin-groups/import")
+            .then()
+            .statusCode(200)
+            .body("imported", equalTo(1))
+            .body("skipped", equalTo(0));
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(java.util.List.of(Map.of(
+                "name", "ImportGroupDup",
+                "slug", "import-group",
+                "description", "desc",
+                "enabled", true,
+                "items", java.util.List.of(Map.of(
+                    "pluginScript", "context.log('group-export')",
+                    "orderIndex", 0,
+                    "priority", 0,
+                    "enabled", true
+                ))
+            )))
+            .when().post("/api/plugin-groups/import")
+            .then()
+            .statusCode(200)
+            .body("imported", equalTo(0))
+            .body("skipped", equalTo(1));
+
+        given()
+            .when().get("/api/plugin-groups")
+            .then()
+            .statusCode(200)
+            .body("size()", equalTo(2));
+    }
+
+    @Test
+    void shouldExportAndImportInstances() {
+        Long profileId = given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("name", "ExportProfile", "slug", "export-profile", "baseUrl", "http://localhost:1234"))
+            .when().post("/api/profiles")
+            .then()
+            .statusCode(201)
+            .extract().jsonPath().getLong("id");
+
+        Long pluginId = given()
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "name", "InstanceExportPlugin",
+                "language", "GROOVY",
+                "executionPhase", "REQUEST",
+                "script", "context.log('instance-export')",
+                "enabled", true
+            ))
+            .when().post("/api/plugins")
+            .then()
+            .statusCode(201)
+            .extract().jsonPath().getLong("id");
+
+        Long groupId = given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("name", "ExportGroupForInstance", "slug", "export-group-for-instance", "description", "", "enabled", true,
+                "items", java.util.List.of(Map.of("pluginId", pluginId, "orderIndex", 0, "priority", 0, "enabled", true))))
+            .when().post("/api/plugin-groups")
+            .then()
+            .statusCode(201)
+            .extract().jsonPath().getLong("id");
+
+        Long instanceId = given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("name", "ExportInstance", "slug", "export-instance",
+                "profileId", profileId, "pluginGroupId", groupId,
+                "defaultModel", "gpt-4", "enabled", true))
+            .when().post("/api/instances")
+            .then()
+            .statusCode(201)
+            .body("slug", equalTo("export-instance"))
+            .extract().jsonPath().getLong("id");
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("ids", java.util.List.of(instanceId)))
+            .when().post("/api/instances/export")
+            .then()
+            .statusCode(200)
+            .body("size()", equalTo(1))
+            .body("[0].slug", equalTo("export-instance"))
+            .body("[0].profileSlug", equalTo("export-profile"))
+            .body("[0].pluginGroupSlug", equalTo("export-group-for-instance"));
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(java.util.List.of(Map.of(
+                "name", "ImportInstance",
+                "slug", "import-instance",
+                "profileSlug", "export-profile",
+                "pluginGroupSlug", "export-group-for-instance",
+                "defaultModel", "gpt-4",
+                "enabled", true
+            )))
+            .when().post("/api/instances/import")
+            .then()
+            .statusCode(200)
+            .body("imported", equalTo(1))
+            .body("skipped", equalTo(0));
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(java.util.List.of(Map.of(
+                "name", "ImportInstanceDup",
+                "slug", "import-instance",
+                "profileSlug", "export-profile",
+                "pluginGroupSlug", "export-group-for-instance",
+                "defaultModel", "gpt-4",
+                "enabled", true
+            )))
+            .when().post("/api/instances/import")
+            .then()
+            .statusCode(200)
+            .body("imported", equalTo(0))
+            .body("skipped", equalTo(1));
+
+        given()
+            .when().get("/api/instances")
+            .then()
+            .statusCode(200)
+            .body("size()", equalTo(2));
     }
 }

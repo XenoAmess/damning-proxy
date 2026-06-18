@@ -14,6 +14,7 @@ import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Path("/api/plugin-groups")
 @Produces(MediaType.APPLICATION_JSON)
@@ -80,6 +81,90 @@ public class PluginGroupAdminApi {
     public Response delete(@PathParam("id") Long id) {
         boolean deleted = groupRepository.deleteById(id);
         return deleted ? Response.noContent().build() : Response.status(Response.Status.NOT_FOUND).build();
+    }
+
+    @POST
+    @Path("/export")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response export(ExportRequest request) {
+        List<PluginGroup> groups;
+        if (request != null && request.ids != null && !request.ids.isEmpty()) {
+            groups = request.ids.stream()
+                .map(id -> groupRepository.findById(id).orElse(null))
+                .filter(g -> g != null)
+                .collect(Collectors.toList());
+        } else {
+            groups = groupRepository.listAll();
+        }
+        List<ExportGroup> exportGroups = groups.stream()
+            .map(g -> new ExportGroup(
+                g.name,
+                g.slug,
+                g.description,
+                g.enabled,
+                g.sortedItems().stream()
+                    .map(i -> new ExportItem(i.plugin.script, i.orderIndex, i.priority, i.enabled))
+                    .collect(Collectors.toList())))
+            .collect(Collectors.toList());
+        return Response.ok(exportGroups).build();
+    }
+
+    @POST
+    @Path("/import")
+    @Transactional
+    public Response importGroups(List<ExportGroup> groups) {
+        if (groups == null || groups.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("No plugin groups to import").build();
+        }
+        int imported = 0;
+        int skipped = 0;
+        for (ExportGroup eg : groups) {
+            if (eg.slug == null || eg.slug.isBlank()) {
+                continue;
+            }
+            if (groupRepository.findBySlug(eg.slug).isPresent()) {
+                skipped++;
+                continue;
+            }
+            PluginGroup group = new PluginGroup();
+            group.name = eg.name;
+            group.slug = eg.slug;
+            group.description = eg.description;
+            group.enabled = eg.enabled;
+            group.items = new ArrayList<>();
+            if (eg.items != null) {
+                for (ExportItem ei : eg.items) {
+                    if (ei.pluginScript == null || ei.pluginScript.isBlank()) {
+                        continue;
+                    }
+                    List<Plugin> matched = pluginRepository.findByScript(ei.pluginScript);
+                    if (matched.isEmpty()) {
+                        continue;
+                    }
+                    PluginGroupItem item = new PluginGroupItem();
+                    item.plugin = matched.get(0);
+                    item.orderIndex = ei.orderIndex != null ? ei.orderIndex : 0;
+                    item.priority = ei.priority != null ? ei.priority : 0;
+                    item.enabled = ei.enabled;
+                    group.items.add(item);
+                }
+            }
+            groupRepository.save(group);
+            imported++;
+        }
+        return Response.ok(new ImportResult(imported, skipped)).build();
+    }
+
+    public record ExportRequest(List<Long> ids) {
+    }
+
+    public record ExportGroup(String name, String slug, String description, boolean enabled, List<ExportItem> items) {
+    }
+
+    public record ExportItem(String pluginScript, Integer orderIndex, Integer priority, boolean enabled) {
+    }
+
+    public record ImportResult(int imported, int skipped) {
     }
 
     private PluginGroup toEntity(PluginGroupRequest request) {

@@ -60,6 +60,14 @@ export function deletePluginGroup(id) {
   return api.delete(`/plugin-groups/${id}`)
 }
 
+export function exportPluginGroups(ids) {
+  return api.post('/plugin-groups/export', { ids })
+}
+
+export function importPluginGroups(data) {
+  return api.post('/plugin-groups/import', data)
+}
+
 export function listInstances() {
   return api.get('/instances')
 }
@@ -74,6 +82,14 @@ export function updateInstance(id, data) {
 
 export function deleteInstance(id) {
   return api.delete(`/instances/${id}`)
+}
+
+export function exportInstances(ids) {
+  return api.post('/instances/export', { ids })
+}
+
+export function importInstances(data) {
+  return api.post('/instances/import', data)
 }
 
 export function listLogs(params) {
