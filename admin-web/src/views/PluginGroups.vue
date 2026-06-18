@@ -119,6 +119,7 @@ import {
   importPluginGroups,
   listPlugins,
 } from '../api/damning.js'
+import { formatTimestamp } from '../utils/format.js'
 
 const groups = ref([])
 const plugins = ref([])
@@ -276,7 +277,7 @@ async function exportPluginGroups() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `plugin-groups-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `damning_proxy_plugin_groups_${formatTimestamp()}.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)

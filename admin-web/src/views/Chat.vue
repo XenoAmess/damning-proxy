@@ -216,6 +216,7 @@ import {
 import { listInstances, listProfiles } from '../api/damning.js'
 import { chatCompletion, chatCompletionStream, listModels } from '../api/chat.js'
 import html2canvas from 'html2canvas'
+import { formatTimestamp } from '../utils/format.js'
 
 const TYPEWRITER_DELAY = 16
 const TYPEWRITER_CHUNK = 2
@@ -280,7 +281,7 @@ async function generateImage() {
       useCORS: true,
     })
     const link = document.createElement('a')
-    link.download = `chat-${new Date().toISOString().slice(0, 10)}-${Date.now()}.png`
+    link.download = `damning_proxy_chat_${formatTimestamp()}_${Date.now()}.png`
     link.href = canvas.toDataURL('image/png')
     document.body.appendChild(link)
     link.click()

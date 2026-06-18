@@ -74,6 +74,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listProfiles, createProfile, updateProfile, deleteProfile, exportProfiles as exportProfilesApi, importProfiles } from '../api/damning.js'
+import { formatTimestamp } from '../utils/format.js'
 
 const profiles = ref([])
 const loading = ref(false)
@@ -153,7 +154,7 @@ async function exportProfiles() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `profiles-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `damning_proxy_profiles_${formatTimestamp()}.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)

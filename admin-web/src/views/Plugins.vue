@@ -77,6 +77,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listPlugins, createPlugin, updatePlugin, deletePlugin, exportPlugins as exportPluginsApi, importPlugins } from '../api/damning.js'
 import CodeEditor from '../components/CodeEditor.vue'
+import { formatTimestamp } from '../utils/format.js'
 
 const plugins = ref([])
 const loading = ref(false)
@@ -172,7 +173,7 @@ async function exportPlugins() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `plugins-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `damning_proxy_plugins_${formatTimestamp()}.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
