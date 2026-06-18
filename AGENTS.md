@@ -70,6 +70,7 @@ Vite dev server proxies `/api` to `http://localhost:12360`. Requires a backend r
   git commit -m "<message>"
   ```
 - After finishing any task, sync relevant documentation and the knowledge base under `docs/` if the change affects architecture, behavior, configuration, or conventions.
+- After finishing any task that changes backend APIs, frontend admin UI, or any runtime behavior, **restart the running service** so the new code takes effect. Use dev mode with live reload (`$JAVA_HOME/bin/mvn quarkus:dev`) to minimize downtime, or stop and restart the existing server process.
 
 ## Plugin Context Quirk
 
