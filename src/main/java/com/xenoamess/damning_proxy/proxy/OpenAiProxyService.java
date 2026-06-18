@@ -66,12 +66,14 @@ public class OpenAiProxyService {
         ProxyContext ctx = resolveInstance(instanceSlug);
         List<Plugin> plugins = loadPlugins(ctx.group);
 
+        PluginContext context = createRequestContext(ctx.profile, null);
+
         long start = System.currentTimeMillis();
         TrafficLog trafficLog = trafficLogService.recordRequest(
-            ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/models", "GET", Map.of(), null
+            ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/models", "GET",
+            context.getRequestHeaders(), null
         );
 
-        PluginContext context = createRequestContext(ctx.profile, null);
         pluginExecutionService.executeRequestPlugins(plugins, context);
 
         if (context.isReturned()) {
@@ -89,6 +91,7 @@ public class OpenAiProxyService {
         );
 
         context.setResponseStatus(upstream.statusCode);
+        context.getResponseHeaders().putAll(toMap(upstream.headers));
         context.setResponseBody(parseJson(upstream.body));
 
         pluginExecutionService.executeResponsePlugins(plugins, context);
@@ -106,13 +109,14 @@ public class OpenAiProxyService {
         ProxyContext ctx = resolveInstance(instanceSlug);
         List<Plugin> plugins = loadPlugins(ctx.group);
 
+        PluginContext context = createRequestContext(ctx.profile, requestBody);
+
         long start = System.currentTimeMillis();
-        Map<String, String> initialHeaders = new HashMap<>();
         TrafficLog trafficLog = trafficLogService.recordRequest(
-            ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/chat/completions", "POST", initialHeaders, requestBody
+            ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/chat/completions", "POST",
+            context.getRequestHeaders(), requestBody
         );
 
-        PluginContext context = createRequestContext(ctx.profile, requestBody);
         pluginExecutionService.executeRequestPlugins(plugins, context);
 
         if (context.isReturned()) {
@@ -136,6 +140,7 @@ public class OpenAiProxyService {
         );
 
         context.setResponseStatus(upstream.statusCode);
+        context.getResponseHeaders().putAll(toMap(upstream.headers));
         context.setResponseBody(parseJson(upstream.body));
 
         pluginExecutionService.executeResponsePlugins(plugins, context);
@@ -153,13 +158,14 @@ public class OpenAiProxyService {
         ProxyContext ctx = resolveInstance(instanceSlug);
         List<Plugin> plugins = loadPlugins(ctx.group);
 
+        PluginContext context = createRequestContext(ctx.profile, requestBody);
+
         long start = System.currentTimeMillis();
-        Map<String, String> initialHeaders = new HashMap<>();
         TrafficLog trafficLog = trafficLogService.recordRequest(
-            ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/chat/completions", "POST", initialHeaders, requestBody
+            ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/chat/completions", "POST",
+            context.getRequestHeaders(), requestBody
         );
 
-        PluginContext context = createRequestContext(ctx.profile, requestBody);
         pluginExecutionService.executeRequestPlugins(plugins, context);
 
         if (context.isReturned()) {
@@ -185,6 +191,8 @@ public class OpenAiProxyService {
             StringBuilder sseBuffer = new StringBuilder();
             StringBuilder contentBuffer = new StringBuilder();
             upstreamFuture.onSuccess(response -> {
+                context.setResponseStatus(response.statusCode());
+                context.getResponseHeaders().putAll(toMap(response.headers()));
                 response.handler(buffer -> {
                     String chunk = buffer.toString();
                     responseBuffer.append(chunk);
@@ -353,6 +361,14 @@ public class OpenAiProxyService {
     private MultiMap toMultiMap(java.util.Map<String, String> headers) {
         MultiMap result = MultiMap.caseInsensitiveMultiMap();
         headers.forEach(result::add);
+        return result;
+    }
+
+    private java.util.Map<String, String> toMap(MultiMap headers) {
+        java.util.Map<String, String> result = new HashMap<>();
+        if (headers != null) {
+            headers.forEach(entry -> result.put(entry.getKey(), entry.getValue()));
+        }
         return result;
     }
 

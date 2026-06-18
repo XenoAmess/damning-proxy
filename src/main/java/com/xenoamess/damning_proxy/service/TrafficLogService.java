@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,12 +70,24 @@ public class TrafficLogService {
             return null;
         }
         try {
-            String json = objectMapper.writeValueAsString(headers);
+            Map<String, String> safe = new HashMap<>(headers);
+            safe.replaceAll((k, v) -> "Authorization".equalsIgnoreCase(k) ? maskAuth(v) : v);
+            String json = objectMapper.writeValueAsString(safe);
             return truncate(json, MAX_HEADERS_LENGTH);
         } catch (JsonProcessingException e) {
             Log.warn("Failed to serialize headers", e);
             return null;
         }
+    }
+
+    private String maskAuth(String value) {
+        if (value == null || value.isBlank()) {
+            return value;
+        }
+        if (value.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            return "Bearer ***";
+        }
+        return "***";
     }
 
     private String serializeBody(Object body) {

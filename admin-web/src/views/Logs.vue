@@ -181,13 +181,15 @@
           </el-tab-pane>
 
           <el-tab-pane label="原始请求" name="rawRequest">
-            <pre>{{ formatJson(current.rawRequestHeaders) }}</pre>
-            <pre>{{ formatJson(current.requestBody) }}</pre>
+            <el-empty v-if="!current.rawRequestHeaders && !current.requestBody" description="无原始请求内容" />
+            <pre v-if="current.rawRequestHeaders">{{ formatJson(current.rawRequestHeaders) }}</pre>
+            <pre v-if="current.requestBody">{{ formatJson(current.requestBody) }}</pre>
           </el-tab-pane>
 
           <el-tab-pane label="原始响应" name="rawResponse">
-            <pre>{{ formatJson(current.rawResponseHeaders) }}</pre>
-            <pre>{{ formatJson(current.responseBody) }}</pre>
+            <el-empty v-if="!current.rawResponseHeaders && !current.responseBody" description="无原始响应内容" />
+            <pre v-if="current.rawResponseHeaders">{{ formatJson(current.rawResponseHeaders) }}</pre>
+            <pre v-if="current.responseBody">{{ formatJson(current.responseBody) }}</pre>
           </el-tab-pane>
 
           <el-tab-pane label="插件日志" name="pluginLogs">

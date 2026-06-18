@@ -15,6 +15,8 @@
 
 实体定义：`src/main/java/com/xenoamess/damning_proxy/entity/TrafficLog.java`
 
+**注意**：请求头中的 `Authorization` 值会被脱敏为 `Bearer ***`，避免将上游 Token 明文写入日志。
+
 ---
 
 ## 记录时机
