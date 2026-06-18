@@ -5,6 +5,7 @@
 - **Java 21 is mandatory** — the Maven enforcer plugin rejects newer JDKs. The default system `java` may be JDK 25, so always set:
   ```bash
   export JAVA_HOME=/home/xenoamess/.jdks/jdk-21.0.7+6
+  export PATH=$JAVA_HOME/bin:$PATH
   ```
 - No `mvnw`; use the system `mvn` (3.9+).
 
@@ -13,6 +14,7 @@
 | Goal | Command |
 |------|---------|
 | Dev mode with live reload | `$JAVA_HOME/bin/mvn quarkus:dev` |
+| Dev mode background (no blocking) | `setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1' </dev/null &` |
 | Run tests | `$JAVA_HOME/bin/mvn test` |
 | Build runnable JAR + admin UI | `$JAVA_HOME/bin/mvn clean package -DskipTests` |
 | Run the built JAR | `$JAVA_HOME/bin/java -jar target/quarkus-app/quarkus-run.jar` |
@@ -70,7 +72,7 @@ Vite dev server proxies `/api` to `http://localhost:12360`. Requires a backend r
   git commit -m "<message>"
   ```
 - After finishing any task, sync relevant documentation and the knowledge base under `docs/` if the change affects architecture, behavior, configuration, or conventions.
-- After finishing any task that changes backend APIs, frontend admin UI, or any runtime behavior, **restart the running service** so the new code takes effect. Use dev mode with live reload (`$JAVA_HOME/bin/mvn quarkus:dev`) to minimize downtime, or stop and restart the existing server process.
+- After finishing any task that changes backend APIs, frontend admin UI, or any runtime behavior, **restart the running service** so the new code takes effect. Use dev mode with live reload (`$JAVA_HOME/bin/mvn quarkus:dev`) to minimize downtime, or stop and restart the existing server process. When restarting via opencode Bash, always use the background command and avoid waiting on the process.
 
 ## Plugin Context Quirk
 

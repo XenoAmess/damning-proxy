@@ -254,4 +254,11 @@ onMounted(load)
 .toolbar {
   margin-bottom: 16px;
 }
+.upload-inline {
+  display: inline-block;
+  margin-left: 12px;
+}
+.upload-inline :deep(.el-upload) {
+  display: inline-block;
+}
 </style>
