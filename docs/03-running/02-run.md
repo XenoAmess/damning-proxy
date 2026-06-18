@@ -1,6 +1,6 @@
 # 02 运行方式
 
-> 最后更新：2026-06-17  
+> 最后更新：2026-06-18  
 > 对应源码版本：当前工作区
 
 ## 开发模式运行
@@ -101,11 +101,30 @@ quarkus.datasource.jdbc.url=jdbc:h2:file:${user.home}/.damning-proxy/data;DB_CLO
 
 ## 后台运行示例
 
+### 生产 JAR 后台运行
+
 使用 `nohup`：
 
 ```bash
 nohup java -jar target/quarkus-app/quarkus-run.jar > damning-proxy.log 2>&1 &
 ```
+
+### 开发模式后台运行
+
+`mvn quarkus:dev` 默认会等待终端输入，直接 `nohup ... &` 仍可能阻塞或异常退出。推荐用 `setsid` 脱离终端：
+
+```bash
+export JAVA_HOME=/home/xenoamess/.jdks/jdk-21.0.7+6
+export PATH=$JAVA_HOME/bin:$PATH
+setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1' </dev/null &
+```
+
+说明：
+
+- `setsid` + `</dev/null` 确保 dev mode 不会从当前终端读取输入，避免阻塞或随终端关闭而退出。
+- `-DskipTests` 跳过测试，否则 dev mode 启动后会暂停在 `Tests paused` 等待按 `r` 恢复。
+- 日志输出到 `/tmp/daming-proxy-dev.log`，可通过 `tail -f /tmp/daming-proxy-dev.log` 查看。
+- 停止时 `pgrep -f quarkus:dev` 找到进程后 `kill`。
 
 使用 systemd（示例）：
 

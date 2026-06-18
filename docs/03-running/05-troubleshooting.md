@@ -1,6 +1,6 @@
 # 05 常见问题排查
 
-> 最后更新：2026-06-17  
+> 最后更新：2026-06-18  
 > 对应源码版本：当前工作区
 
 ## 启动问题
@@ -19,17 +19,54 @@ mvn quarkus:dev -Dquarkus.http.port=8080
 
 ---
 
-### JDK 版本错误
+### JDK 版本错误 / Maven 使用默认 JDK 25
+
+现象：
 
 ```text
 Java 21 is required. Tests and runtime use libraries that are not compatible with newer JDKs.
 ```
 
+或执行 `mvn -version` 显示 `Java version: 25.x`，即使 `JAVA_HOME` 已指向 JDK 21。
+
+原因：系统默认 `java` 可能是 GraalVM 25，`mvn` 脚本根据 `JAVA_HOME` 选择 JDK，但如果只设置 `JAVA_HOME` 而 `PATH` 仍指向 JDK 25 的 `java`，子进程可能不一致。
+
 解决：
 
 ```bash
-java -version  # 确认是 21
-export JAVA_HOME=/path/to/jdk21
+export JAVA_HOME=/home/xenoamess/.jdks/jdk-21.0.7+6
+export PATH=$JAVA_HOME/bin:$PATH
+java -version   # 应显示 21
+mvn -version    # 应显示 Java 21
+```
+
+开发模式启动命令：
+
+```bash
+setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1' </dev/null &
+```
+
+---
+
+### 启动后终端被阻塞 / opencode 主线程挂起
+
+现象：执行 `mvn quarkus:dev` 后 opencode 不再响应，或后台启动后进程很快退出。
+
+原因：Quarkus dev mode 默认读取标准输入等待命令（如 `r` 恢复测试、`e` 编辑参数），并且会暂停测试。普通 `nohup ... &` 可能因 stdin 被关闭而异常。
+
+解决：使用 `setsid` + `</dev/null` 完全脱离终端，并跳过测试：
+
+```bash
+export JAVA_HOME=/home/xenoamess/.jdks/jdk-21.0.7+6
+export PATH=$JAVA_HOME/bin:$PATH
+setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1' </dev/null &
+```
+
+验证：
+
+```bash
+pgrep -f quarkus:dev
+tail -f /tmp/daming-proxy-dev.log
 ```
 
 ---
