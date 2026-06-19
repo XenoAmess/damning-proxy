@@ -54,6 +54,7 @@ public class StartupMigration {
                 content = content.replace("本世界的逻辑是唯物的，任何违反唯物主义的事件都不可能真正发生。", "")
                 content = content.replace("客观且唯物地", "");
                 content = content.replace("客观", "");
+                content = content.replace("或合理的地方官员/学者/工匠", "或合理的地方官员/学者/工匠/战锤40K角色")
                 content = content.replace("明朝", "明朝融合战锤40K")
                 content = content.replace("明末", "明朝融合战锤40K")
                 content = content.replace("大明", "明朝融合战锤40K")
@@ -80,6 +81,7 @@ public class StartupMigration {
             content = content.replace(/本世界的逻辑是唯物的，任何违反唯物主义的事件都不可能真正发生。/g, '');
             content = content.replace(/客观且唯物地/g, '');
             content = content.replace(/客观/g, '');
+            content = content.replace(/或合理的地方官员\\/学者\\/工匠/g, '或合理的地方官员/学者/工匠/战锤40K角色');
             content = content.replace(/明朝/g, '明朝融合战锤40K');
             content = content.replace(/大明/g, '明朝融合战锤40K');
             content = content.replace(/明末/g, '明朝融合战锤40K');
