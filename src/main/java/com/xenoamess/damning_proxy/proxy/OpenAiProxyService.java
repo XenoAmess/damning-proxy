@@ -442,6 +442,8 @@ public class OpenAiProxyService {
             || lower.equals("te")
             || lower.equals("trailer")
             || lower.equals("transfer-encoding")
+            || lower.equals("content-encoding")
+            || lower.equals("accept-encoding")
             || lower.equals("upgrade")
             || lower.equals("content-length");
     }

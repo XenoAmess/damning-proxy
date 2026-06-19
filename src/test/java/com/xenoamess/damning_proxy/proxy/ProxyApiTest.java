@@ -95,6 +95,7 @@ class ProxyApiTest {
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader("Content-Type", "application/json")
+                .withHeader("Content-Encoding", "identity")
                 .withBody("{\"object\":\"list\",\"data\":[{\"id\":\"gpt-4\",\"object\":\"model\"}]}")));
 
         ProxyInstance instance = createInstance("openai", "http://localhost:18089/v1", "sk-test");

@@ -29,7 +29,8 @@ public class UpstreamHttpClient {
 
     @Inject
     public UpstreamHttpClient(Vertx vertx) {
-        this.httpClient = vertx.createHttpClient();
+        this.httpClient = vertx.createHttpClient(new io.vertx.core.http.HttpClientOptions()
+            .setTryUseCompression(false));
     }
 
     public UpstreamResponse send(String method, String baseUrl, String path,

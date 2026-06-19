@@ -26,7 +26,16 @@ public class ProxyApi {
             return false;
         }
         Object stream = requestBody.get("stream");
-        return Boolean.TRUE.equals(stream) || "true".equals(stream);
+        if (stream == null) {
+            return false;
+        }
+        if (stream instanceof Boolean) {
+            return (Boolean) stream;
+        }
+        if (stream instanceof String s) {
+            return Boolean.parseBoolean(s);
+        }
+        return false;
     }
 
     @GET
@@ -39,22 +48,21 @@ public class ProxyApi {
     @POST
     @Path("/chat/completions")
     @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.SERVER_SENT_EVENTS)
     @Blocking
-    public Multi<String> chatCompletions(@PathParam("instanceSlug") String instanceSlug, Map<String, Object> requestBody,
+    public Response chatCompletions(@PathParam("instanceSlug") String instanceSlug, Map<String, Object> requestBody,
                                      @Context HttpHeaders headers) {
         boolean wantsStream = isStreamingRequest(requestBody)
-            || headers.getAcceptableMediaTypes().stream().anyMatch(mt -> mt.isCompatible(MediaType.SERVER_SENT_EVENTS_TYPE));
+            || headers.getAcceptableMediaTypes().stream().anyMatch(mt -> {
+                return mt.isCompatible(MediaType.SERVER_SENT_EVENTS_TYPE)
+                    && !mt.isWildcardType() && !mt.isWildcardSubtype();
+            });
         if (wantsStream) {
-            return proxyService.chatCompletionsStream(instanceSlug, requestBody, headers);
+            // Force upstream stream=true so non-stream requests don't get confused; let plugins override if needed
+            requestBody.put("stream", true);
+            return Response.ok(proxyService.chatCompletionsStream(instanceSlug, requestBody, headers))
+                .type(MediaType.SERVER_SENT_EVENTS)
+                .build();
         }
-        Response response = proxyService.chatCompletions(instanceSlug, requestBody, headers);
-        Object entity = response.getEntity();
-        try {
-            String json = (entity instanceof String) ? (String) entity : objectMapper.writeValueAsString(entity);
-            return Multi.createFrom().item("data: " + json + "\n\n");
-        } catch (Exception e) {
-            return Multi.createFrom().failure(e);
-        }
+        return proxyService.chatCompletions(instanceSlug, requestBody, headers);
     }
 }
