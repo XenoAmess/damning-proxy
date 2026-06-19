@@ -21,9 +21,12 @@ public class PanachePluginRepository implements PluginRepository {
                 plugin.persistAndFlush();
             } else {
                 existing.name = plugin.name;
+                existing.slug = plugin.slug;
                 existing.description = plugin.description;
                 existing.language = plugin.language;
+                existing.mode = plugin.mode;
                 existing.script = plugin.script;
+                existing.packagePath = plugin.packagePath;
                 existing.executionPhase = plugin.executionPhase;
                 existing.enabled = plugin.enabled;
                 existing.sample = plugin.sample;
@@ -46,6 +49,11 @@ public class PanachePluginRepository implements PluginRepository {
     @Override
     public long count() {
         return Plugin.count();
+    }
+
+    @Override
+    public Optional<Plugin> findBySlug(String slug) {
+        return Plugin.find("slug", slug).firstResultOptional();
     }
 
     @Override

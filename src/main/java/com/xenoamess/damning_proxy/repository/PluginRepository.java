@@ -15,6 +15,8 @@ public interface PluginRepository {
 
     long count();
 
+    Optional<Plugin> findBySlug(String slug);
+
     List<Plugin> findByScript(String script);
 
     Optional<Plugin> findSampleByScript(String script);

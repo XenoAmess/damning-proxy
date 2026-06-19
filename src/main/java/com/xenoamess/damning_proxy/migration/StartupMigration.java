@@ -94,10 +94,13 @@ public class StartupMigration {
             plugin.sample = true;
         }
         plugin.name = sample.name;
+        plugin.slug = sample.slug;
         plugin.description = sample.description;
         plugin.language = sample.language;
         plugin.executionPhase = sample.executionPhase;
         plugin.script = sample.script;
+        plugin.mode = sample.mode;
+        plugin.packagePath = sample.packagePath;
         plugin.enabled = sample.enabled;
         plugin.sample = true;
         return pluginRepository.save(plugin);
@@ -126,6 +129,7 @@ public class StartupMigration {
     private void ensureSamplePluginsAndGroups() {
         Plugin groovyPlugin = new Plugin();
         groovyPlugin.name = "大明战锤提示词（Groovy）";
+        groovyPlugin.slug = "sample-groovy-script";
         groovyPlugin.description = "在请求阶段将提示追加到 system 消息末尾，若不存在 system 则在开头添加（Groovy 示例）";
         groovyPlugin.language = Plugin.Language.GROOVY;
         groovyPlugin.executionPhase = Plugin.ExecutionPhase.REQUEST;
@@ -135,6 +139,7 @@ public class StartupMigration {
 
         Plugin jsPlugin = new Plugin();
         jsPlugin.name = "大明战锤提示词（JS）";
+        jsPlugin.slug = "sample-js-script";
         jsPlugin.description = "在请求阶段将提示追加到 system 消息末尾，若不存在 system 则在开头添加（JavaScript 示例）";
         jsPlugin.language = Plugin.Language.JS;
         jsPlugin.executionPhase = Plugin.ExecutionPhase.REQUEST;

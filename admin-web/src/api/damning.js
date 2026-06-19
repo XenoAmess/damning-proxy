@@ -33,11 +33,15 @@ export function listPlugins() {
 }
 
 export function createPlugin(data) {
-  return api.post('/plugins', data)
+  return api.post('/plugins', data, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
 }
 
 export function updatePlugin(id, data) {
-  return api.put(`/plugins/${id}`, data)
+  return api.post(`/plugins/${id}`, data, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
 }
 
 export function deletePlugin(id) {
@@ -45,11 +49,17 @@ export function deletePlugin(id) {
 }
 
 export function exportPlugins(ids) {
-  return api.post('/plugins/export', { ids })
+  return api.post('/plugins/export', { ids }, {
+    responseType: 'blob',
+    headers: { Accept: 'application/zip' }
+  })
 }
 
 export function importPlugins(data) {
-  return api.post('/plugins/import', data)
+  const isZip = data instanceof Blob && data.type === 'application/zip'
+  return api.post('/plugins/import', data, {
+    headers: { 'Content-Type': isZip ? 'application/zip' : 'application/json' }
+  })
 }
 
 export function listPluginGroups() {
