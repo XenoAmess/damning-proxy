@@ -109,9 +109,36 @@ quarkus.datasource.jdbc.url=jdbc:h2:file:${user.home}/.damning-proxy/data;DB_CLO
 nohup java -jar target/quarkus-app/quarkus-run.jar > damning-proxy.log 2>&1 &
 ```
 
-### 开发模式后台运行
+### 开发模式后台运行（推荐 screen）
 
-`mvn quarkus:dev` 默认会等待终端输入，直接 `nohup ... &` 仍可能阻塞或异常退出。推荐用 `setsid` + 内层后台脱离终端：
+`mvn quarkus:dev` 默认会等待终端输入，直接 `nohup ... &` 仍可能阻塞或异常退出。**推荐使用 `screen` 管理 dev 会话**：
+
+```bash
+export JAVA_HOME=/home/xenoamess/.jdks/jdk-21.0.7+6
+export PATH=$JAVA_HOME/bin:$PATH
+cd /home/xenoamess/workspace/daming-proxy
+screen -dmS daming-proxy /bin/bash -c \
+  'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1'
+```
+
+常用管理命令：
+
+| 操作 | 命令 |
+|---|---|
+| 查看日志 | `tail -f /tmp/daming-proxy-dev.log` |
+| 附加到会话 | `screen -r daming-proxy` |
+| 在 screen 内触发重启 | 按 `Ctrl+A` 然后 `C`，输入 `r` 回车；或从外部执行 `screen -S daming-proxy -X stuff $'r\n'` |
+| 退出并停止服务 | `screen -S daming-proxy -X quit` |
+
+说明：
+
+- `-DskipTests` 跳过测试，否则 dev mode 启动后会暂停在 `Tests paused` 等待按 `r` 恢复。
+- 日志输出到 `/tmp/daming-proxy-dev.log`。
+- 使用 `screen` 可以避免 `setsid` 或裸后台启动时遗留的 Maven/Quarkus 进程占用端口 `12360` 或 H2 文件锁。
+
+### 旧版 `setsid` 方式（备用）
+
+如果无法使用 `screen`，也可用 `setsid` + 内层后台脱离终端：
 
 ```bash
 export JAVA_HOME=/home/xenoamess/.jdks/jdk-21.0.7+6
@@ -119,19 +146,11 @@ export PATH=$JAVA_HOME/bin:$PATH
 setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1 &' </dev/null &
 ```
 
-说明：
+注意：
 
 - 内层 `mvn ... &` 让 Maven 在子 shell 中后台运行，该子 shell 立即退出，不会持有 opencode Bash 工具的 stdout 管道。
-- `-DskipTests` 跳过测试，否则 dev mode 启动后会暂停在 `Tests paused` 等待按 `r` 恢复。
-- 日志输出到 `/tmp/daming-proxy-dev.log`，可通过 `tail -f /tmp/daming-proxy-dev.log` 查看。
-- 停止时 `pgrep -f quarkus:dev` 找到 Java 进程后 `kill`。
-
-注意：如果写成下面这种方式，内层 shell 会等待 `mvn` 退出，导致 opencode Bash 命令超时：
-
-```bash
-# 错误示例
-setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1' </dev/null &
-```
+- 如果写成 `setsid bash -c 'mvn quarkus:dev ...' </dev/null &`（没有内层 `&`），内层 shell 会等待 `mvn` 退出，导致命令超时。
+- 停止时需要手动 `pgrep -f quarkus:dev` 找到 Java 进程后 `kill`。
 
 使用 systemd（示例）：
 

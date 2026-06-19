@@ -271,7 +271,7 @@ public class OpenAiProxyService {
                                 emitter.complete();
                                 return;
                             }
-                            emitter.emit(data);
+                            emitter.emit("data: " + data + "\n\n");
                             accumulateStreamContent(data, contentBuffer);
                         }
                     }
@@ -284,7 +284,7 @@ public class OpenAiProxyService {
                     if (remaining.startsWith("data: ")) {
                         String data = remaining.substring(6).trim();
                         if (!"[DONE]".equals(data)) {
-                            emitter.emit(data);
+                            emitter.emit("data: " + data + "\n\n");
                             accumulateStreamContent(data, contentBuffer);
                         }
                     }

@@ -11,9 +11,17 @@
 
 ## Build & Run
 
+- **Prefer screen for dev mode**: `setsid` and direct backgrounding can leave stale Maven/Quarkus processes that hold port `12360` or the H2 file lock. Use the `screen` command above and manage the session with `screen -r` / `screen -S daming-proxy -X quit`.
+- If startup fails with `Port 12360 seems to be in use` or H2 `Database may be already in use`, kill all stale `daming-proxy`/`quarkus` Java processes (`ps -ef | grep quarkus`) and restart.
+- After deleting `~/.damning-proxy/data.mv.db`, recreate the `minimax` instance/profile if needed (the migration only creates sample plugins/groups, not instances).
+
 | Goal | Command |
 |------|---------|
 | Dev mode with live reload | `$JAVA_HOME/bin/mvn quarkus:dev` |
+| Dev mode in screen (recommended for opencode) | `screen -dmS daming-proxy /bin/bash -c 'export JAVA_HOME=/home/xenoamess/.jdks/jdk-21.0.7+6; export PATH=$JAVA_HOME/bin:$PATH; cd /home/xenoamess/workspace/daming-proxy; mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1'` |
+| Attach to screen session | `screen -r daming-proxy` |
+| Send restart to screen dev mode | `screen -S daming-proxy -X stuff $'r\n'` |
+| Kill screen dev server | `screen -S daming-proxy -X quit` |
 | Dev mode background (no blocking) | `setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1 &' </dev/null &` |
 | Run tests | `$JAVA_HOME/bin/mvn test` |
 | Build runnable JAR + admin UI | `$JAVA_HOME/bin/mvn clean package -DskipTests` |
