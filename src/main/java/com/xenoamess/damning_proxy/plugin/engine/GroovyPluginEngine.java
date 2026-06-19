@@ -32,7 +32,7 @@ public class GroovyPluginEngine implements PluginEngine {
     @Override
     public void execute(Plugin plugin, PluginContext context) {
         String script = resolveScript(plugin);
-        Script compiled = scriptCache.computeIfAbsent(cacheKey(plugin, script), s -> shell.parse(s));
+        Script compiled = scriptCache.computeIfAbsent(cacheKey(plugin, script), k -> shell.parse(script));
         Binding binding = new Binding();
         binding.setVariable("context", context);
         if (plugin.mode == Plugin.Mode.ZIP_PACKAGE) {
