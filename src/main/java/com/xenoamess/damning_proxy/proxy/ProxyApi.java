@@ -1,5 +1,7 @@
 package com.xenoamess.damning_proxy.proxy;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Multi;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -15,6 +17,9 @@ public class ProxyApi {
 
     @Inject
     OpenAiProxyService proxyService;
+
+    @Inject
+    ObjectMapper objectMapper;
 
     private static boolean isStreamingRequest(Map<String, Object> requestBody) {
         if (requestBody == null) {
@@ -34,14 +39,22 @@ public class ProxyApi {
     @POST
     @Path("/chat/completions")
     @Consumes(MediaType.APPLICATION_JSON)
-    @Produces({MediaType.APPLICATION_JSON, MediaType.SERVER_SENT_EVENTS})
-    public Object chatCompletions(@PathParam("instanceSlug") String instanceSlug, Map<String, Object> requestBody,
+    @Produces(MediaType.SERVER_SENT_EVENTS)
+    @Blocking
+    public Multi<String> chatCompletions(@PathParam("instanceSlug") String instanceSlug, Map<String, Object> requestBody,
                                      @Context HttpHeaders headers) {
         boolean wantsStream = isStreamingRequest(requestBody)
             || headers.getAcceptableMediaTypes().stream().anyMatch(mt -> mt.isCompatible(MediaType.SERVER_SENT_EVENTS_TYPE));
         if (wantsStream) {
             return proxyService.chatCompletionsStream(instanceSlug, requestBody, headers);
         }
-        return proxyService.chatCompletions(instanceSlug, requestBody, headers);
+        Response response = proxyService.chatCompletions(instanceSlug, requestBody, headers);
+        Object entity = response.getEntity();
+        try {
+            String json = (entity instanceof String) ? (String) entity : objectMapper.writeValueAsString(entity);
+            return Multi.createFrom().item("data: " + json + "\n\n");
+        } catch (Exception e) {
+            return Multi.createFrom().failure(e);
+        }
     }
 }

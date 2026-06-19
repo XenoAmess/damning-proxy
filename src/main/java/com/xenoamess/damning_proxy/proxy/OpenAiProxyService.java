@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @ApplicationScoped
 public class OpenAiProxyService {
@@ -113,7 +114,7 @@ public class OpenAiProxyService {
         }
     }
 
-    public Object chatCompletions(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+    public Response chatCompletions(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
         ProxyContext ctx = resolveInstance(instanceSlug);
         List<Plugin> plugins = loadPlugins(ctx.group);
 
@@ -134,12 +135,6 @@ public class OpenAiProxyService {
             return Response.status(context.getResponseStatus())
                 .entity(context.getResponseBody())
                 .build();
-        }
-
-        boolean streaming = isStreamingRequest(context.getRequestBody());
-
-        if (streaming) {
-            return doStreamChatCompletions(ctx, context, plugins, trafficLog, start);
         }
 
         try {
@@ -205,6 +200,26 @@ public class OpenAiProxyService {
             StringBuilder responseBuffer = new StringBuilder();
             StringBuilder sseBuffer = new StringBuilder();
             StringBuilder contentBuffer = new StringBuilder();
+            AtomicBoolean logged = new AtomicBoolean(false);
+
+            Runnable recordOnce = () -> {
+                if (logged.compareAndSet(false, true)) {
+                    int status = context.getResponseStatus() != 0 ? context.getResponseStatus() : 200;
+                    executorService.execute(() -> trafficLogService.recordResponse(trafficLog, status,
+                        context.getResponseHeaders(), context.getResponseBody(),
+                        System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots()));
+                }
+            };
+
+            emitter.onTermination(() -> {
+                if (logged.compareAndSet(false, true)) {
+                    Log.warnf("Streaming request terminated (client cancelled or failure) for log #%d", trafficLog.id);
+                    executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 499,
+                        Map.of(), "Client closed connection or stream terminated",
+                        System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots()));
+                }
+            });
+
             upstreamFuture.onSuccess(response -> {
                 context.setResponseStatus(response.statusCode());
                 context.getResponseHeaders().putAll(toMap(response.headers()));
@@ -220,6 +235,7 @@ public class OpenAiProxyService {
                         if (line.startsWith("data: ")) {
                             String data = line.substring(6).trim();
                             if ("[DONE]".equals(data)) {
+                                recordOnce.run();
                                 emitter.complete();
                                 return;
                             }
@@ -240,15 +256,15 @@ public class OpenAiProxyService {
                     Object parsedBody = buildStreamingResponseBody(contentBuffer.toString());
                     context.setResponseBody(parsedBody);
                     pluginExecutionService.executeResponsePlugins(plugins, context);
-                    executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 200,
-                        context.getResponseHeaders(), context.getResponseBody(),
-                        System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots()));
+                    recordOnce.run();
                     emitter.complete();
                 });
             }).onFailure(err -> {
                 Log.error("Streaming upstream failed", err);
-                executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 502,
-                    Map.of(), err.getMessage(), System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots()));
+                if (logged.compareAndSet(false, true)) {
+                    executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 502,
+                        Map.of(), err.getMessage(), System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots()));
+                }
                 emitter.fail(err);
             });
         });
