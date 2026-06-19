@@ -37,6 +37,8 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+
 @ApplicationScoped
 public class OpenAiProxyService {
 
@@ -425,7 +427,8 @@ public class OpenAiProxyService {
                 Log.warnf("Failed to parse custom body for profile %s: %s", profile.slug, e.getMessage());
             }
         }
-        return base;
+        // Convert back to plain Map/List so Groovy/JS plugins can mutate in-place
+        return objectMapper.convertValue(base, new TypeReference<Map<String, Object>>() {});
     }
 
     private boolean isHopByHopHeader(String name) {
