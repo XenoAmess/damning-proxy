@@ -41,7 +41,8 @@ public class TrafficLogService {
 
     @Transactional
     public TrafficLog recordRequest(Long instanceId, String instanceSlug, Long profileId, String path, String method,
-                                    Map<String, String> requestHeaders, Object requestBody) {
+                                    Map<String, String> requestHeaders, Object requestBody,
+                                    String upstreamBaseUrl, int timeoutMs, boolean streaming) {
         TrafficLog log = new TrafficLog();
         log.instanceId = instanceId;
         log.instanceSlug = instanceSlug;
@@ -50,6 +51,10 @@ public class TrafficLogService {
         log.requestMethod = method;
         log.requestHeaders = serializeHeaders(requestHeaders);
         log.requestBody = serializeBody(requestBody);
+        log.requestBodyLength = computeBodyLength(requestBody);
+        log.upstreamBaseUrl = upstreamBaseUrl;
+        log.timeoutMs = timeoutMs;
+        log.streaming = streaming;
         log.requestTime = LocalDateTime.now();
         return logRepository.save(log);
     }
@@ -59,6 +64,14 @@ public class TrafficLogService {
                                Map<String, String> responseHeaders, Object responseBody,
                                long durationMs, List<String> pluginLogs,
                                List<PluginExecutionSnapshot> friendlySnapshots) {
+        recordResponse(log, statusCode, responseHeaders, responseBody, durationMs, pluginLogs, friendlySnapshots, null);
+    }
+
+    @Transactional
+    public void recordResponse(TrafficLog log, int statusCode,
+                               Map<String, String> responseHeaders, Object responseBody,
+                               long durationMs, List<String> pluginLogs,
+                               List<PluginExecutionSnapshot> friendlySnapshots, String errorMessage) {
         TrafficLog existing = logRepository.findById(log.id).orElse(null);
         if (existing == null) {
             Log.warnf("TrafficLog not found for response recording: id=%s", log.id);
@@ -67,10 +80,12 @@ public class TrafficLogService {
         existing.responseStatus = statusCode;
         existing.responseHeaders = serializeHeaders(responseHeaders);
         existing.responseBody = serializeBody(responseBody);
+        existing.responseBodyLength = computeBodyLength(responseBody);
         existing.durationMs = durationMs;
         existing.responseTime = LocalDateTime.now();
         existing.pluginLogs = serializePluginLogs(pluginLogs);
         existing.friendlyPluginSnapshots = serializeFriendlySnapshots(friendlySnapshots);
+        existing.errorMessage = errorMessage;
         logRepository.save(existing);
     }
 
@@ -109,6 +124,18 @@ public class TrafficLogService {
         } catch (JsonProcessingException e) {
             Log.warn("Failed to serialize body", e);
             return body.toString();
+        }
+    }
+
+    private Integer computeBodyLength(Object body) {
+        if (body == null) {
+            return null;
+        }
+        try {
+            String json = (body instanceof String) ? (String) body : objectMapper.writeValueAsString(body);
+            return json.length();
+        } catch (JsonProcessingException e) {
+            return body.toString().length();
         }
     }
 

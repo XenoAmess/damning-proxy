@@ -38,11 +38,15 @@ class TrafficLogServiceTest {
         TrafficLog log = trafficLogService.recordRequest(
             10L, "test-instance", 1L, "/v1/chat/completions", "POST",
             Map.of("Authorization", "Bearer test"),
-            Map.of("model", "gpt-4")
+            Map.of("model", "gpt-4"),
+            "https://api.example.com", 30000, false
         );
         assertNotNull(log.id);
         assertEquals("POST", log.requestMethod);
         assertEquals("test-instance", log.instanceSlug);
+        assertEquals("https://api.example.com", log.upstreamBaseUrl);
+        assertEquals(30000, log.timeoutMs);
+        assertFalse(log.streaming);
 
         trafficLogService.recordResponse(log, 200,
             Map.of("Content-Type", "application/json"),
@@ -64,7 +68,8 @@ class TrafficLogServiceTest {
         }
 
         TrafficLog log = trafficLogService.recordRequest(
-            10L, "test-instance", 1L, "/v1/chat/completions", "POST", Map.of(), large.toString()
+            10L, "test-instance", 1L, "/v1/chat/completions", "POST", Map.of(), large.toString(),
+            "https://api.example.com", 30000, false
         );
 
         assertTrue(log.requestBody.length() < 15000);

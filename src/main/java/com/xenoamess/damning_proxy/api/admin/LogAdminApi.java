@@ -88,6 +88,12 @@ public class LogAdminApi {
         dto.responseTime = log.responseTime;
         dto.requestBody = parseJson(log.requestBody);
         dto.responseBody = parseJson(log.responseBody);
+        dto.requestBodyLength = log.requestBodyLength;
+        dto.responseBodyLength = log.responseBodyLength;
+        dto.upstreamBaseUrl = log.upstreamBaseUrl;
+        dto.timeoutMs = log.timeoutMs;
+        dto.streaming = log.streaming;
+        dto.errorMessage = log.errorMessage;
         dto.rawRequestHeaders = log.requestHeaders;
         dto.rawResponseHeaders = log.responseHeaders;
         dto.rawPluginLogs = log.pluginLogs;

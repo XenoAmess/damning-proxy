@@ -35,6 +35,18 @@ public class TrafficLog extends PanacheEntityBase {
     @Column(name = "request_body", length = 20000)
     public String requestBody;
 
+    @Column(name = "request_body_length")
+    public Integer requestBodyLength;
+
+    @Column(name = "upstream_base_url")
+    public String upstreamBaseUrl;
+
+    @Column(name = "timeout_ms")
+    public Integer timeoutMs;
+
+    @Column(name = "streaming")
+    public Boolean streaming;
+
     @CreationTimestamp
     @Column(name = "request_time")
     public LocalDateTime requestTime;
@@ -47,6 +59,12 @@ public class TrafficLog extends PanacheEntityBase {
 
     @Column(name = "response_body", length = 20000)
     public String responseBody;
+
+    @Column(name = "response_body_length")
+    public Integer responseBodyLength;
+
+    @Column(name = "error_message", length = 2000)
+    public String errorMessage;
 
     @Column(name = "response_time")
     public LocalDateTime responseTime;

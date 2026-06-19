@@ -20,6 +20,13 @@ public class TrafficLogFriendlyDto {
     public Object requestBody;
     public Object responseBody;
 
+    public Integer requestBodyLength;
+    public Integer responseBodyLength;
+    public String upstreamBaseUrl;
+    public Integer timeoutMs;
+    public Boolean streaming;
+    public String errorMessage;
+
     public String userPrompt;
     public String modelOutput;
     public String model;

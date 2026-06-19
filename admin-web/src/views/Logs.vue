@@ -28,9 +28,11 @@
             >
               {{ log.responseStatus || '-' }}
             </el-tag>
+            <el-tag v-if="log.streaming" size="small" type="primary">流式</el-tag>
           </div>
           <div class="log-time">
             <span v-if="log.durationMs">{{ log.durationMs }}ms · </span>
+            <span v-if="log.requestBodyLength">{{ formatBytes(log.requestBodyLength) }} · </span>
             {{ formatTime(log.requestTime) }}
           </div>
         </div>
@@ -106,6 +108,7 @@
             · 状态 <el-tag :type="statusType">{{ current.responseStatus || '-' }}</el-tag>
             <span v-if="current.durationMs !== null && current.durationMs !== undefined"> · 耗时 {{ current.durationMs }}ms</span>
             <span v-if="current.model"> · 模型 {{ current.model }}</span>
+            <span v-if="current.streaming"> · 流式</span>
           </div>
           <div class="detail-times">
             <div class="detail-time-item">
@@ -116,6 +119,9 @@
               <span class="detail-time-label">响应时间</span>
               <span class="detail-time-value">{{ formatFullTime(current.responseTime) }}</span>
             </div>
+          </div>
+          <div v-if="current.errorMessage" class="detail-error">
+            <el-alert :title="current.errorMessage" type="error" :closable="false" show-icon />
           </div>
         </div>
 
@@ -201,6 +207,10 @@
               <div class="detail-section-title">请求体</div>
               <pre>{{ formatJson(current.requestBody) }}</pre>
             </div>
+            <div class="detail-section">
+              <div class="detail-section-title">请求大小</div>
+              <div class="meta-value">{{ formatBytes(current.requestBodyLength) }}</div>
+            </div>
           </el-tab-pane>
 
           <el-tab-pane label="原始响应" name="rawResponse">
@@ -212,6 +222,10 @@
             <div v-if="current.responseBody" class="detail-section">
               <div class="detail-section-title">响应体</div>
               <pre>{{ formatJson(current.responseBody) }}</pre>
+            </div>
+            <div class="detail-section">
+              <div class="detail-section-title">响应大小</div>
+              <div class="meta-value">{{ formatBytes(current.responseBodyLength) }}</div>
             </div>
           </el-tab-pane>
 
@@ -266,6 +280,30 @@
               <div class="meta-item">
                 <div class="meta-label">模型</div>
                 <div class="meta-value">{{ current.model || '-' }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">上游地址</div>
+                <div class="meta-value">{{ current.upstreamBaseUrl || '-' }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">超时时间</div>
+                <div class="meta-value">{{ current.timeoutMs !== null && current.timeoutMs !== undefined ? current.timeoutMs + 'ms' : '-' }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">是否流式</div>
+                <div class="meta-value">{{ current.streaming ? '是' : '否' }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">请求大小</div>
+                <div class="meta-value">{{ formatBytes(current.requestBodyLength) }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">响应大小</div>
+                <div class="meta-value">{{ formatBytes(current.responseBodyLength) }}</div>
+              </div>
+              <div v-if="current.errorMessage" class="meta-item meta-item-full">
+                <div class="meta-label">错误信息</div>
+                <div class="meta-value error-text">{{ current.errorMessage }}</div>
               </div>
             </div>
           </el-tab-pane>
@@ -425,6 +463,14 @@ function formatFullTime(value) {
 function formatTime(value) {
   if (!value) return '-'
   return formatFullTime(value)
+}
+
+function formatBytes(value) {
+  if (value === null || value === undefined) return '-'
+  const n = Number(value)
+  if (n < 1024) return n + ' B'
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB'
+  return (n / (1024 * 1024)).toFixed(2) + ' MB'
 }
 
 function setCardRef(id, el) {
@@ -619,10 +665,8 @@ onUnmounted(() => {
   color: #606266;
 }
 
-.detail-subtitle {
-  margin-top: 6px;
-  font-size: 13px;
-  color: #606266;
+.detail-error {
+  margin-top: 12px;
 }
 
 .detail-times {
@@ -672,6 +716,10 @@ onUnmounted(() => {
   background: #f5f7fa;
   border-radius: 6px;
   padding: 10px 12px;
+}
+
+.meta-item-full {
+  grid-column: 1 / -1;
 }
 
 .meta-label {

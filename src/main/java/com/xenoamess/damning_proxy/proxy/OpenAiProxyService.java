@@ -73,7 +73,8 @@ public class OpenAiProxyService {
         long start = System.currentTimeMillis();
         TrafficLog trafficLog = trafficLogService.recordRequest(
             ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/models", "GET",
-            context.getRequestHeaders(), null
+            context.getRequestHeaders(), null,
+            ctx.profile.baseUrl, ctx.profile.timeoutMs, false
         );
 
         pluginExecutionService.executeRequestPlugins(plugins, context);
@@ -109,7 +110,7 @@ public class OpenAiProxyService {
         } catch (Exception e) {
             trafficLogService.recordResponse(trafficLog, 502,
                 Map.of(), "Upstream request failed: " + e.getMessage(),
-                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), e.getMessage());
             throw e;
         }
     }
@@ -123,7 +124,8 @@ public class OpenAiProxyService {
         long start = System.currentTimeMillis();
         TrafficLog trafficLog = trafficLogService.recordRequest(
             ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/chat/completions", "POST",
-            context.getRequestHeaders(), requestBody
+            context.getRequestHeaders(), requestBody,
+            ctx.profile.baseUrl, ctx.profile.timeoutMs, false
         );
 
         pluginExecutionService.executeRequestPlugins(plugins, context);
@@ -159,7 +161,7 @@ public class OpenAiProxyService {
         } catch (Exception e) {
             trafficLogService.recordResponse(trafficLog, 502,
                 Map.of(), "Upstream request failed: " + e.getMessage(),
-                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), e.getMessage());
             throw e;
         }
     }
@@ -173,7 +175,8 @@ public class OpenAiProxyService {
         long start = System.currentTimeMillis();
         TrafficLog trafficLog = trafficLogService.recordRequest(
             ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/chat/completions", "POST",
-            context.getRequestHeaders(), requestBody
+            context.getRequestHeaders(), requestBody,
+            ctx.profile.baseUrl, ctx.profile.timeoutMs, true
         );
 
         pluginExecutionService.executeRequestPlugins(plugins, context);
@@ -211,12 +214,19 @@ public class OpenAiProxyService {
                 }
             };
 
+            java.util.function.Consumer<String> recordError = (message) -> {
+                if (logged.compareAndSet(false, true)) {
+                    executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 502,
+                        Map.of(), message, System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), message));
+                }
+            };
+
             emitter.onTermination(() -> {
                 if (logged.compareAndSet(false, true)) {
+                    String message = "Client closed connection or stream terminated";
                     Log.warnf("Streaming request terminated (client cancelled or failure) for log #%d", trafficLog.id);
                     executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 499,
-                        Map.of(), "Client closed connection or stream terminated",
-                        System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots()));
+                        Map.of(), message, System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), message));
                 }
             });
 
@@ -261,10 +271,7 @@ public class OpenAiProxyService {
                 });
             }).onFailure(err -> {
                 Log.error("Streaming upstream failed", err);
-                if (logged.compareAndSet(false, true)) {
-                    executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 502,
-                        Map.of(), err.getMessage(), System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots()));
-                }
+                recordError.accept(err.getMessage());
                 emitter.fail(err);
             });
         });
