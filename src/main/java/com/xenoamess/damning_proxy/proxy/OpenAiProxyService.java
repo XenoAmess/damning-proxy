@@ -86,27 +86,34 @@ public class OpenAiProxyService {
                 .build();
         }
 
-        UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
-            "GET", ctx.profile.baseUrl, "/models",
-            toMultiMap(context.getRequestHeaders()), null, ctx.profile.timeoutMs
-        );
+        try {
+            UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
+                "GET", ctx.profile.baseUrl, "/models",
+                toMultiMap(context.getRequestHeaders()), null, ctx.profile.timeoutMs
+            );
 
-        context.setResponseStatus(upstream.statusCode);
-        context.getResponseHeaders().putAll(toMap(upstream.headers));
-        context.setResponseBody(parseJson(upstream.body));
+            context.setResponseStatus(upstream.statusCode);
+            context.getResponseHeaders().putAll(toMap(upstream.headers));
+            context.setResponseBody(parseJson(upstream.body));
 
-        pluginExecutionService.executeResponsePlugins(plugins, context);
+            pluginExecutionService.executeResponsePlugins(plugins, context);
 
-        trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
-            context.getResponseHeaders(), context.getResponseBody(),
-            System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
+            trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
+                context.getResponseHeaders(), context.getResponseBody(),
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
 
-        return Response.status(context.getResponseStatus())
-            .entity(context.getResponseBody())
-            .build();
+            return Response.status(context.getResponseStatus())
+                .entity(context.getResponseBody())
+                .build();
+        } catch (Exception e) {
+            trafficLogService.recordResponse(trafficLog, 502,
+                Map.of(), "Upstream request failed: " + e.getMessage(),
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
+            throw e;
+        }
     }
 
-    public Response chatCompletions(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+    public Object chatCompletions(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
         ProxyContext ctx = resolveInstance(instanceSlug);
         List<Plugin> plugins = loadPlugins(ctx.group);
 
@@ -132,27 +139,34 @@ public class OpenAiProxyService {
         boolean streaming = isStreamingRequest(context.getRequestBody());
 
         if (streaming) {
-            throw new jakarta.ws.rs.WebApplicationException("Streaming requests are not supported by this endpoint, use /chat/completions with Accept: text/event-stream", jakarta.ws.rs.core.Response.Status.BAD_REQUEST);
+            return doStreamChatCompletions(ctx, context, plugins, trafficLog, start);
         }
 
-        UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
-            "POST", ctx.profile.baseUrl, "/chat/completions",
-            toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs
-        );
+        try {
+            UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
+                "POST", ctx.profile.baseUrl, "/chat/completions",
+                toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs
+            );
 
-        context.setResponseStatus(upstream.statusCode);
-        context.getResponseHeaders().putAll(toMap(upstream.headers));
-        context.setResponseBody(parseJson(upstream.body));
+            context.setResponseStatus(upstream.statusCode);
+            context.getResponseHeaders().putAll(toMap(upstream.headers));
+            context.setResponseBody(parseJson(upstream.body));
 
-        pluginExecutionService.executeResponsePlugins(plugins, context);
+            pluginExecutionService.executeResponsePlugins(plugins, context);
 
-        trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
-            context.getResponseHeaders(), context.getResponseBody(),
-            System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
+            trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
+                context.getResponseHeaders(), context.getResponseBody(),
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
 
-        return Response.status(context.getResponseStatus())
-            .entity(context.getResponseBody())
-            .build();
+            return Response.status(context.getResponseStatus())
+                .entity(context.getResponseBody())
+                .build();
+        } catch (Exception e) {
+            trafficLogService.recordResponse(trafficLog, 502,
+                Map.of(), "Upstream request failed: " + e.getMessage(),
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
+            throw e;
+        }
     }
 
     public Multi<String> chatCompletionsStream(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
@@ -177,10 +191,10 @@ public class OpenAiProxyService {
             return Multi.createFrom().item("data: " + returned + "\n\ndata: [DONE]\n\n");
         }
 
-        return streamChatCompletions(ctx, context, plugins, trafficLog, start);
+        return doStreamChatCompletions(ctx, context, plugins, trafficLog, start);
     }
 
-    private Multi<String> streamChatCompletions(ProxyContext ctx, PluginContext context,
+    private Multi<String> doStreamChatCompletions(ProxyContext ctx, PluginContext context,
                                            List<Plugin> plugins, TrafficLog trafficLog, long start) {
         Future<HttpClientResponse> upstreamFuture = upstreamHttpClient.sendStream(
             "POST", ctx.profile.baseUrl, "/chat/completions",

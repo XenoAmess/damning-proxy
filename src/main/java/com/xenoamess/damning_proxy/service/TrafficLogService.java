@@ -10,6 +10,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,10 +27,17 @@ public class TrafficLogService {
     @Inject
     ObjectMapper objectMapper;
 
-    private static final int MAX_BODY_LENGTH = 10000;
-    private static final int MAX_HEADERS_LENGTH = 2000;
-    private static final int MAX_PLUGIN_LOGS_LENGTH = 5000;
-    private static final int MAX_FRIENDLY_SNAPSHOTS_LENGTH = 8000;
+    @ConfigProperty(name = "damning-proxy.log.max-body-length", defaultValue = "1073741824")
+    int maxBodyLength;
+
+    @ConfigProperty(name = "damning-proxy.log.max-headers-length", defaultValue = "2000")
+    int maxHeadersLength;
+
+    @ConfigProperty(name = "damning-proxy.log.max-plugin-logs-length", defaultValue = "5000")
+    int maxPluginLogsLength;
+
+    @ConfigProperty(name = "damning-proxy.log.max-friendly-snapshots-length", defaultValue = "8000")
+    int maxFriendlySnapshotsLength;
 
     @Transactional
     public TrafficLog recordRequest(Long instanceId, String instanceSlug, Long profileId, String path, String method,
@@ -73,7 +82,7 @@ public class TrafficLogService {
             Map<String, String> safe = new HashMap<>(headers);
             safe.replaceAll((k, v) -> "Authorization".equalsIgnoreCase(k) ? maskAuth(v) : v);
             String json = objectMapper.writeValueAsString(safe);
-            return truncate(json, MAX_HEADERS_LENGTH);
+            return truncate(json, maxHeadersLength);
         } catch (JsonProcessingException e) {
             Log.warn("Failed to serialize headers", e);
             return null;
@@ -96,7 +105,7 @@ public class TrafficLogService {
         }
         try {
             String json = (body instanceof String) ? (String) body : objectMapper.writeValueAsString(body);
-            return truncate(json, MAX_BODY_LENGTH);
+            return truncate(json, maxBodyLength);
         } catch (JsonProcessingException e) {
             Log.warn("Failed to serialize body", e);
             return body.toString();
@@ -109,7 +118,7 @@ public class TrafficLogService {
         }
         try {
             String json = objectMapper.writeValueAsString(pluginLogs);
-            return truncate(json, MAX_PLUGIN_LOGS_LENGTH);
+            return truncate(json, maxPluginLogsLength);
         } catch (JsonProcessingException e) {
             Log.warn("Failed to serialize plugin logs", e);
             return null;
@@ -122,7 +131,7 @@ public class TrafficLogService {
         }
         try {
             String json = objectMapper.writeValueAsString(snapshots);
-            return truncate(json, MAX_FRIENDLY_SNAPSHOTS_LENGTH);
+            return truncate(json, maxFriendlySnapshotsLength);
         } catch (JsonProcessingException e) {
             Log.warn("Failed to serialize friendly snapshots", e);
             return null;
@@ -130,7 +139,7 @@ public class TrafficLogService {
     }
 
     private String truncate(String value, int maxLength) {
-        if (value == null || value.length() <= maxLength) {
+        if (maxLength < 0 || value == null || value.length() <= maxLength) {
             return value;
         }
         return value.substring(0, maxLength) + "...[truncated]";

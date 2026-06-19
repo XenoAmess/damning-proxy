@@ -102,9 +102,20 @@
           </div>
           <div class="detail-subtitle">
             实例 <el-tag type="warning">{{ current.instanceSlug || current.instanceId || '-' }}</el-tag>
+            · 配置 <el-tag type="warning">{{ current.profileId || '-' }}</el-tag>
             · 状态 <el-tag :type="statusType">{{ current.responseStatus || '-' }}</el-tag>
-            <span v-if="current.durationMs"> · 耗时 {{ current.durationMs }}ms</span>
+            <span v-if="current.durationMs !== null && current.durationMs !== undefined"> · 耗时 {{ current.durationMs }}ms</span>
             <span v-if="current.model"> · 模型 {{ current.model }}</span>
+          </div>
+          <div class="detail-times">
+            <div class="detail-time-item">
+              <span class="detail-time-label">请求时间</span>
+              <span class="detail-time-value">{{ formatFullTime(current.requestTime) }}</span>
+            </div>
+            <div v-if="current.responseTime" class="detail-time-item">
+              <span class="detail-time-label">响应时间</span>
+              <span class="detail-time-value">{{ formatFullTime(current.responseTime) }}</span>
+            </div>
           </div>
         </div>
 
@@ -182,18 +193,81 @@
 
           <el-tab-pane label="原始请求" name="rawRequest">
             <el-empty v-if="!current.rawRequestHeaders && !current.requestBody" description="无原始请求内容" />
-            <pre v-if="current.rawRequestHeaders">{{ formatJson(current.rawRequestHeaders) }}</pre>
-            <pre v-if="current.requestBody">{{ formatJson(current.requestBody) }}</pre>
+            <div v-if="current.rawRequestHeaders" class="detail-section">
+              <div class="detail-section-title">请求头</div>
+              <pre>{{ formatJsonHeader(current.rawRequestHeaders) }}</pre>
+            </div>
+            <div v-if="current.requestBody" class="detail-section">
+              <div class="detail-section-title">请求体</div>
+              <pre>{{ formatJson(current.requestBody) }}</pre>
+            </div>
           </el-tab-pane>
 
           <el-tab-pane label="原始响应" name="rawResponse">
             <el-empty v-if="!current.rawResponseHeaders && !current.responseBody" description="无原始响应内容" />
-            <pre v-if="current.rawResponseHeaders">{{ formatJson(current.rawResponseHeaders) }}</pre>
-            <pre v-if="current.responseBody">{{ formatJson(current.responseBody) }}</pre>
+            <div v-if="current.rawResponseHeaders" class="detail-section">
+              <div class="detail-section-title">响应头</div>
+              <pre>{{ formatJsonHeader(current.rawResponseHeaders) }}</pre>
+            </div>
+            <div v-if="current.responseBody" class="detail-section">
+              <div class="detail-section-title">响应体</div>
+              <pre>{{ formatJson(current.responseBody) }}</pre>
+            </div>
           </el-tab-pane>
 
           <el-tab-pane label="插件日志" name="pluginLogs">
-            <pre>{{ formatJson(current.rawPluginLogs) }}</pre>
+            <div v-if="current.rawPluginLogs" class="detail-section">
+              <div class="detail-section-title">插件日志</div>
+              <pre>{{ formatJson(current.rawPluginLogs) }}</pre>
+            </div>
+            <el-empty v-else description="无插件日志" />
+          </el-tab-pane>
+
+          <el-tab-pane label="元信息" name="meta">
+            <div class="meta-grid">
+              <div class="meta-item">
+                <div class="meta-label">日志 ID</div>
+                <div class="meta-value">#{{ current.id }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">请求方法</div>
+                <div class="meta-value">{{ current.requestMethod }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">请求路径</div>
+                <div class="meta-value">{{ current.requestPath }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">实例</div>
+                <div class="meta-value">{{ current.instanceSlug || current.instanceId || '-' }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">上游配置 ID</div>
+                <div class="meta-value">{{ current.profileId || '-' }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">响应状态码</div>
+                <div class="meta-value">
+                  <el-tag size="small" :type="statusType">{{ current.responseStatus || '-' }}</el-tag>
+                </div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">耗时</div>
+                <div class="meta-value">{{ current.durationMs !== null && current.durationMs !== undefined ? current.durationMs + 'ms' : '-' }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">请求时间</div>
+                <div class="meta-value">{{ formatFullTime(current.requestTime) }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">响应时间</div>
+                <div class="meta-value">{{ formatFullTime(current.responseTime) }}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">模型</div>
+                <div class="meta-value">{{ current.model || '-' }}</div>
+              </div>
+            </div>
           </el-tab-pane>
         </el-tabs>
       </template>
@@ -310,18 +384,47 @@ function parseThink(content) {
 }
 
 function formatJson(value) {
-  if (!value) return ''
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'string') return value
   try {
-    return JSON.stringify(typeof value === 'string' ? JSON.parse(value) : value, null, 2)
+    return JSON.stringify(value, null, 2)
+  } catch (e) {
+    return String(value)
+  }
+}
+
+function formatJsonHeader(value) {
+  if (!value) return ''
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value, null, 2)
+    } catch (e) {
+      return String(value)
+    }
+  }
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2)
   } catch (e) {
     return value
   }
 }
 
-function formatTime(value) {
+function formatFullTime(value) {
   if (!value) return '-'
   const d = new Date(value)
-  return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`
+  const Y = d.getFullYear()
+  const M = (d.getMonth() + 1).toString().padStart(2, '0')
+  const D = d.getDate().toString().padStart(2, '0')
+  const h = d.getHours().toString().padStart(2, '0')
+  const m = d.getMinutes().toString().padStart(2, '0')
+  const s = d.getSeconds().toString().padStart(2, '0')
+  const ms = d.getMilliseconds().toString().padStart(3, '0')
+  return `${Y}-${M}-${D} ${h}:${m}:${s}.${ms}`
+}
+
+function formatTime(value) {
+  if (!value) return '-'
+  return formatFullTime(value)
 }
 
 function setCardRef(id, el) {
@@ -514,6 +617,73 @@ onUnmounted(() => {
   margin-top: 6px;
   font-size: 13px;
   color: #606266;
+}
+
+.detail-subtitle {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.detail-times {
+  display: flex;
+  gap: 24px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #f5f7fa;
+  border-radius: 6px;
+}
+
+.detail-time-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-time-label {
+  font-size: 12px;
+  color: #909399;
+}
+
+.detail-time-value {
+  font-size: 13px;
+  color: #303133;
+  font-family: monospace;
+}
+
+.detail-section {
+  margin-bottom: 16px;
+}
+
+.detail-section-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #606266;
+  margin-bottom: 8px;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.meta-item {
+  background: #f5f7fa;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.meta-label {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 4px;
+}
+
+.meta-value {
+  font-size: 13px;
+  color: #303133;
+  word-break: break-all;
 }
 
 .chat-flow {
