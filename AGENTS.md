@@ -14,7 +14,7 @@
 | Goal | Command |
 |------|---------|
 | Dev mode with live reload | `$JAVA_HOME/bin/mvn quarkus:dev` |
-| Dev mode background (no blocking) | `setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1' </dev/null &` |
+| Dev mode background (no blocking) | `setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1 &' </dev/null &` |
 | Run tests | `$JAVA_HOME/bin/mvn test` |
 | Build runnable JAR + admin UI | `$JAVA_HOME/bin/mvn clean package -DskipTests` |
 | Run the built JAR | `$JAVA_HOME/bin/java -jar target/quarkus-app/quarkus-run.jar` |

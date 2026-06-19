@@ -52,14 +52,14 @@ setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1' </
 
 现象：执行 `mvn quarkus:dev` 后 opencode 不再响应，或后台启动后进程很快退出。
 
-原因：Quarkus dev mode 默认读取标准输入等待命令（如 `r` 恢复测试、`e` 编辑参数），并且会暂停测试。普通 `nohup ... &` 可能因 stdin 被关闭而异常。
+原因：Quarkus dev mode 默认读取标准输入等待命令（如 `r` 恢复测试、`e` 编辑参数），并且会暂停测试。普通 `nohup ... &` 可能因 stdin 被关闭而异常；`setsid bash -c 'mvn ...'` 会让 opencode 等待内层 shell 直到 mvn 退出。
 
-解决：使用 `setsid` + `</dev/null` 完全脱离终端，并跳过测试：
+解决：使用 `setsid` + 内层后台 + `</dev/null`：
 
 ```bash
 export JAVA_HOME=/home/xenoamess/.jdks/jdk-21.0.7+6
 export PATH=$JAVA_HOME/bin:$PATH
-setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1' </dev/null &
+setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1 &' </dev/null &
 ```
 
 验证：

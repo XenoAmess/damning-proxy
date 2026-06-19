@@ -111,20 +111,27 @@ nohup java -jar target/quarkus-app/quarkus-run.jar > damning-proxy.log 2>&1 &
 
 ### 开发模式后台运行
 
-`mvn quarkus:dev` 默认会等待终端输入，直接 `nohup ... &` 仍可能阻塞或异常退出。推荐用 `setsid` 脱离终端：
+`mvn quarkus:dev` 默认会等待终端输入，直接 `nohup ... &` 仍可能阻塞或异常退出。推荐用 `setsid` + 内层后台脱离终端：
 
 ```bash
 export JAVA_HOME=/home/xenoamess/.jdks/jdk-21.0.7+6
 export PATH=$JAVA_HOME/bin:$PATH
-setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1' </dev/null &
+setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1 &' </dev/null &
 ```
 
 说明：
 
-- `setsid` + `</dev/null` 确保 dev mode 不会从当前终端读取输入，避免阻塞或随终端关闭而退出。
+- 内层 `mvn ... &` 让 Maven 在子 shell 中后台运行，该子 shell 立即退出，不会持有 opencode Bash 工具的 stdout 管道。
 - `-DskipTests` 跳过测试，否则 dev mode 启动后会暂停在 `Tests paused` 等待按 `r` 恢复。
 - 日志输出到 `/tmp/daming-proxy-dev.log`，可通过 `tail -f /tmp/daming-proxy-dev.log` 查看。
-- 停止时 `pgrep -f quarkus:dev` 找到进程后 `kill`。
+- 停止时 `pgrep -f quarkus:dev` 找到 Java 进程后 `kill`。
+
+注意：如果写成下面这种方式，内层 shell 会等待 `mvn` 退出，导致 opencode Bash 命令超时：
+
+```bash
+# 错误示例
+setsid bash -c 'mvn quarkus:dev -DskipTests > /tmp/daming-proxy-dev.log 2>&1' </dev/null &
+```
 
 使用 systemd（示例）：
 
