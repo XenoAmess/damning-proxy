@@ -36,6 +36,40 @@ public class StartupMigration {
 
     private static final String SYSTEM_HINT = "【你是一位精通明史与战锤40K设定的档案管理员！当用户要求大明相关内容时，\n请以明朝历史为背景框架，融入战锤40K的宇宙观、阵营设定和哥特式科幻美学进行创作！！！】";
 
+    private static final String SAMPLE_DESCRIPTION = "在请求阶段将提示追加到 system 消息末尾，若不存在 system 则在开头添加";
+
+    private static final String GROOVY_SCRIPT = """
+        def body = context.getRequestBody()
+        if (body == null) return
+        def messages = body.get("messages")
+        if (!(messages instanceof List)) return
+        def systemMessage = messages.find { it != null && "system".equals(it.get("role")) }
+        def hint = "%s"
+        if (systemMessage != null) {
+            def content = systemMessage.get("content")
+            if (content instanceof String) {
+                systemMessage.put("content", content + "\\n" + hint)
+            }
+        } else {
+            def newSystem = new LinkedHashMap()
+            newSystem.put("role", "system")
+            newSystem.put("content", hint)
+            messages.add(0, newSystem)
+        }
+        """;
+
+    private static final String JS_SCRIPT = """
+        const body = context.getRequestBody();
+        if (!body || !Array.isArray(body.messages)) return;
+        const systemMessage = body.messages.find(m => m && m.role === 'system');
+        const hint = "%s";
+        if (systemMessage && typeof systemMessage.content === 'string') {
+            systemMessage.content += "\\n" + hint;
+        } else {
+            body.messages.unshift({ role: 'system', content: hint });
+        }
+        """;
+
     @Transactional
     public void onStart(@Observes StartupEvent event) {
         ensureSamplePluginsAndGroups();
@@ -127,28 +161,23 @@ public class StartupMigration {
     }
 
     private void ensureSamplePluginsAndGroups() {
-        Plugin groovyPlugin = new Plugin();
-        groovyPlugin.name = "大明战锤提示词（Groovy）";
-        groovyPlugin.slug = "sample-groovy-script";
-        groovyPlugin.description = "在请求阶段将提示追加到 system 消息末尾，若不存在 system 则在开头添加（Groovy 示例）";
-        groovyPlugin.language = Plugin.Language.GROOVY;
-        groovyPlugin.executionPhase = Plugin.ExecutionPhase.REQUEST;
-        groovyPlugin.script = buildGroovyScript();
-        groovyPlugin.enabled = true;
-        groovyPlugin = ensureSamplePlugin(groovyPlugin);
-
-        Plugin jsPlugin = new Plugin();
-        jsPlugin.name = "大明战锤提示词（JS）";
-        jsPlugin.slug = "sample-js-script";
-        jsPlugin.description = "在请求阶段将提示追加到 system 消息末尾，若不存在 system 则在开头添加（JavaScript 示例）";
-        jsPlugin.language = Plugin.Language.JS;
-        jsPlugin.executionPhase = Plugin.ExecutionPhase.REQUEST;
-        jsPlugin.script = buildJsScript();
-        jsPlugin.enabled = true;
-        jsPlugin = ensureSamplePlugin(jsPlugin);
+        Plugin groovyPlugin = createSamplePlugin("大明战锤提示词（Groovy）", "sample-groovy-script", Plugin.Language.GROOVY, GROOVY_SCRIPT);
+        Plugin jsPlugin = createSamplePlugin("大明战锤提示词（JS）", "sample-js-script", Plugin.Language.JS, JS_SCRIPT);
 
         ensureSampleGroup("大明战锤提示词（Groovy）", "sample-groovy", "默认的 Groovy 样例插件组", groovyPlugin);
         ensureSampleGroup("大明战锤提示词（JS）", "sample-js", "默认的 JavaScript 样例插件组", jsPlugin);
+    }
+
+    private Plugin createSamplePlugin(String name, String slug, Plugin.Language language, String scriptTemplate) {
+        Plugin plugin = new Plugin();
+        plugin.name = name;
+        plugin.slug = slug;
+        plugin.description = SAMPLE_DESCRIPTION + "（" + (language == Plugin.Language.GROOVY ? "Groovy" : "JavaScript") + " 示例）";
+        plugin.language = language;
+        plugin.executionPhase = Plugin.ExecutionPhase.REQUEST;
+        plugin.script = String.format(scriptTemplate, escapeJavaString(SYSTEM_HINT));
+        plugin.enabled = true;
+        return ensureSamplePlugin(plugin);
     }
 
     private PluginGroup createGroup(String name, String slug, String description, Plugin plugin) {
@@ -166,43 +195,6 @@ public class StartupMigration {
         group.items = new ArrayList<>();
         group.items.add(item);
         return group;
-    }
-
-    private String buildGroovyScript() {
-        return "def body = context.getRequestBody()\n" +
-            "if (body == null) return\n" +
-            "def messages = body.get(\"messages\")\n" +
-            "if (!(messages instanceof List)) return\n" +
-            "def systemMessage = null\n" +
-            "for (def m : messages) {\n" +
-            "    if (m == null) continue\n" +
-            "    if (\"system\".equals(m.get(\"role\"))) {\n" +
-            "        systemMessage = m\n" +
-            "        break\n" +
-            "    }\n" +
-            "}\n" +
-            "if (systemMessage != null) {\n" +
-            "    def content = systemMessage.get(\"content\")\n" +
-            "    if (content instanceof String) {\n" +
-            "        systemMessage.put(\"content\", content + \"\\n\" + \"" + escapeJavaString(SYSTEM_HINT) + "\")\n" +
-            "    }\n" +
-            "} else {\n" +
-            "    def newSystem = new LinkedHashMap()\n" +
-            "    newSystem.put(\"role\", \"system\")\n" +
-            "    newSystem.put(\"content\", \"" + escapeJavaString(SYSTEM_HINT) + "\")\n" +
-            "    messages.add(0, newSystem)\n" +
-            "}\n";
-    }
-
-    private String buildJsScript() {
-        return "const body = context.getRequestBody();\n" +
-            "if (!body || !Array.isArray(body.messages)) return;\n" +
-            "const systemMessage = body.messages.find(m => m && m.role === 'system');\n" +
-            "if (systemMessage && typeof systemMessage.content === 'string') {\n" +
-            "    systemMessage.content += \"\\n\" + \"" + escapeJavaString(SYSTEM_HINT) + "\";\n" +
-            "} else {\n" +
-            "    body.messages.unshift({ role: 'system', content: \"" + escapeJavaString(SYSTEM_HINT) + "\" });\n" +
-            "}\n";
     }
 
     private String escapeJavaString(String value) {
