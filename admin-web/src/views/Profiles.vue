@@ -48,13 +48,13 @@
         <el-form-item label="Bearer Token">
           <el-input v-model="form.bearerToken" type="password" show-password />
         </el-form-item>
-        <el-form-item label="自定义 Headers">
+        <el-form-item label="自定义 Headers" :error="errors.customHeaders">
           <el-input v-model="form.customHeaders" type="textarea" :rows="3"
-            placeholder='{"X-Api-Key":"secret"}' />
+            placeholder='{"X-Api-Key":"secret"}' @blur="formatJson('customHeaders')" />
         </el-form-item>
-        <el-form-item label="自定义 Body">
+        <el-form-item label="自定义 Body" :error="errors.customBody">
           <el-input v-model="form.customBody" type="textarea" :rows="5"
-            placeholder='{"temperature": 0.7, "max_tokens": 2048}' />
+            placeholder='{"temperature": 0.7, "max_tokens": 2048}' @blur="formatJson('customBody')" />
         </el-form-item>
         <el-form-item label="默认模型">
           <el-input v-model="form.defaultModel" />
@@ -84,6 +84,7 @@ const profiles = ref([])
 const loading = ref(false)
 const visible = ref(false)
 const selectedIds = ref([])
+const errors = ref({ customHeaders: '', customBody: '' })
 const form = ref({
   name: '',
   slug: '',
@@ -111,6 +112,7 @@ function handleSelectionChange(rows) {
 }
 
 function openDialog(row) {
+  errors.value = { customHeaders: '', customBody: '' }
   form.value = row ? { ...row } : {
     name: '',
     slug: '',
@@ -126,6 +128,7 @@ function openDialog(row) {
 }
 
 async function save() {
+  if (!validateJsonFields()) return
   try {
     if (form.value.id) {
       await updateProfile(form.value.id, form.value)
@@ -151,6 +154,40 @@ async function remove(id) {
       ElMessage.error('删除失败')
     }
   }
+}
+
+function formatJson(field) {
+  const raw = form.value[field]
+  if (!raw || raw.trim() === '') {
+    errors.value[field] = ''
+    return
+  }
+  try {
+    const parsed = JSON.parse(raw)
+    form.value[field] = JSON.stringify(parsed, null, 2)
+    errors.value[field] = ''
+  } catch (e) {
+    errors.value[field] = 'JSON 格式错误: ' + e.message
+  }
+}
+
+function validateJsonFields() {
+  let valid = true
+  ;['customHeaders', 'customBody'].forEach(field => {
+    const raw = form.value[field]
+    if (raw && raw.trim() !== '') {
+      try {
+        JSON.parse(raw)
+        errors.value[field] = ''
+      } catch (e) {
+        errors.value[field] = 'JSON 格式错误: ' + e.message
+        valid = false
+      }
+    } else {
+      errors.value[field] = ''
+    }
+  })
+  return valid
 }
 
 async function exportProfiles() {
