@@ -32,7 +32,8 @@ public class TrafficLog extends PanacheEntityBase {
     @Column(name = "request_headers", length = 4000)
     public String requestHeaders;
 
-    @Column(name = "request_body", length = 20000)
+    @Lob
+    @Column(name = "request_body")
     public String requestBody;
 
     @Column(name = "request_body_length")
@@ -57,7 +58,8 @@ public class TrafficLog extends PanacheEntityBase {
     @Column(name = "response_headers", length = 4000)
     public String responseHeaders;
 
-    @Column(name = "response_body", length = 20000)
+    @Lob
+    @Column(name = "response_body")
     public String responseBody;
 
     @Column(name = "response_body_length")
@@ -72,10 +74,12 @@ public class TrafficLog extends PanacheEntityBase {
     @Column(name = "duration_ms")
     public Long durationMs;
 
-    @Column(name = "plugin_logs", length = 10000)
+    @Lob
+    @Column(name = "plugin_logs")
     public String pluginLogs;
 
-    @Column(name = "friendly_plugin_snapshots", length = 10000)
+    @Lob
+    @Column(name = "friendly_plugin_snapshots")
     public String friendlyPluginSnapshots;
 
     public TrafficLog() {
