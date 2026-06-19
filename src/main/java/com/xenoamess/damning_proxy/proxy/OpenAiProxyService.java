@@ -62,11 +62,11 @@ public class OpenAiProxyService {
     @Inject
     ExecutorService executorService;
 
-    public Response listModels(String instanceSlug) {
+    public Response listModels(String instanceSlug, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
         ProxyContext ctx = resolveInstance(instanceSlug);
         List<Plugin> plugins = loadPlugins(ctx.group);
 
-        PluginContext context = createRequestContext(ctx.profile, null);
+        PluginContext context = createRequestContext(ctx.profile, null, incomingHeaders);
 
         long start = System.currentTimeMillis();
         TrafficLog trafficLog = trafficLogService.recordRequest(
@@ -105,11 +105,11 @@ public class OpenAiProxyService {
             .build();
     }
 
-    public Response chatCompletions(String instanceSlug, Object requestBody) {
+    public Response chatCompletions(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
         ProxyContext ctx = resolveInstance(instanceSlug);
         List<Plugin> plugins = loadPlugins(ctx.group);
 
-        PluginContext context = createRequestContext(ctx.profile, requestBody);
+        PluginContext context = createRequestContext(ctx.profile, requestBody, incomingHeaders);
 
         long start = System.currentTimeMillis();
         TrafficLog trafficLog = trafficLogService.recordRequest(
@@ -154,11 +154,11 @@ public class OpenAiProxyService {
             .build();
     }
 
-    public Multi<String> chatCompletionsStream(String instanceSlug, Object requestBody) {
+    public Multi<String> chatCompletionsStream(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
         ProxyContext ctx = resolveInstance(instanceSlug);
         List<Plugin> plugins = loadPlugins(ctx.group);
 
-        PluginContext context = createRequestContext(ctx.profile, requestBody);
+        PluginContext context = createRequestContext(ctx.profile, requestBody, incomingHeaders);
 
         long start = System.currentTimeMillis();
         TrafficLog trafficLog = trafficLogService.recordRequest(
@@ -332,13 +332,20 @@ public class OpenAiProxyService {
         return plugins;
     }
 
-    private PluginContext createRequestContext(ProxyProfile profile, Object requestBody) {
+    private PluginContext createRequestContext(ProxyProfile profile, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
         PluginContext context = new PluginContext();
         context.setRequestBody(requestBody);
+        if (incomingHeaders != null) {
+            incomingHeaders.getRequestHeaders().forEach((key, values) -> {
+                if (values != null && !values.isEmpty() && !isHopByHopHeader(key)) {
+                    context.getRequestHeaders().put(key, values.get(0));
+                }
+            });
+        }
+        addCustomHeaders(context, profile);
         if (profile.bearerToken != null && !profile.bearerToken.isBlank()) {
             context.getRequestHeaders().put("Authorization", "Bearer " + profile.bearerToken);
         }
-        addCustomHeaders(context, profile);
         return context;
     }
 
@@ -356,6 +363,21 @@ public class OpenAiProxyService {
         } catch (IOException e) {
             Log.warnf("Failed to parse custom headers for profile %s: %s", profile.slug, e.getMessage());
         }
+    }
+
+    private boolean isHopByHopHeader(String name) {
+        if (name == null) return true;
+        String lower = name.toLowerCase();
+        return lower.equals("host")
+            || lower.equals("connection")
+            || lower.equals("keep-alive")
+            || lower.equals("proxy-authenticate")
+            || lower.equals("proxy-authorization")
+            || lower.equals("te")
+            || lower.equals("trailer")
+            || lower.equals("transfer-encoding")
+            || lower.equals("upgrade")
+            || lower.equals("content-length");
     }
 
     private MultiMap toMultiMap(java.util.Map<String, String> headers) {
