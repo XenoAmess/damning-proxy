@@ -178,9 +178,18 @@ public class InstanceAdminApi {
         instance.slug = request.slug;
         instance.profileId = request.profileId;
         instance.pluginGroupId = request.pluginGroupId;
-        instance.defaultModel = request.defaultModel;
+        instance.defaultModel = resolveDefaultModel(request);
         instance.enabled = request.enabled;
         return instance;
+    }
+
+    private String resolveDefaultModel(InstanceRequest request) {
+        if (request.defaultModel != null && !request.defaultModel.isBlank()) {
+            return request.defaultModel;
+        }
+        return profileRepository.findById(request.profileId)
+            .map(p -> p.defaultModel)
+            .orElse(null);
     }
 
     public record InstanceRequest(String name, String slug, Long profileId, Long pluginGroupId,
