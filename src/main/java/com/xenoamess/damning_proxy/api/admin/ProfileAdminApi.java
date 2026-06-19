@@ -89,6 +89,7 @@ public class ProfileAdminApi {
                 p.baseUrl,
                 p.bearerToken,
                 p.customHeaders,
+                p.customBody,
                 p.defaultModel,
                 p.timeoutMs,
                 p.enabled))
@@ -119,6 +120,7 @@ public class ProfileAdminApi {
             profile.baseUrl = ep.baseUrl;
             profile.bearerToken = ep.bearerToken;
             profile.customHeaders = ep.customHeaders;
+            profile.customBody = ep.customBody;
             profile.defaultModel = ep.defaultModel;
             profile.timeoutMs = ep.timeoutMs;
             profile.enabled = ep.enabled;
@@ -132,7 +134,7 @@ public class ProfileAdminApi {
     }
 
     public record ExportProfile(String name, String slug, String baseUrl, String bearerToken,
-                                String customHeaders, String defaultModel, Integer timeoutMs, boolean enabled) {
+                                String customHeaders, String customBody, String defaultModel, Integer timeoutMs, boolean enabled) {
     }
 
     public record ImportResult(int imported, int skipped) {

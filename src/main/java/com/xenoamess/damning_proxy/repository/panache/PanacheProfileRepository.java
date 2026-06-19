@@ -24,6 +24,7 @@ public class PanacheProfileRepository implements ProfileRepository {
                 existing.baseUrl = profile.baseUrl;
                 existing.bearerToken = profile.bearerToken;
                 existing.customHeaders = profile.customHeaders;
+                existing.customBody = profile.customBody;
                 existing.defaultModel = profile.defaultModel;
                 existing.timeoutMs = profile.timeoutMs;
                 existing.enabled = profile.enabled;

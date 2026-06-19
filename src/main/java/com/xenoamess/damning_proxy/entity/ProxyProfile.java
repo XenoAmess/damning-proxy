@@ -30,6 +30,9 @@ public class ProxyProfile extends PanacheEntityBase {
     @Column(name = "custom_headers", length = 4000)
     public String customHeaders;
 
+    @Column(name = "custom_body", length = 10000)
+    public String customBody;
+
     @Column(name = "default_model")
     public String defaultModel;
 

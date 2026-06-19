@@ -52,6 +52,10 @@
           <el-input v-model="form.customHeaders" type="textarea" :rows="3"
             placeholder='{"X-Api-Key":"secret"}' />
         </el-form-item>
+        <el-form-item label="自定义 Body">
+          <el-input v-model="form.customBody" type="textarea" :rows="5"
+            placeholder='{"temperature": 0.7, "max_tokens": 2048}' />
+        </el-form-item>
         <el-form-item label="默认模型">
           <el-input v-model="form.defaultModel" />
         </el-form-item>
@@ -86,6 +90,7 @@ const form = ref({
   baseUrl: '',
   bearerToken: '',
   customHeaders: '',
+  customBody: '',
   defaultModel: '',
   timeoutMs: 30000,
   enabled: true,
@@ -112,6 +117,7 @@ function openDialog(row) {
     baseUrl: '',
     bearerToken: '',
     customHeaders: '',
+    customBody: '',
     defaultModel: '',
     timeoutMs: 30000,
     enabled: true,

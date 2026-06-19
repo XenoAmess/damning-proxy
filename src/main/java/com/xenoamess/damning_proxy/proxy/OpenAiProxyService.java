@@ -2,6 +2,7 @@ package com.xenoamess.damning_proxy.proxy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.xenoamess.damning_proxy.entity.Plugin;
 import com.xenoamess.damning_proxy.entity.PluginGroup;
 import com.xenoamess.damning_proxy.entity.PluginGroupItem;
@@ -334,7 +335,7 @@ public class OpenAiProxyService {
 
     private PluginContext createRequestContext(ProxyProfile profile, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
         PluginContext context = new PluginContext();
-        context.setRequestBody(requestBody);
+        context.setRequestBody(mergeRequestBody(profile, requestBody));
         if (incomingHeaders != null) {
             incomingHeaders.getRequestHeaders().forEach((key, values) -> {
                 if (values != null && !values.isEmpty() && !isHopByHopHeader(key)) {
@@ -363,6 +364,29 @@ public class OpenAiProxyService {
         } catch (IOException e) {
             Log.warnf("Failed to parse custom headers for profile %s: %s", profile.slug, e.getMessage());
         }
+    }
+
+    private Object mergeRequestBody(ProxyProfile profile, Object requestBody) {
+        ObjectNode base = objectMapper.createObjectNode();
+        if (profile.customBody != null && !profile.customBody.isBlank()) {
+            try {
+                JsonNode custom = objectMapper.readTree(profile.customBody);
+                if (custom.isObject()) {
+                    base.setAll((ObjectNode) custom);
+                }
+            } catch (IOException e) {
+                Log.warnf("Failed to parse custom body for profile %s: %s", profile.slug, e.getMessage());
+            }
+        }
+        if (requestBody != null) {
+            JsonNode incoming = objectMapper.valueToTree(requestBody);
+            if (incoming.isObject()) {
+                base.setAll((ObjectNode) incoming);
+            } else {
+                return requestBody;
+            }
+        }
+        return base;
     }
 
     private boolean isHopByHopHeader(String name) {
