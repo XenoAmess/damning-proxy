@@ -335,7 +335,9 @@ public class OpenAiProxyService {
 
     private PluginContext createRequestContext(ProxyProfile profile, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
         PluginContext context = new PluginContext();
-        context.setRequestBody(mergeRequestBody(profile, requestBody));
+        // Priority (low -> high): client request body -> profile custom body -> plugins
+        context.setRequestBody(mergeRequestBody(requestBody, profile));
+        // Priority (low -> high): client headers -> profile custom headers -> bearer token -> plugins
         if (incomingHeaders != null) {
             incomingHeaders.getRequestHeaders().forEach((key, values) -> {
                 if (values != null && !values.isEmpty() && !isHopByHopHeader(key)) {
@@ -366,8 +368,16 @@ public class OpenAiProxyService {
         }
     }
 
-    private Object mergeRequestBody(ProxyProfile profile, Object requestBody) {
+    private Object mergeRequestBody(Object requestBody, ProxyProfile profile) {
         ObjectNode base = objectMapper.createObjectNode();
+        if (requestBody != null) {
+            JsonNode incoming = objectMapper.valueToTree(requestBody);
+            if (incoming.isObject()) {
+                base.setAll((ObjectNode) incoming);
+            } else {
+                return requestBody;
+            }
+        }
         if (profile.customBody != null && !profile.customBody.isBlank()) {
             try {
                 JsonNode custom = objectMapper.readTree(profile.customBody);
@@ -376,14 +386,6 @@ public class OpenAiProxyService {
                 }
             } catch (IOException e) {
                 Log.warnf("Failed to parse custom body for profile %s: %s", profile.slug, e.getMessage());
-            }
-        }
-        if (requestBody != null) {
-            JsonNode incoming = objectMapper.valueToTree(requestBody);
-            if (incoming.isObject()) {
-                base.setAll((ObjectNode) incoming);
-            } else {
-                return requestBody;
             }
         }
         return base;
