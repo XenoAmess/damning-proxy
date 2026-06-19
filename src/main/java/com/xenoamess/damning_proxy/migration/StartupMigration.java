@@ -122,7 +122,7 @@ public class StartupMigration {
     }
 
     private Plugin ensureSamplePlugin(Plugin sample) {
-        Plugin plugin = pluginRepository.findSampleByScript(sample.script).orElse(null);
+        Plugin plugin = pluginRepository.findBySlug(sample.slug).orElse(null);
         if (plugin == null) {
             plugin = new Plugin();
             plugin.sample = true;
