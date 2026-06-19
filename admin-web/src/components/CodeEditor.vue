@@ -9,12 +9,14 @@ import { EditorState, Compartment } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { javascript } from '@codemirror/lang-javascript'
+import { json } from '@codemirror/lang-json'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
   language: { type: String, default: 'JS' },
   readOnly: { type: Boolean, default: false },
   placeholder: { type: String, default: '' },
+  height: { type: Number, default: 260 },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -31,6 +33,8 @@ const languageSupport = computed(() => {
       return javascript()
     case 'GROOVY':
       return javascript({ typescript: false })
+    case 'JSON':
+      return json()
     default:
       return javascript()
   }
@@ -52,7 +56,7 @@ function createState(value) {
         }
       }),
       EditorView.theme({
-        '&': { height: '260px', fontSize: '14px' },
+        '&': { height: props.height + 'px', fontSize: '14px' },
         '.cm-scroller': { overflow: 'auto' },
         '.cm-gutters': { backgroundColor: '#1e1e1e', borderRight: '1px solid #333' },
       }),

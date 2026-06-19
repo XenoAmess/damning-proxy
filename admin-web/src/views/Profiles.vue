@@ -49,12 +49,12 @@
           <el-input v-model="form.bearerToken" type="password" show-password />
         </el-form-item>
         <el-form-item label="自定义 Headers" :error="errors.customHeaders">
-          <el-input v-model="form.customHeaders" type="textarea" :rows="3"
-            placeholder='{"X-Api-Key":"secret"}' @blur="formatJson('customHeaders')" />
+          <CodeEditor v-model="form.customHeaders" language="JSON" :height="120"
+            placeholder='{"X-Api-Key":"secret"}' />
         </el-form-item>
         <el-form-item label="自定义 Body" :error="errors.customBody">
-          <el-input v-model="form.customBody" type="textarea" :rows="5"
-            placeholder='{"temperature": 0.7, "max_tokens": 2048}' @blur="formatJson('customBody')" />
+          <CodeEditor v-model="form.customBody" language="JSON" :height="200"
+            placeholder='{"temperature": 0.7, "max_tokens": 2048}' />
         </el-form-item>
         <el-form-item label="默认模型">
           <el-input v-model="form.defaultModel" />
@@ -79,6 +79,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listProfiles, createProfile, updateProfile, deleteProfile, exportProfiles as exportProfilesApi, importProfiles } from '../api/damning.js'
 import { formatTimestamp } from '../utils/format.js'
+import CodeEditor from '../components/CodeEditor.vue'
 
 const profiles = ref([])
 const loading = ref(false)
@@ -153,21 +154,6 @@ async function remove(id) {
     if (e !== 'cancel') {
       ElMessage.error('删除失败')
     }
-  }
-}
-
-function formatJson(field) {
-  const raw = form.value[field]
-  if (!raw || raw.trim() === '') {
-    errors.value[field] = ''
-    return
-  }
-  try {
-    const parsed = JSON.parse(raw)
-    form.value[field] = JSON.stringify(parsed, null, 2)
-    errors.value[field] = ''
-  } catch (e) {
-    errors.value[field] = 'JSON 格式错误: ' + e.message
   }
 }
 
