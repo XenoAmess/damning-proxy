@@ -44,7 +44,7 @@ public class UpstreamHttpClient {
                     .setPort(resolvePort(uri))
                     .setSsl(isSsl(uri))
                     .setURI(uri.getPath() + (uri.getQuery() != null ? "?" + uri.getQuery() : ""))
-                    .setTimeout(timeoutMs > 0 ? timeoutMs : 30000))
+                    .setTimeout(timeoutMs > 0 ? timeoutMs : 0))
                 .compose(req -> {
                     if (headers != null) {
                         headers.forEach(entry -> {
@@ -93,7 +93,7 @@ public class UpstreamHttpClient {
                 .setPort(resolvePort(uri))
                 .setSsl(isSsl(uri))
                 .setURI(uri.getPath() + (uri.getQuery() != null ? "?" + uri.getQuery() : ""))
-                .setTimeout(timeoutMs > 0 ? timeoutMs : 30000))
+                .setTimeout(timeoutMs > 0 ? timeoutMs : 0))
             .compose(req -> {
                 if (headers != null) {
                     headers.forEach(entry -> {
