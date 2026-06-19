@@ -89,6 +89,25 @@ public class TrafficLogService {
         logRepository.save(existing);
     }
 
+    @Transactional
+    public void appendPluginLog(TrafficLog log, String message) {
+        TrafficLog existing = logRepository.findById(log.id).orElse(null);
+        if (existing == null) {
+            return;
+        }
+        List<String> logs = new ArrayList<>();
+        if (existing.pluginLogs != null && !existing.pluginLogs.isBlank()) {
+            try {
+                logs = objectMapper.readValue(existing.pluginLogs, objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+            } catch (JsonProcessingException e) {
+                logs.add(existing.pluginLogs);
+            }
+        }
+        logs.add(LocalDateTime.now() + " " + message);
+        existing.pluginLogs = serializePluginLogs(logs);
+        logRepository.save(existing);
+    }
+
     private String serializeHeaders(Map<String, String> headers) {
         if (headers == null || headers.isEmpty()) {
             return null;

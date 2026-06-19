@@ -223,7 +223,26 @@ public class OpenAiProxyService {
                 }
             };
 
+            java.util.concurrent.atomic.AtomicLong lastActivity = new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis());
+            java.util.concurrent.ScheduledFuture<?>[] heartbeatHolder = new java.util.concurrent.ScheduledFuture<?>[1];
+            Runnable heartbeat = () -> {
+                long idle = System.currentTimeMillis() - lastActivity.get();
+                Log.debugf("Streaming heartbeat for log #%d: idle %d ms", Long.valueOf(trafficLog.id), Long.valueOf(idle));
+                if (idle > 30_000) {
+                    String msg = "Upstream idle for " + (idle / 1000) + " seconds, still waiting";
+                    executorService.execute(() -> trafficLogService.appendPluginLog(trafficLog, msg));
+                }
+            };
+            heartbeatHolder[0] = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "stream-heartbeat-" + trafficLog.id);
+                t.setDaemon(true);
+                return t;
+            }).scheduleAtFixedRate(heartbeat, 30, 30, java.util.concurrent.TimeUnit.SECONDS);
+
             emitter.onTermination(() -> {
+                if (heartbeatHolder[0] != null) {
+                    heartbeatHolder[0].cancel(false);
+                }
                 if (logged.compareAndSet(false, true)) {
                     String message = "Client closed connection or stream terminated";
                     Log.warnf("Streaming request terminated (client cancelled or failure) for log #%d", trafficLog.id);
@@ -236,6 +255,7 @@ public class OpenAiProxyService {
                 context.setResponseStatus(response.statusCode());
                 context.getResponseHeaders().putAll(toMap(response.headers()));
                 response.handler(buffer -> {
+                    lastActivity.set(System.currentTimeMillis());
                     String chunk = buffer.toString();
                     responseBuffer.append(chunk);
                     sseBuffer.append(chunk);
@@ -257,6 +277,9 @@ public class OpenAiProxyService {
                     }
                 });
                 response.endHandler(v -> {
+                    if (heartbeatHolder[0] != null) {
+                        heartbeatHolder[0].cancel(false);
+                    }
                     String remaining = sseBuffer.toString().trim();
                     if (remaining.startsWith("data: ")) {
                         String data = remaining.substring(6).trim();
@@ -272,6 +295,9 @@ public class OpenAiProxyService {
                     emitter.complete();
                 });
             }).onFailure(err -> {
+                if (heartbeatHolder[0] != null) {
+                    heartbeatHolder[0].cancel(false);
+                }
                 Log.error("Streaming upstream failed", err);
                 recordError.accept(err.getMessage());
                 emitter.fail(err);
