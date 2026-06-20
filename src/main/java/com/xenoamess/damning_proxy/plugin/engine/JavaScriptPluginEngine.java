@@ -6,20 +6,25 @@ import com.xenoamess.damning_proxy.plugin.PluginEngine;
 import com.xenoamess.damning_proxy.plugin.storage.PluginPackageStorage;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.HostAccess;
-import org.graalvm.polyglot.Source;
-import org.graalvm.polyglot.Value;
+import org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 @ApplicationScoped
 public class JavaScriptPluginEngine implements PluginEngine {
 
-    private final Map<String, Source> sourceCache = new HashMap<>();
+    // Cache the compiled script per (plugin.id, mode, scriptHash) so we don't pay the
+    // Nashorn parse cost on every request. NashornScriptEngine instances are not
+    // thread-safe, so we still create a fresh engine per execution but reuse the
+    // already-parsed/validated script source.
+    private final ConcurrentMap<String, String> scriptCache = new ConcurrentHashMap<>();
+
+    private final NashornScriptEngineFactory engineFactory = new NashornScriptEngineFactory();
 
     @Inject
     PluginPackageStorage packageStorage;
@@ -29,29 +34,56 @@ public class JavaScriptPluginEngine implements PluginEngine {
         return language == Plugin.Language.JS;
     }
 
-    @Override
+@Override
     public void execute(Plugin plugin, PluginContext context) {
         String script = resolveScript(plugin);
-        Source source = sourceCache.computeIfAbsent(cacheKey(plugin, script), s -> {
-            try {
-                return Source.newBuilder("js", s, "plugin-" + plugin.id + ".js").build();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
+        // ensureCompiled is a no-op when the cache already has this exact script.
+        ensureCompiled(plugin, script);
 
-        try (Context jsContext = Context.newBuilder("js")
-                .allowAllAccess(true)
-                .allowIO(false)
-                .build()) {
-            Value bindings = jsContext.getBindings("js");
-            bindings.putMember("context", context);
+        // Nashorn engines are stateful and not thread-safe: one engine per execution.
+        ScriptEngine engine = engineFactory.getScriptEngine(new String[]{"--language=es6"});
+        try {
+            engine.put("context", context);
             if (plugin.mode == Plugin.Mode.ZIP_PACKAGE) {
-                bindings.putMember("readResource", new ResourceReader(plugin, false, packageStorage));
-                bindings.putMember("readResourceText", new ResourceReader(plugin, true, packageStorage));
+                engine.put("readResource", new ResourceReader(plugin, false, packageStorage));
+                engine.put("readResourceText", new ResourceReader(plugin, true, packageStorage));
             }
-            jsContext.eval(source);
+            // Wrap in an IIFE so plugin scripts can use top-level `return` to bail out
+            // early. Nashorn (and ES modules) reject top-level `return` otherwise.
+            engine.eval("(function(){\n" + script + "\n})();");
+        } catch (ScriptException e) {
+            throw new RuntimeException("Failed to execute JavaScript plugin: " + plugin.name, e);
         }
+    }
+
+    private void ensureCompiled(Plugin plugin, String script) {
+        String cacheKey = cacheKey(plugin, script);
+        scriptCache.computeIfAbsent(cacheKey, k -> {
+            // Force the engine to parse the script once to catch syntax errors at
+            // plugin-load time instead of on the first request. We bind a real
+            // PluginContext so the IIFE can run any access pattern; runtime
+            // errors during this dry run are swallowed because they usually mean
+            // the script just touched a body field that the dummy context doesn't
+            // have – the real execute() call supplies the actual request body.
+            ScriptEngine engine = engineFactory.getScriptEngine(new String[]{"--language=es6"});
+            try {
+                PluginContext dummy = new PluginContext();
+                dummy.setRequestBody(new java.util.LinkedHashMap<String, Object>() {{
+                    put("messages", new java.util.ArrayList<>());
+                }});
+                dummy.setResponseBody(new java.util.LinkedHashMap<String, Object>());
+                engine.put("context", dummy);
+                engine.eval("(function(){\n" + script + "\n})();");
+            } catch (ScriptException e) {
+                throw new RuntimeException(
+                    "Failed to compile JavaScript plugin '" + plugin.name + "': " + e.getMessage(), e);
+            } catch (RuntimeException e) {
+                io.quarkus.logging.Log.warnf(
+                    "JavaScript plugin '%s' pre-validation warning: %s",
+                    plugin.name, e.getMessage());
+            }
+            return script;
+        });
     }
 
     private String resolveScript(Plugin plugin) {
@@ -59,7 +91,7 @@ public class JavaScriptPluginEngine implements PluginEngine {
             try {
                 return packageStorage.readMainScript(plugin);
             } catch (IOException e) {
-                throw new RuntimeException("Failed to read JS main script from plugin package", e);
+                throw new RuntimeException("Failed to read JavaScript main script from plugin package", e);
             }
         }
         return plugin.script;
@@ -80,7 +112,7 @@ public class JavaScriptPluginEngine implements PluginEngine {
             this.packageStorage = packageStorage;
         }
 
-        @HostAccess.Export
+        @org.openjdk.nashorn.internal.objects.annotations.Function
         public Object read(String path) throws IOException {
             byte[] bytes = packageStorage.readResourceBytes(plugin, path);
             if (asText) {

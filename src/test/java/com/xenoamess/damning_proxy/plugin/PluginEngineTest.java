@@ -17,7 +17,7 @@ class PluginEngineTest {
         GroovyPluginEngine engine = new GroovyPluginEngine();
         Plugin plugin = new Plugin();
         plugin.language = Plugin.Language.GROOVY;
-        plugin.script = "context.requestHeaders['X-Custom'] = 'groovy-value'";
+        plugin.script = "context.getRequestHeaders().put('X-Custom', 'js-value') = 'groovy-value'";
 
         PluginContext context = new PluginContext();
         engine.execute(plugin, context);
@@ -86,7 +86,7 @@ class PluginEngineTest {
         plugin.language = Plugin.Language.JS;
         plugin.script = """
             var body = context.getResponseBody();
-            body.model = 'js-modified';
+            body.put('model', 'js-modified');
             context.setResponseBody(body);
             context.log('modified by js');
             """;
