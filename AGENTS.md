@@ -2,7 +2,7 @@
 
 ## Environment
 
-- **Java 21 is mandatory** — the Maven enforcer plugin rejects newer JDKs. The default system `java` may be JDK 25, so always set:
+- **Java 21 minimum** — the Maven enforcer requires 21+. JDK 25 is confirmed working.
   ```bash
   export JAVA_HOME=/home/xenoamess/.jdks/jdk-21.0.7+6
   export PATH=$JAVA_HOME/bin:$PATH

@@ -217,8 +217,8 @@
                         <configuration>
                             <rules>
                                 <requireJavaVersion>
-                                    <version>[21,22)</version>
-                                    <message>Java 21 is required. Tests and runtime use libraries that are not compatible with newer JDKs.</message>
+                                    <version>[21,)</version>
+                                    <message>Java 21+ is required.</message>
                                 </requireJavaVersion>
                             </rules>
                         </configuration>
