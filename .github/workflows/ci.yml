@@ -19,6 +19,21 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: admin-web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: admin-web
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: admin-web
+        run: npm run build
+
       - name: Setup Maven cache
         uses: actions/cache@v4
         with:
@@ -27,15 +42,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Setup frontend cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/Cypress
-            admin-web/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('admin-web/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Build and test
-        run: mvn --batch-mode verify -DskipTests=false
+      - name: Build and test (skip frontend plugin)
+        run: mvn --batch-mode verify -DskipTests=false -Dskip.frontend.build=true
