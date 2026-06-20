@@ -29,14 +29,16 @@
 | Native image (needs GraalVM 21) | `$JAVA_HOME/bin/mvn clean package -Pnative` then `./target/damning-proxy-1.0-SNAPSHOT-runner` |
 
 - Dev server listens on `http://localhost:12360`. Root `/` redirects to the admin UI; admin UI is also at `/admin/index.html`.
-- Maven auto-builds the Vue admin UI via `frontend-maven-plugin` (Node 20.15.1, npm 10.7.0). Vite 8 emits engine warnings but the build succeeds.
+- Maven auto-builds the Vue admin UI via `frontend-maven-plugin` (Node 22.12, npm 10.9). Vite 8 emits engine warnings but the build succeeds.
+- CI uses `pnpm` (via `corepack`) instead of npm because npm 10.x crashes with 'Exit handler never called!' on GitHub Actions runners.
 
 ## Frontend-only dev
 
 ```bash
 cd admin-web
-npm install
-npm run dev
+corepack enable pnpm
+pnpm install
+pnpm run dev
 ```
 
 Vite dev server proxies `/api` to `http://localhost:12360`. Requires a backend running on that port.

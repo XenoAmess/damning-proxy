@@ -19,25 +19,23 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: admin-web/package-lock.json
-
-      - name: Upgrade npm (work around 10.x Exit handler bug)
-        run: npm install -g npm@11
+          cache: pnpm
+          cache-dependency-path: admin-web/pnpm-lock.yaml
 
       - name: Install frontend dependencies
         working-directory: admin-web
-        run: npm ci
-        env:
-          NODE_OPTIONS: --max-old-space-size=4096
+        run: pnpm install --frozen-lockfile
 
       - name: Build frontend
         working-directory: admin-web
-        run: npm run build
+        run: pnpm run build
 
       - name: Setup Maven cache
         uses: actions/cache@v4
