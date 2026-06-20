@@ -19,7 +19,9 @@ import java.util.function.Function;
 public class GroovyPluginEngine implements PluginEngine {
 
     private final GroovyShell shell = new GroovyShell();
-    private final Map<String, Script> scriptCache = new HashMap<>();
+    // Cache the compiled Script *class*, not instance: Script objects are not thread-safe
+    // and should not be reused across concurrent requests.
+    private final Map<String, Class<? extends Script>> scriptClassCache = new HashMap<>();
 
     @Inject
     PluginPackageStorage packageStorage;
@@ -32,7 +34,7 @@ public class GroovyPluginEngine implements PluginEngine {
     @Override
     public void execute(Plugin plugin, PluginContext context) {
         String script = resolveScript(plugin);
-        Script compiled = scriptCache.computeIfAbsent(cacheKey(plugin, script), k -> shell.parse(script));
+        Class<? extends Script> scriptClass = scriptClassCache.computeIfAbsent(cacheKey(plugin, script), k -> shell.parse(script).getClass());
         Binding binding = new Binding();
         binding.setVariable("context", context);
         if (plugin.mode == Plugin.Mode.ZIP_PACKAGE) {
@@ -52,8 +54,12 @@ public class GroovyPluginEngine implements PluginEngine {
                 }
             });
         }
-        compiled.setBinding(binding);
-        compiled.run();
+        try {
+            Script instance = scriptClass.getDeclaredConstructor(Binding.class).newInstance(binding);
+            instance.run();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to execute Groovy plugin: " + plugin.name, e);
+        }
     }
 
     private String resolveScript(Plugin plugin) {
