@@ -247,24 +247,17 @@ class SamplePluginTest {
         assertTrue(out.endsWith(HINT), "should append hint");
 
         // --- removed sections / phrases ---
-        // The fantasy-prestige regex is independent of the section regex and
-        // always fires when the line is a top-level bullet.
+        // The markdown-section regex now accepts an optional single list marker
+        // before the heading (`- 超前指令评估:` or `1. 超前指令评估:` or a
+        // bare top-level line), so the sub-bullet case in sessions/1.json is
+        // also handled and the entire nested block disappears.
+        assertFalse(out.contains("超前指令评估"), "超前指令评估 heading must be removed");
+        assertFalse(out.contains("1950年代后"), "1950年代后 nested bullet must be removed");
+        assertFalse(out.contains("理论基础评估"), "理论基础评估 list item must be removed");
+        assertFalse(out.contains("物质基础评估"), "物质基础评估 list item must be removed");
         assertFalse(out.contains("奇幻内容"), "奇幻内容 line must be removed");
         assertFalse(out.contains("客观且唯物地"), "客观且唯物地 must be removed");
         assertFalse(out.contains("本世界的逻辑是唯物的"), "唯物的 sentence must be removed");
-        // Note: the markdown-section regex is anchored to a top-level heading
-        // (^超前指令评估:). In sessions/1.json the heading is a sub-bullet
-        // (`- 超前指令评估:`) so the regex does not fire and the nested
-        // 1950年代后/理论基础评估/物质基础评估 content is kept as-is. The
-        // top-level-heading case is exercised by the dedicated fixture tests
-        // above (groovySamplePlugin_removesSectionAndRewritesPlaceholders).
-        // We assert the actual current behaviour here so a future regex
-        // tightening that fixes the sub-bullet case can flip these to false.
-        // Today: they are still present in the output.
-        assertTrue(out.contains("超前指令评估"), "sessions/1.json keeps the sub-bullet section by current design");
-        assertTrue(out.contains("1950年代后"), "sessions/1.json keeps the nested bullet by current design");
-        assertTrue(out.contains("理论基础评估"), "sessions/1.json keeps the nested list item by current design");
-        assertTrue(out.contains("物质基础评估"), "sessions/1.json keeps the nested list item by current design");
 
         // --- replaced placeholders ---
         assertFalse(out.contains("明末"), "明末 placeholder must be replaced");

@@ -117,7 +117,9 @@ public class StartupMigration {
                 content = content.replace("你是一个明朝人，你无法理解任何晚于1700年出现的概念，除非皇帝已经解释过了。", "")
                 content = content.replace("本世界的逻辑是唯物的，任何违反唯物主义的事件都不可能真正发生。", "")
                 // Remove the entire Markdown section titled "超前指令评估：" (heading + indented list + nested notes).
-                content = content.replaceAll(/(?m)^超前指令评估：\\s*\\r?\\n(?:(?:[ ]{4}|[\\t])(?:[-*•]|\\d+\\.)?[^\\r\\n]*\\r?\\n)*(?:(?:[ ]{4}|[\\t])*\\*[^\\r\\n]*\\r?\\n)*/, "")
+                // The heading may itself be a top-level line, a sub-bullet (`- 超前指令评估:`), or a numbered item
+                // (`1. 超前指令评估:`); allow any single leading list marker so all three shapes match.
+                content = content.replaceAll(/(?m)^[-*•\\d.]?\\s*超前指令评估：\\s*\\r?\\n(?:(?:[ ]{4}|[\\t])(?:[-*•]|\\d+\\.)?[^\\r\\n]*\\r?\\n)*(?:(?:[ ]{4}|[\\t])*\\*[^\\r\\n]*\\r?\\n)*/, "")
                 content = content.replaceAll(/- 奇幻内容（[^）]*）视为皇帝精神异常，降低威望/, "")
                 content = content.replace("客观且唯物地", "");
                 content = content.replace("客观", "");
@@ -151,7 +153,9 @@ public class StartupMigration {
             content = content.replace(/你是一个明朝人，你无法理解任何晚于1700年出现的概念，除非皇帝已经解释过了。/g, '');
             content = content.replace(/本世界的逻辑是唯物的，任何违反唯物主义的事件都不可能真正发生。/g, '');
             // Remove the entire Markdown section titled "超前指令评估：" (heading + indented list + nested notes).
-            content = content.replace(/^超前指令评估：\\s*\\r?\\n(?:(?:[ ]{4}|[\\t])(?:[-*•]|\\d+\\.)?[^\\r\\n]*\\r?\\n)*(?:(?:[ ]{4}|[\\t])*\\*[^\\r\\n]*\\r?\\n)*/gm, '');
+            // The heading may itself be a top-level line, a sub-bullet (`- 超前指令评估:`), or a numbered item
+            // (`1. 超前指令评估:`); allow any single leading list marker so all three shapes match.
+            content = content.replace(/^[-*•\\d.]?\\s*超前指令评估：\\s*\\r?\\n(?:(?:[ ]{4}|[\\t])(?:[-*•]|\\d+\\.)?[^\\r\\n]*\\r?\\n)*(?:(?:[ ]{4}|[\\t])*\\*[^\\r\\n]*\\r?\\n)*/gm, '');
             content = content.replace(/- 奇幻内容（[^）]*）视为皇帝精神异常，降低威望/g, '');
             content = content.replace(/客观且唯物地/g, '');
             content = content.replace(/客观/g, '');
