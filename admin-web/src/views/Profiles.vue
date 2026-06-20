@@ -34,7 +34,7 @@
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="visible" :title="form.id ? '编辑配置' : '新增配置'" width="600px">
+    <el-dialog v-model="visible" :title="form.id ? '编辑配置' : '新增配置'" width="800px">
       <el-form :model="form" label-width="120px">
         <el-form-item label="名称" required>
           <el-input v-model="form.name" />
@@ -49,12 +49,16 @@
           <el-input v-model="form.bearerToken" type="password" show-password />
         </el-form-item>
         <el-form-item label="自定义 Headers" :error="errors.customHeaders">
-          <CodeEditor v-model="form.customHeaders" language="JSON" :height="120"
-            placeholder='{"X-Api-Key":"secret"}' />
+          <div :class="['editor-wrapper', { 'has-error': errors.customHeaders }]">
+            <CodeEditor v-model="form.customHeaders" language="JSON" :height="160"
+              placeholder='{"X-Api-Key":"secret"}' />
+          </div>
         </el-form-item>
         <el-form-item label="自定义 Body" :error="errors.customBody">
-          <CodeEditor v-model="form.customBody" language="JSON" :height="200"
-            placeholder='{"temperature": 0.7, "max_tokens": 2048}' />
+          <div :class="['editor-wrapper', { 'has-error': errors.customBody }]">
+            <CodeEditor v-model="form.customBody" language="JSON" :height="260"
+              placeholder='{"temperature": 0.7, "max_tokens": 2048}' />
+          </div>
         </el-form-item>
         <el-form-item label="默认模型">
           <el-input v-model="form.defaultModel" />
@@ -75,7 +79,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listProfiles, createProfile, updateProfile, deleteProfile, exportProfiles as exportProfilesApi, importProfiles } from '../api/damning.js'
 import { formatTimestamp } from '../utils/format.js'
@@ -97,6 +101,17 @@ const form = ref({
   timeoutMs: 30000,
   enabled: true,
 })
+
+watch(() => form.value.customHeaders, validateCustomHeaders)
+watch(() => form.value.customBody, validateCustomBody)
+
+function validateCustomHeaders() {
+  parseJsonField('customHeaders')
+}
+
+function validateCustomBody() {
+  parseJsonField('customBody')
+}
 
 async function load() {
   loading.value = true
@@ -157,22 +172,27 @@ async function remove(id) {
   }
 }
 
+function parseJsonField(field) {
+  const raw = form.value[field]
+  if (raw && raw.trim() !== '') {
+    try {
+      JSON.parse(raw)
+      errors.value[field] = ''
+      return true
+    } catch (e) {
+      errors.value[field] = 'JSON 格式错误: ' + e.message
+      return false
+    }
+  } else {
+    errors.value[field] = ''
+    return true
+  }
+}
+
 function validateJsonFields() {
   let valid = true
-  ;['customHeaders', 'customBody'].forEach(field => {
-    const raw = form.value[field]
-    if (raw && raw.trim() !== '') {
-      try {
-        JSON.parse(raw)
-        errors.value[field] = ''
-      } catch (e) {
-        errors.value[field] = 'JSON 格式错误: ' + e.message
-        valid = false
-      }
-    } else {
-      errors.value[field] = ''
-    }
-  })
+  if (!parseJsonField('customHeaders')) valid = false
+  if (!parseJsonField('customBody')) valid = false
   return valid
 }
 
@@ -225,5 +245,14 @@ onMounted(load)
 }
 .upload-inline :deep(.el-upload) {
   display: inline-block;
+}
+.editor-wrapper {
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.editor-wrapper.has-error {
+  border-color: var(--el-color-danger);
 }
 </style>
