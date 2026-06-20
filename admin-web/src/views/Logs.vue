@@ -47,6 +47,12 @@
               <div class="summary-label">🤖 模型输出</div>
               <div class="summary-text">{{ log._friendly?.modelOutput || '-' }}</div>
             </div>
+            <div v-if="(log._friendly?.requestMessages?.length || 0) > 2" class="summary-section summary-meta">
+              <div class="summary-label">💬 对话历史</div>
+              <div class="summary-text">
+                共 {{ log._friendly.requestMessages.length }} 条消息 · 点击「详情」查看完整对话
+              </div>
+            </div>
           </template>
           <template v-else>
             <div class="summary-section">
@@ -128,14 +134,32 @@
         <el-tabs v-model="activeTab">
           <el-tab-pane v-if="isChatLike(current)" label="对话摘要" name="summary">
             <div class="chat-flow">
-              <div class="chat-bubble user">
-                <div class="chat-role">用户</div>
-                <pre class="chat-text">{{ current.userPrompt || '-' }}</pre>
-              </div>
-              <div class="chat-bubble assistant">
-                <div class="chat-role">模型</div>
-                <div class="chat-text markdown-body" v-html="renderModelOutput(current.modelOutput)"></div>
-              </div>
+              <template v-for="(msg, idx) in (current.requestMessages || [])" :key="'req-' + idx">
+                <div :class="['chat-bubble', bubbleClass(msg.role)]">
+                  <div class="chat-role">
+                    <span class="chat-role-label">{{ roleLabel(msg.role) }}</span>
+                    <el-tag v-if="msg.name" size="small" type="info" class="chat-role-name">{{ msg.name }}</el-tag>
+                  </div>
+                  <pre v-if="msg.content" class="chat-text">{{ msg.content }}</pre>
+                  <pre v-else class="chat-text muted">（无文本内容）</pre>
+                </div>
+              </template>
+              <template v-for="(msg, idx) in (current.responseMessages || [])" :key="'res-' + idx">
+                <div :class="['chat-bubble', bubbleClass(msg.role || 'assistant')]">
+                  <div class="chat-role">
+                    <span class="chat-role-label">{{ roleLabel(msg.role || 'assistant') }}</span>
+                    <el-tag v-if="msg.name" size="small" type="info" class="chat-role-name">{{ msg.name }}</el-tag>
+                  </div>
+                  <pre v-if="msg.reasoningContent" class="chat-text reasoning">{{ msg.reasoningContent }}</pre>
+                  <div v-if="msg.content" class="chat-text markdown-body" v-html="renderModelOutput(msg.content)"></div>
+                  <pre v-else-if="!msg.reasoningContent" class="chat-text muted">（无文本内容）</pre>
+                  <div v-if="msg.toolCallIds && msg.toolCallIds.length" class="chat-tool-calls">
+                    🔧 工具调用：{{ msg.toolCallIds.join(', ') }}
+                  </div>
+                </div>
+              </template>
+              <el-empty v-if="!current.requestMessages?.length && !current.responseMessages?.length"
+                description="没有可显示的消息" />
             </div>
           </el-tab-pane>
 
@@ -396,6 +420,38 @@ async function openFriendly(id) {
 
 function isChatLike(log) {
   return log && log.requestPath && log.requestPath.includes('/chat/completions')
+}
+
+const ROLE_LABELS = {
+  system: '系统',
+  developer: '开发者',
+  user: '用户',
+  assistant: '模型',
+  tool: '工具',
+  function: '函数'
+}
+
+function roleLabel(role) {
+  if (!role) return '消息'
+  return ROLE_LABELS[role] || role
+}
+
+function bubbleClass(role) {
+  // Map upstream roles to a small set of bubble styles. Unknown roles share
+  // the assistant visual so the conversation still reads coherently.
+  switch (role) {
+    case 'system':
+    case 'developer':
+      return 'system'
+    case 'tool':
+    case 'function':
+      return 'tool'
+    case 'assistant':
+      return 'assistant'
+    case 'user':
+    default:
+      return 'user'
+  }
 }
 
 function renderModelOutput(text) {
@@ -752,6 +808,53 @@ onUnmounted(() => {
 
 .chat-bubble.assistant {
   border-left: 4px solid #67c23a;
+}
+
+.chat-bubble.system {
+  border-left: 4px solid #909399;
+  background: #f4f4f5;
+}
+
+.chat-bubble.tool {
+  border-left: 4px solid #e6a23c;
+  background: #fdf6ec;
+}
+
+.chat-role {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-role-label {
+  font-size: 12px;
+  color: #909399;
+}
+
+.chat-role-name {
+  font-size: 11px !important;
+}
+
+.chat-text.muted {
+  color: #c0c4cc;
+  font-style: italic;
+}
+
+.chat-text.reasoning {
+  background: #f4f4f5;
+  border-left: 3px solid #909399;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  white-space: pre-wrap;
+  color: #606266;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
+.chat-tool-calls {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #e6a23c;
 }
 
 .chat-role {
