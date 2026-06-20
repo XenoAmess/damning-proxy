@@ -51,13 +51,10 @@ public class UpstreamHttpClient {
         Log.debugf("Upstream request: %s %s", method, uri);
 
         // Bound the wait so a stuck upstream connection (e.g. HTTP/1.1 keep-alive
-        // socket that never closes) cannot pin a worker thread forever. Vert.x's
-        // own .timeout() only covers the connect/idle window; we additionally cap
-        // the Future.get() so the caller is guaranteed to observe either a
-        // response or an exception within `effectiveTimeoutMs`.
+        // socket that never closes) cannot pin a worker thread forever.
         int effectiveTimeoutMs = clampTimeoutMs(timeoutMs);
-        long deadlineMs = System.currentTimeMillis() + effectiveTimeoutMs;
 
+        String bodyJson = null;
         try {
             io.vertx.ext.web.client.HttpRequest<Buffer> request = webClient.request(
                     io.vertx.core.http.HttpMethod.valueOf(method),
@@ -75,7 +72,6 @@ public class UpstreamHttpClient {
                 });
             }
 
-            String bodyJson = null;
             if (body != null) {
                 bodyJson = (body instanceof String) ? (String) body : objectMapper.writeValueAsString(body);
                 request.putHeader(HttpHeaders.CONTENT_TYPE.toString(), MediaType.APPLICATION_JSON);
@@ -85,7 +81,8 @@ public class UpstreamHttpClient {
                 (bodyJson != null
                     ? request.sendBuffer(Buffer.buffer(bodyJson))
                     : request.send())
-                .toCompletionStage().toCompletableFuture().get(effectiveTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+                .toCompletionStage().toCompletableFuture()
+                .get(effectiveTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
 
             Buffer bodyBuffer = response.body();
 
@@ -104,10 +101,14 @@ public class UpstreamHttpClient {
                 result.body != null ? result.body.substring(Math.max(0, result.body.length() - 100)) : "null");
 
             return result;
-        } catch (TimeoutException e) {
-            Log.errorf("Upstream request timed out after %d ms: %s %s", effectiveTimeoutMs, method, uri);
+        } catch (java.util.concurrent.TimeoutException e) {
+            Log.errorf("Upstream request timed out after %d ms (request=%d bytes, url=%s %s)",
+                effectiveTimeoutMs,
+                bodyJson != null ? bodyJson.length() : -1,
+                method, uri);
             throw new WebApplicationException(
-                "Upstream request timed out after " + effectiveTimeoutMs + " ms",
+                "Upstream request timed out after " + (effectiveTimeoutMs / 1000) + " s (request body " +
+                (bodyJson != null ? bodyJson.length() : 0) + " bytes)",
                 Response.Status.GATEWAY_TIMEOUT);
         } catch (Exception e) {
             Log.errorf(e, "Upstream request failed: %s %s", method, uri);
