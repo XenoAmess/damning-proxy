@@ -100,14 +100,8 @@ public class StartupMigration {
             "6. 所有人，包括你自己，崇祯皇帝（帝皇）和全部大臣，全都熟知明朝融合战锤40K的全部人物、事件、背景、种族、科技等设定，【禁止出现大臣对明朝或战锤40K一问三不知的情况】" +
             "请在创作时充分发挥你的想象力，结合明朝历史和战锤40K的设定，创造出独特而引人入胜的故事和场景！";
 
-    private static final String SAMPLE_DESCRIPTION = ""
-        + "在请求阶段处理 system 消息："
-        + "移除“超前指令评估：”Markdown 段落及其缩进子项、"
-        + "移除“奇幻内容（修仙…）视为皇帝精神异常”等违禁句、"
-        + "替换明朝/明末/大明为“明朝融合战锤40K”、"
-        + "去除“客观”“客观且唯物地”等措辞、"
-        + "在消息前后追加完整的“档案管理员”角色设定提示词。"
-        + "若请求中没有 system 消息则自动注入一条。";
+    private static final String SAMPLE_DESCRIPTION = "以明朝与战锤40K进行的叠加世界。" +
+            "在这里，崇祯皇帝不仅是明朝的皇帝，同时也是战锤40K宇宙中的人类帝皇。";
 
     private static final String GROOVY_SCRIPT = """
         def body = context.getRequestBody()
@@ -273,8 +267,8 @@ public class StartupMigration {
         Plugin groovyPlugin = createSamplePlugin("大明战锤提示词（Groovy）", "sample-groovy-script", Plugin.Language.GROOVY, GROOVY_SCRIPT);
         Plugin jsPlugin = createSamplePlugin("大明战锤提示词（JS）", "sample-js-script", Plugin.Language.JS, JS_SCRIPT);
 
-        ensureSampleGroup("大明战锤提示词（Groovy）", "sample-groovy", "包含“大明战锤提示词”Groovy 插件，在请求阶段自动清洗 system 提示词并注入世界设定", groovyPlugin);
-        ensureSampleGroup("大明战锤提示词（JS）", "sample-js", "包含“大明战锤提示词”JavaScript 插件，功能与 Groovy 版完全一致，用于 Nashorn 执行环境", jsPlugin);
+        ensureSampleGroup("大明战锤提示词（Groovy）", "sample-groovy", SAMPLE_DESCRIPTION, groovyPlugin);
+        ensureSampleGroup("大明战锤提示词（JS）", "sample-js", SAMPLE_DESCRIPTION, jsPlugin);
     }
 
     /**
