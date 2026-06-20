@@ -17,6 +17,7 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import io.vertx.core.http.HttpVersion;
 import java.net.URI;
 
 @ApplicationScoped
@@ -34,7 +35,8 @@ public class UpstreamHttpClient {
             // Force HTTP/1.1: Vert.x HttpClient over HTTP/2 intermittently drops/loses
             // response bodies when response.body() is called from a worker thread,
             // causing non-streaming upstream responses to be empty or truncated.
-            .setUseAlpn(false));
+            .setUseAlpn(false)
+            .setProtocolVersion(HttpVersion.HTTP_1_1));
     }
 
     public UpstreamResponse send(String method, String baseUrl, String path,
@@ -80,10 +82,13 @@ public class UpstreamHttpClient {
             result.body = bodyBuffer != null ? bodyBuffer.toString() : null;
             result.streaming = isStreamingResponse(result.headers);
 
-            Log.debugf("Upstream response: status=%d, bodyLength=%d, first200=%s",
+            Log.debugf("Upstream response: status=%d, protocol=%s, contentLength=%s, bodyLength=%d, first100=%s, last100=%s",
                 result.statusCode,
+                response.version(),
+                result.headers.get(HttpHeaders.CONTENT_LENGTH),
                 result.body != null ? result.body.length() : 0,
-                result.body != null ? result.body.substring(0, Math.min(200, result.body.length())) : "null");
+                result.body != null ? result.body.substring(0, Math.min(100, result.body.length())) : "null",
+                result.body != null ? result.body.substring(Math.max(0, result.body.length() - 100)) : "null");
 
             return result;
         } catch (Exception e) {
