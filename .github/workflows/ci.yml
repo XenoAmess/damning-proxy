@@ -47,3 +47,57 @@ jobs:
 
       - name: Build and test
         run: mvn --batch-mode verify -DskipTests=false -Dskip.frontend.build=true
+
+  windows-package:
+    needs: test
+    runs-on: windows-latest
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install frontend dependencies
+        working-directory: admin-web
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: admin-web
+        run: pnpm run build
+
+      - name: Setup Maven cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build uber-jar
+        run: mvn --batch-mode package -DskipTests -Dskip.frontend.build=true -Dquarkus.package.jar.type=uber-jar
+        env:
+          MAVEN_OPTS: -Duser.home=%USERPROFILE%
+
+      - name: Package Windows installer
+        run: |
+          & "$env:JAVA_HOME\bin\jpackage.exe" --name damning-proxy --input target --main-jar damning-proxy-1.0-SNAPSHOT-runner.jar --win-console --type exe --java-options "-Duser.home=%APPDATA%" --dest dist --app-version 1.0.0
+        shell: pwsh
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: damning-proxy-windows
+          path: dist/*.exe
