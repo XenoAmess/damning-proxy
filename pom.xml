@@ -160,8 +160,8 @@
                 <version>1.15.0</version>
                 <configuration>
                     <workingDirectory>admin-web</workingDirectory>
-                    <nodeVersion>v20.15.1</nodeVersion>
-                    <npmVersion>10.7.0</npmVersion>
+                    <nodeVersion>v20.19.0</nodeVersion>
+                    <npmVersion>10.8.2</npmVersion>
                 </configuration>
                 <executions>
                     <execution>
