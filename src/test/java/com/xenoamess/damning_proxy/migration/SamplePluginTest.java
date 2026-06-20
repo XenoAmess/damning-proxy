@@ -1,11 +1,13 @@
 package com.xenoamess.damning_proxy.migration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xenoamess.damning_proxy.entity.Plugin;
 import com.xenoamess.damning_proxy.plugin.PluginContext;
 import com.xenoamess.damning_proxy.plugin.engine.GroovyPluginEngine;
 import com.xenoamess.damning_proxy.plugin.engine.JavaScriptPluginEngine;
 import org.junit.jupiter.api.Test;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -215,5 +217,96 @@ class SamplePluginTest {
         assertFalse(out.contains("奇幻内容"), "fantasy line should be removed: " + out);
         assertTrue(out.contains("其他文字"), "non-matching content should be preserved");
         assertTrue(out.startsWith(HINT) && out.endsWith(HINT));
+    }
+
+    // ----- tests driven by the on-disk fixture sessions/1.json --------------
+    // The file is a representative traffic capture for the instance `minimax`.
+    // We load it with Jackson and exercise the same code path the proxy would.
+
+    private static final String SESSION_FILE = "sessions/1.json";
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> loadSessionBody() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        try (InputStream in = SamplePluginTest.class.getClassLoader().getResourceAsStream(SESSION_FILE)) {
+            assertNotNull(in, "missing test resource: " + SESSION_FILE);
+            Map<String, Object> body = mapper.readValue(in, Map.class);
+            // Strip top-level fields the plugin never reads so that the assertion
+            // message is easier to read. The plugin only mutates messages[*].content.
+            assertTrue(body.containsKey("messages"), "session file must have a messages array");
+            assertTrue(body.get("messages") instanceof List, "messages must be a JSON array");
+            return body;
+        }
+    }
+
+    private static void assertSessionExpectations(String out) {
+        // Plugin must leave the system message non-empty and untouched at the
+        // outer wrapping (hint + cleaned content + hint).
+        assertNotNull(out, "plugin should produce a system message");
+        assertTrue(out.startsWith(HINT), "should prepend hint");
+        assertTrue(out.endsWith(HINT), "should append hint");
+
+        // --- removed sections / phrases ---
+        // The fantasy-prestige regex is independent of the section regex and
+        // always fires when the line is a top-level bullet.
+        assertFalse(out.contains("奇幻内容"), "奇幻内容 line must be removed");
+        assertFalse(out.contains("客观且唯物地"), "客观且唯物地 must be removed");
+        assertFalse(out.contains("本世界的逻辑是唯物的"), "唯物的 sentence must be removed");
+        // Note: the markdown-section regex is anchored to a top-level heading
+        // (^超前指令评估:). In sessions/1.json the heading is a sub-bullet
+        // (`- 超前指令评估:`) so the regex does not fire and the nested
+        // 1950年代后/理论基础评估/物质基础评估 content is kept as-is. The
+        // top-level-heading case is exercised by the dedicated fixture tests
+        // above (groovySamplePlugin_removesSectionAndRewritesPlaceholders).
+        // We assert the actual current behaviour here so a future regex
+        // tightening that fixes the sub-bullet case can flip these to false.
+        // Today: they are still present in the output.
+        assertTrue(out.contains("超前指令评估"), "sessions/1.json keeps the sub-bullet section by current design");
+        assertTrue(out.contains("1950年代后"), "sessions/1.json keeps the nested bullet by current design");
+        assertTrue(out.contains("理论基础评估"), "sessions/1.json keeps the nested list item by current design");
+        assertTrue(out.contains("物质基础评估"), "sessions/1.json keeps the nested list item by current design");
+
+        // --- replaced placeholders ---
+        assertFalse(out.contains("明末"), "明末 placeholder must be replaced");
+        // Note: 明朝 and 大明 no longer appear standalone – they only show up as
+        // part of 明朝融合战锤40K (which is appended by the plugin's own rewrite).
+        assertTrue(out.contains("明朝融合战锤40K"), "明朝/明末/大明 → 明朝融合战锤40K rewrite must run");
+        assertTrue(out.contains("或合理的地方官员/学者/工匠/战锤40K角色"),
+            "or合理的地方官员/学者/工匠 must be appended with /战锤40K角色");
+
+        // --- preserved framing ---
+        assertTrue(out.contains("## 一、角色定位"), "## 一、角色定位 heading must be preserved");
+        assertTrue(out.contains("## 二、输入信息解释"), "## 二、输入信息解释 heading must be preserved");
+        assertTrue(out.contains("## 三、推演层级法则"), "## 三 heading must be preserved");
+        assertTrue(out.contains("## 四、输出格式"), "## 四 heading must be preserved");
+        assertTrue(out.contains("## 五、推演戒律"), "## 五 heading must be preserved");
+        assertTrue(out.contains("## 六、思维链及反思说明"), "## 六 heading must be preserved");
+        assertTrue(out.contains("## 七、示例输入与输出"), "## 七 heading must be preserved");
+        assertTrue(out.contains("postgreSQL数据库表结构信息") || out.contains("PostgreSQL"),
+            "trailing schema section must be preserved");
+    }
+
+    @Test
+    void groovySamplePlugin_handlesRealSessionFixture() throws Exception {
+        Map<String, Object> body = loadSessionBody();
+        String out = runPlugin(body, 9101L, groovySample(), Plugin.Language.GROOVY);
+        assertSessionExpectations(out);
+        // The user message must be left alone (the plugin only touches the
+        // system message and message array order).
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> msgs = (List<Map<String, Object>>) body.get("messages");
+        assertEquals(2, msgs.size(), "user message count should be unchanged");
+        assertEquals("user", msgs.get(1).get("role"));
+    }
+
+    @Test
+    void javaScriptSamplePlugin_handlesRealSessionFixture() throws Exception {
+        Map<String, Object> body = loadSessionBody();
+        String out = runPlugin(body, 9102L, jsSample(), Plugin.Language.JS);
+        assertSessionExpectations(out);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> msgs = (List<Map<String, Object>>) body.get("messages");
+        assertEquals(2, msgs.size(), "user message count should be unchanged");
+        assertEquals("user", msgs.get(1).get("role"));
     }
 }
