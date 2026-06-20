@@ -108,6 +108,7 @@ import {
   listPluginGroups,
 } from '../api/damning.js'
 import { formatTimestamp } from '../utils/format.js'
+import { copyToClipboard } from '../utils/clipboard.js'
 
 const instances = ref([])
 const profiles = ref([])
@@ -149,7 +150,7 @@ function openAiUrl(slug) {
 async function copyOpenAiUrl(slug) {
   const url = openAiUrl(slug)
   try {
-    await navigator.clipboard.writeText(url)
+    await copyToClipboard(url)
     ElMessage.success('已复制到剪贴板')
   } catch (e) {
     ElMessage.error('复制失败')

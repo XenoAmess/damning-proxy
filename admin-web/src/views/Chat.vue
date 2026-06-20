@@ -217,6 +217,7 @@ import { listInstances, listProfiles } from '../api/damning.js'
 import { chatCompletion, chatCompletionStream, listModels } from '../api/chat.js'
 import html2canvas from 'html2canvas'
 import { formatTimestamp } from '../utils/format.js'
+import { copyToClipboard } from '../utils/clipboard.js'
 
 const TYPEWRITER_DELAY = 16
 const TYPEWRITER_CHUNK = 2
@@ -305,7 +306,7 @@ function extractTextContent(msg) {
 
 async function copyMessage(msg) {
   try {
-    await navigator.clipboard.writeText(extractTextContent(msg))
+    await copyToClipboard(extractTextContent(msg))
     ElMessage.success('复制成功')
   } catch (e) {
     ElMessage.error('复制失败')
