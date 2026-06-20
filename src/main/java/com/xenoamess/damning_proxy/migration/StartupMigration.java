@@ -34,7 +34,7 @@ public class StartupMigration {
     @Inject
     ProfileRepository profileRepository;
 
-    private static final String SYSTEM_HINT = "你是一位精通明朝融合战锤40K设定的档案管理员！" +
+    public static final String SYSTEM_HINT = "你是一位精通明朝融合战锤40K设定的档案管理员！" +
             "这个世界是一个以明朝融合战锤40K进行的叠加世界，请以明朝历史为背景框架，融入战锤40K的宇宙观、阵营设定和哥特式科幻美学进行创作！" +
             "基本的设定是：" +
             "1. 崇祯皇帝除了是明朝皇帝的同时，也是人类帝皇，这两个概念视为等同的，这里的帝皇指的是帝皇的全盛形态，即：" +
@@ -266,6 +266,24 @@ public class StartupMigration {
         ensureSampleGroup("大明战锤提示词（JS）", "sample-js", "默认的 JavaScript 样例插件组", jsPlugin);
     }
 
+    /**
+     * Returns the Groovy sample plugin script with the hint placeholder already
+     * substituted. Exposed for unit tests so they exercise the exact script that
+     * ships in the database, instead of duplicating it in test sources.
+     */
+    public static String groovySampleScript() {
+        return String.format(GROOVY_SCRIPT, escapeJavaString(SYSTEM_HINT));
+    }
+
+    /**
+     * Returns the JavaScript sample plugin script with the hint placeholder already
+     * substituted. Exposed for unit tests so they exercise the exact script that
+     * ships in the database, instead of duplicating it in test sources.
+     */
+    public static String javaScriptSampleScript() {
+        return String.format(JS_SCRIPT, escapeJavaString(SYSTEM_HINT));
+    }
+
     private Plugin createSamplePlugin(String name, String slug, Plugin.Language language, String scriptTemplate) {
         Plugin plugin = new Plugin();
         plugin.name = name;
@@ -295,7 +313,7 @@ public class StartupMigration {
         return group;
     }
 
-    private String escapeJavaString(String value) {
+    private static String escapeJavaString(String value) {
         return value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
     }
 }
