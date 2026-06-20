@@ -18,6 +18,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.net.URI;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @ApplicationScoped
 public class UpstreamHttpClient {
@@ -48,6 +50,14 @@ public class UpstreamHttpClient {
         URI uri = buildUri(baseUrl, path);
         Log.debugf("Upstream request: %s %s", method, uri);
 
+        // Bound the wait so a stuck upstream connection (e.g. HTTP/1.1 keep-alive
+        // socket that never closes) cannot pin a worker thread forever. Vert.x's
+        // own .timeout() only covers the connect/idle window; we additionally cap
+        // the Future.get() so the caller is guaranteed to observe either a
+        // response or an exception within `effectiveTimeoutMs`.
+        int effectiveTimeoutMs = clampTimeoutMs(timeoutMs);
+        long deadlineMs = System.currentTimeMillis() + effectiveTimeoutMs;
+
         try {
             io.vertx.ext.web.client.HttpRequest<Buffer> request = webClient.request(
                     io.vertx.core.http.HttpMethod.valueOf(method),
@@ -75,7 +85,7 @@ public class UpstreamHttpClient {
                 (bodyJson != null
                     ? request.sendBuffer(Buffer.buffer(bodyJson))
                     : request.send())
-                .toCompletionStage().toCompletableFuture().get();
+                .toCompletionStage().toCompletableFuture().get(effectiveTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
 
             Buffer bodyBuffer = response.body();
 
@@ -94,6 +104,11 @@ public class UpstreamHttpClient {
                 result.body != null ? result.body.substring(Math.max(0, result.body.length() - 100)) : "null");
 
             return result;
+        } catch (TimeoutException e) {
+            Log.errorf("Upstream request timed out after %d ms: %s %s", effectiveTimeoutMs, method, uri);
+            throw new WebApplicationException(
+                "Upstream request timed out after " + effectiveTimeoutMs + " ms",
+                Response.Status.GATEWAY_TIMEOUT);
         } catch (Exception e) {
             Log.errorf(e, "Upstream request failed: %s %s", method, uri);
             throw new WebApplicationException("Upstream request failed: " + e.getMessage(), Response.Status.BAD_GATEWAY);
@@ -156,6 +171,16 @@ public class UpstreamHttpClient {
 
     private boolean isSsl(URI uri) {
         return "https".equalsIgnoreCase(uri.getScheme());
+    }
+
+    private static int clampTimeoutMs(int timeoutMs) {
+        // 0 means "no timeout configured" – still enforce a hard ceiling so a
+        // runaway upstream cannot pin the worker pool indefinitely.
+        int hardCeilingMs = 600_000; // 10 minutes
+        if (timeoutMs <= 0 || timeoutMs > hardCeilingMs) {
+            return hardCeilingMs;
+        }
+        return timeoutMs;
     }
 
     private MultiMap toMultiMap(io.vertx.core.MultiMap source) {

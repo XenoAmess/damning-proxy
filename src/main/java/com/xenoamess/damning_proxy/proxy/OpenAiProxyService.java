@@ -90,6 +90,7 @@ public class OpenAiProxyService {
                 .build();
         }
 
+        boolean responseRecorded = false;
         try {
             UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
                 "GET", ctx.profile.baseUrl, "/models",
@@ -105,15 +106,25 @@ public class OpenAiProxyService {
             trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
                 context.getResponseHeaders(), context.getResponseBody(),
                 System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
+            responseRecorded = true;
 
             return Response.status(context.getResponseStatus())
                 .entity(context.getResponseBody())
                 .build();
         } catch (Exception e) {
-            trafficLogService.recordResponse(trafficLog, 502,
+            int status = (e instanceof jakarta.ws.rs.WebApplicationException wae) ? wae.getResponse().getStatus() : 502;
+            trafficLogService.recordResponse(trafficLog, status,
                 Map.of(), "Upstream request failed: " + e.getMessage(),
                 System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), e.getMessage());
+            responseRecorded = true;
             throw e;
+        } finally {
+            if (!responseRecorded) {
+                trafficLogService.recordResponse(trafficLog, 504,
+                    Map.of(), "Upstream request completed without producing a response",
+                    System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(),
+                    "Upstream request completed without producing a response");
+            }
         }
     }
 
@@ -141,6 +152,7 @@ public class OpenAiProxyService {
                 .build();
         }
 
+        boolean responseRecorded = false;
         try {
             UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
                 "POST", ctx.profile.baseUrl, "/chat/completions",
@@ -156,15 +168,30 @@ public class OpenAiProxyService {
             trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
                 context.getResponseHeaders(), context.getResponseBody(),
                 System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
+            responseRecorded = true;
 
             return Response.status(context.getResponseStatus())
                 .entity(context.getResponseBody())
                 .build();
         } catch (Exception e) {
-            trafficLogService.recordResponse(trafficLog, 502,
+            int status = (e instanceof jakarta.ws.rs.WebApplicationException wae) ? wae.getResponse().getStatus() : 502;
+            trafficLogService.recordResponse(trafficLog, status,
                 Map.of(), "Upstream request failed: " + e.getMessage(),
                 System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), e.getMessage());
+            responseRecorded = true;
             throw e;
+        } finally {
+            // Safety net: if neither the success path nor the catch block recorded
+            // a response (e.g. the upstream send() returned silently without
+            // throwing and we somehow skipped recordResponse), still capture
+            // whatever plugin state was produced so traffic logs reflect the
+            // request-phase plugin activity.
+            if (!responseRecorded) {
+                trafficLogService.recordResponse(trafficLog, 504,
+                    Map.of(), "Upstream request completed without producing a response",
+                    System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(),
+                    "Upstream request completed without producing a response");
+            }
         }
     }
 
