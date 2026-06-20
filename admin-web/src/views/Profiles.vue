@@ -98,7 +98,7 @@ const form = ref({
   customHeaders: '',
   customBody: '',
   defaultModel: '',
-  timeoutMs: 30000,
+  timeoutMs: 600000,
   enabled: true,
 })
 
@@ -137,7 +137,7 @@ function openDialog(row) {
     customHeaders: '',
     customBody: '',
     defaultModel: '',
-    timeoutMs: 30000,
+    timeoutMs: 600000,
     enabled: true,
   }
   visible.value = true

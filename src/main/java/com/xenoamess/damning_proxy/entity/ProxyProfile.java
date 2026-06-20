@@ -37,7 +37,7 @@ public class ProxyProfile extends PanacheEntityBase {
     public String defaultModel;
 
     @Column(name = "timeout_ms")
-    public Integer timeoutMs = 30000;
+    public Integer timeoutMs = 600000;
 
     @Column(nullable = false)
     public boolean enabled = true;
