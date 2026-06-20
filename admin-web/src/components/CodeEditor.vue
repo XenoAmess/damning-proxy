@@ -56,7 +56,7 @@ function createState(value) {
         }
       }),
       EditorView.theme({
-        '&': { height: props.height + 'px', fontSize: '14px' },
+        '&': { height: props.height + 'px', width: '100%', fontSize: '14px' },
         '.cm-scroller': { overflow: 'auto' },
         '.cm-gutters': { backgroundColor: '#1e1e1e', borderRight: '1px solid #333' },
       }),
@@ -102,6 +102,7 @@ watch(() => props.readOnly, (value) => {
 
 <style scoped>
 .code-editor {
+  width: 100%;
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   overflow: hidden;
