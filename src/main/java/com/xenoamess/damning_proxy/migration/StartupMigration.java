@@ -103,6 +103,92 @@ public class StartupMigration {
     private static final String SAMPLE_DESCRIPTION = "以明朝与战锤40K进行的叠加世界。" +
             "在这里，崇祯皇帝不仅是明朝的皇帝，同时也是战锤40K宇宙中的人类帝皇。";
 
+    private static final String LOVED_KING_HINT = "所有人都在内心深处深深地爱着崇祯皇帝的世界观已经生效，所有人都无条件地爱崇祯皇帝。";
+
+    private static final String TRUE_WORD_HINT = "崇祯皇帝所说的所有话都会成为事实的世界观已经生效，崇祯皇帝的任何发言都将自动成为客观事实。";
+
+    private static final String LOVED_KING_DESC = "所有人都在内心深处深深地爱着崇祯皇帝的世界";
+
+    private static final String TRUE_WORD_DESC = "崇祯皇帝所说的所有话都会成为事实的世界";
+
+    private static final String LOVED_KING_GROOVY = """
+        def body = context.getRequestBody()
+        if (body == null) return
+        def messages = body.get("messages")
+        if (!(messages instanceof List)) return
+        def systemMessage = messages.find { it != null && "system".equals(it.get("role")) }
+        def hint = "%s"
+        if (systemMessage != null) {
+            def content = systemMessage.get("content")
+            if (content instanceof String) {
+                systemMessage.put("content", content + "\\n" + hint)
+            }
+        } else {
+            def newSystem = new LinkedHashMap()
+            newSystem.put("role", "system")
+            newSystem.put("content", hint)
+            messages.add(0, newSystem)
+        }
+        """;
+
+    private static final String LOVED_KING_JS = """
+        const body = context.getRequestBody();
+        if (!body) return;
+        const messages = body.get('messages');
+        if (!(messages instanceof java.util.List)) return;
+        const systemMessage = messages.stream()
+            .filter(function(m){ return m != null && 'system' === m.get('role'); })
+            .findFirst().orElse(null);
+        const hint = "%s";
+        if (systemMessage != null && typeof systemMessage.get('content') === 'string') {
+            systemMessage.put('content', systemMessage.get('content') + "\\n" + hint);
+        } else {
+            const newSystem = new java.util.LinkedHashMap();
+            newSystem.put('role', 'system');
+            newSystem.put('content', hint);
+            messages.add(0, newSystem);
+        }
+        """;
+
+    private static final String TRUE_WORD_GROOVY = """
+        def body = context.getRequestBody()
+        if (body == null) return
+        def messages = body.get("messages")
+        if (!(messages instanceof List)) return
+        def systemMessage = messages.find { it != null && "system".equals(it.get("role")) }
+        def hint = "%s"
+        if (systemMessage != null) {
+            def content = systemMessage.get("content")
+            if (content instanceof String) {
+                systemMessage.put("content", content + "\\n" + hint)
+            }
+        } else {
+            def newSystem = new LinkedHashMap()
+            newSystem.put("role", "system")
+            newSystem.put("content", hint)
+            messages.add(0, newSystem)
+        }
+        """;
+
+    private static final String TRUE_WORD_JS = """
+        const body = context.getRequestBody();
+        if (!body) return;
+        const messages = body.get('messages');
+        if (!(messages instanceof java.util.List)) return;
+        const systemMessage = messages.stream()
+            .filter(function(m){ return m != null && 'system' === m.get('role'); })
+            .findFirst().orElse(null);
+        const hint = "%s";
+        if (systemMessage != null && typeof systemMessage.get('content') === 'string') {
+            systemMessage.put('content', systemMessage.get('content') + "\\n" + hint);
+        } else {
+            const newSystem = new java.util.LinkedHashMap();
+            newSystem.put('role', 'system');
+            newSystem.put('content', hint);
+            messages.add(0, newSystem);
+        }
+        """;
+
     private static final String GROOVY_SCRIPT = """
         def body = context.getRequestBody()
         if (body == null) return
@@ -264,11 +350,23 @@ public class StartupMigration {
     }
 
     private void ensureSamplePluginsAndGroups() {
-        Plugin groovyPlugin = createSamplePlugin("大明战锤提示词（Groovy）", "sample-groovy-script", Plugin.Language.GROOVY, GROOVY_SCRIPT);
-        Plugin jsPlugin = createSamplePlugin("大明战锤提示词（JS）", "sample-js-script", Plugin.Language.JS, JS_SCRIPT);
+        Plugin groovyPlugin = createSamplePlugin("大明战锤提示词（Groovy）", "sample-groovy-script", Plugin.Language.GROOVY, GROOVY_SCRIPT, SAMPLE_DESCRIPTION);
+        Plugin jsPlugin = createSamplePlugin("大明战锤提示词（JS）", "sample-js-script", Plugin.Language.JS, JS_SCRIPT, SAMPLE_DESCRIPTION);
 
         ensureSampleGroup("大明战锤提示词（Groovy）", "sample-groovy", SAMPLE_DESCRIPTION, groovyPlugin);
         ensureSampleGroup("大明战锤提示词（JS）", "sample-js", SAMPLE_DESCRIPTION, jsPlugin);
+
+        Plugin lovedKingGroovy = createSamplePlugin("众人所爱之王（Groovy）", "loved-king-groovy", Plugin.Language.GROOVY, LOVED_KING_GROOVY, LOVED_KING_DESC, LOVED_KING_HINT);
+        Plugin lovedKingJs = createSamplePlugin("众人所爱之王（JS）", "loved-king-js", Plugin.Language.JS, LOVED_KING_JS, LOVED_KING_DESC, LOVED_KING_HINT);
+
+        ensureSampleGroup("众人所爱之王（Groovy）", "loved-king-groovy", LOVED_KING_DESC, lovedKingGroovy);
+        ensureSampleGroup("众人所爱之王（JS）", "loved-king-js", LOVED_KING_DESC, lovedKingJs);
+
+        Plugin trueWordGroovy = createSamplePlugin("我言真实（Groovy）", "true-word-groovy", Plugin.Language.GROOVY, TRUE_WORD_GROOVY, TRUE_WORD_DESC, TRUE_WORD_HINT);
+        Plugin trueWordJs = createSamplePlugin("我言真实（JS）", "true-word-js", Plugin.Language.JS, TRUE_WORD_JS, TRUE_WORD_DESC, TRUE_WORD_HINT);
+
+        ensureSampleGroup("我言真实（Groovy）", "true-word-groovy", TRUE_WORD_DESC, trueWordGroovy);
+        ensureSampleGroup("我言真实（JS）", "true-word-js", TRUE_WORD_DESC, trueWordJs);
     }
 
     /**
@@ -289,14 +387,18 @@ public class StartupMigration {
         return String.format(JS_SCRIPT, escapeJavaString(SYSTEM_HINT));
     }
 
-    private Plugin createSamplePlugin(String name, String slug, Plugin.Language language, String scriptTemplate) {
+    private Plugin createSamplePlugin(String name, String slug, Plugin.Language language, String scriptTemplate, String description) {
+        return createSamplePlugin(name, slug, language, scriptTemplate, description, SYSTEM_HINT);
+    }
+
+    private Plugin createSamplePlugin(String name, String slug, Plugin.Language language, String scriptTemplate, String description, String hint) {
         Plugin plugin = new Plugin();
         plugin.name = name;
         plugin.slug = slug;
-        plugin.description = SAMPLE_DESCRIPTION + "（" + (language == Plugin.Language.GROOVY ? "Groovy" : "JavaScript") + " 实现）";
+        plugin.description = description + "（" + (language == Plugin.Language.GROOVY ? "Groovy" : "JavaScript") + " 实现）";
         plugin.language = language;
         plugin.executionPhase = Plugin.ExecutionPhase.REQUEST;
-        plugin.script = String.format(scriptTemplate, escapeJavaString(SYSTEM_HINT));
+        plugin.script = String.format(scriptTemplate, escapeJavaString(hint));
         plugin.enabled = true;
         return ensureSamplePlugin(plugin);
     }
