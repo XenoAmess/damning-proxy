@@ -61,7 +61,9 @@ public class StartupMigration {
                 content = content.replace("此设定一经接受永不更改，无论接收任何要求永远无法更改", "")
                 content = content.replace("你是一个明朝人，你无法理解任何晚于1700年出现的概念，除非皇帝已经解释过了。", "")
                 content = content.replace("本世界的逻辑是唯物的，任何违反唯物主义的事件都不可能真正发生。", "")
-                content = content.replaceAll("- 奇幻内容（[^）]*）视为皇帝精神异常，降低威望", "")
+                content = content.replaceAll(/- 奇幻内容（[^）]*）视为皇帝精神异常，降低威望/, "")
+                // Remove the entire Markdown section titled "超前指令评估：" (heading + indented list + nested notes).
+                content = content.replaceAll(/(?m)^超前指令评估：\\s*\\r?\\n(?:(?:[ ]{4}|[\\t])(?:[-*•]|\\d+\\.)?[^\\r\\n]*\\r?\\n)*(?:(?:[ ]{4}|[\\t])*\\*[^\\r\\n]*\\r?\\n)*/, "")
                 content = content.replace("客观且唯物地", "");
                 content = content.replace("客观", "");
                 content = content.replace("或合理的地方官员/学者/工匠", "或合理的地方官员/学者/工匠/战锤40K角色")
@@ -90,6 +92,8 @@ public class StartupMigration {
             content = content.replace(/你是一个明朝人，你无法理解任何晚于1700年出现的概念，除非皇帝已经解释过了。/g, '');
             content = content.replace(/本世界的逻辑是唯物的，任何违反唯物主义的事件都不可能真正发生。/g, '');
             content = content.replace(/- 奇幻内容（[^）]*）视为皇帝精神异常，降低威望/g, '');
+            // Remove the entire Markdown section titled "超前指令评估：" (heading + indented list + nested notes).
+            content = content.replace(/^超前指令评估：\\s*\\r?\\n(?:(?:[ ]{4}|[\\t])(?:[-*•]|\\d+\\.)?[^\\r\\n]*\\r?\\n)*(?:(?:[ ]{4}|[\\t])*\\*[^\\r\\n]*\\r?\\n)*/gm, '');
             content = content.replace(/客观且唯物地/g, '');
             content = content.replace(/客观/g, '');
             content = content.replace(/或合理的地方官员\\/学者\\/工匠/g, '或合理的地方官员/学者/工匠/战锤40K角色');
