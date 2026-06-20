@@ -56,8 +56,8 @@ function createState(value) {
         }
       }),
       EditorView.theme({
-        '&': { height: props.height + 'px', width: '100%', fontSize: '14px' },
-        '.cm-scroller': { overflow: 'auto' },
+        '&': { height: props.height + 'px', width: '100%', minWidth: '0', fontSize: '14px' },
+        '.cm-scroller': { overflow: 'auto', minWidth: '0' },
         '.cm-gutters': { backgroundColor: '#1e1e1e', borderRight: '1px solid #333' },
       }),
     ],

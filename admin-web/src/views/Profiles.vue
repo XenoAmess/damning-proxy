@@ -247,6 +247,8 @@ onMounted(load)
   display: inline-block;
 }
 .editor-wrapper {
+  width: 100%;
+  min-width: 0;
   border: 1px solid var(--el-border-color);
   border-radius: 4px;
   overflow: hidden;
