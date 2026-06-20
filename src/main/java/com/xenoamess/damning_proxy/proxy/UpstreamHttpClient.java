@@ -30,7 +30,11 @@ public class UpstreamHttpClient {
     @Inject
     public UpstreamHttpClient(Vertx vertx) {
         this.httpClient = vertx.createHttpClient(new io.vertx.core.http.HttpClientOptions()
-            .setTryUseCompression(false));
+            .setTryUseCompression(false)
+            // Force HTTP/1.1: Vert.x HttpClient over HTTP/2 intermittently drops/loses
+            // response bodies when response.body() is called from a worker thread,
+            // causing non-streaming upstream responses to be empty or truncated.
+            .setUseAlpn(false));
     }
 
     public UpstreamResponse send(String method, String baseUrl, String path,
@@ -75,6 +79,11 @@ public class UpstreamHttpClient {
             result.headers = response.headers();
             result.body = bodyBuffer != null ? bodyBuffer.toString() : null;
             result.streaming = isStreamingResponse(result.headers);
+
+            Log.debugf("Upstream response: status=%d, bodyLength=%d, first200=%s",
+                result.statusCode,
+                result.body != null ? result.body.length() : 0,
+                result.body != null ? result.body.substring(0, Math.min(200, result.body.length())) : "null");
 
             return result;
         } catch (Exception e) {
