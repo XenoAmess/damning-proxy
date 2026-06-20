@@ -66,13 +66,17 @@ class TrafficLogServiceTest {
         for (int i = 0; i < 20000; i++) {
             large.append("a");
         }
+        String input = large.toString();
 
         TrafficLog log = trafficLogService.recordRequest(
-            10L, "test-instance", 1L, "/v1/chat/completions", "POST", Map.of(), large.toString(),
+            10L, "test-instance", 1L, "/v1/chat/completions", "POST", Map.of(), input,
             "https://api.example.com", 30000, false
         );
 
-        assertTrue(log.requestBody.length() < 15000);
-        assertTrue(log.requestBody.endsWith("...[truncated]"));
+        // With damning-proxy.log.max-body-length=-1 (the default in application.properties),
+        // bodies are stored verbatim, so a 20 KB input lands at exactly 20 KB.
+        assertEquals(input.length(), log.requestBody.length(),
+            "default config disables truncation, body length should be preserved");
+        assertFalse(log.requestBody.endsWith("...[truncated]"));
     }
 }

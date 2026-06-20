@@ -114,9 +114,16 @@ class AdminApiTest {
         plugin.language = Plugin.Language.GROOVY;
         plugin.script = "context.stop()";
 
+        // /api/plugins is @Consumes(MULTIPART_FORM_DATA) — the production
+        // admin UI uploads scripts that way too. Use multipart here.
         given()
-            .contentType(ContentType.JSON)
-            .body(plugin)
+            .multiPart("name", plugin.name)
+            .multiPart("slug", "test-plugin")
+            .multiPart("language", plugin.language.name())
+            .multiPart("executionPhase", Plugin.ExecutionPhase.REQUEST.name())
+            .multiPart("mode", Plugin.Mode.SINGLE_SCRIPT.name())
+            .multiPart("script", plugin.script)
+            .multiPart("enabled", "true")
             .when().post("/api/plugins")
             .then()
             .statusCode(201)
@@ -168,6 +175,7 @@ class AdminApiTest {
     void shouldCrudPluginGroups() {
         Plugin plugin = new Plugin();
         plugin.name = "GroupTestPlugin";
+        plugin.slug = "group-test-plugin";
         plugin.language = Plugin.Language.GROOVY;
         plugin.script = "context.stop()";
         pluginRepository.save(plugin);
@@ -200,28 +208,26 @@ class AdminApiTest {
     @Test
     void shouldListSamplePluginsAndGroupsAfterStartup() {
         given()
-            .contentType(ContentType.JSON)
-            .body(Map.of(
-                "name", "大明战锤提示词（Groovy）",
-                "language", "GROOVY",
-                "executionPhase", "REQUEST",
-                "script", "context.log('groovy')",
-                "enabled", true
-            ))
+            .multiPart("name", "Sample Groovy Plugin")
+            .multiPart("slug", "groovy-user-test")
+            .multiPart("language", "GROOVY")
+            .multiPart("executionPhase", "REQUEST")
+            .multiPart("mode", "SINGLE_SCRIPT")
+            .multiPart("script", "context.log('groovy')")
+            .multiPart("enabled", "true")
             .when().post("/api/plugins")
             .then()
             .statusCode(201)
             .body("sample", equalTo(false));
 
         given()
-            .contentType(ContentType.JSON)
-            .body(Map.of(
-                "name", "大明战锤提示词（JS）",
-                "language", "JS",
-                "executionPhase", "REQUEST",
-                "script", "context.log('js')",
-                "enabled", true
-            ))
+            .multiPart("name", "Sample JS Plugin")
+            .multiPart("slug", "js-user-test")
+            .multiPart("language", "JS")
+            .multiPart("executionPhase", "REQUEST")
+            .multiPart("mode", "SINGLE_SCRIPT")
+            .multiPart("script", "context.log('js')")
+            .multiPart("enabled", "true")
             .when().post("/api/plugins")
             .then()
             .statusCode(201)
@@ -232,21 +238,20 @@ class AdminApiTest {
             .then()
             .statusCode(200)
             .body("size()", equalTo(2))
-            .body("name", hasItems("大明战锤提示词（Groovy）", "大明战锤提示词（JS）"))
+            .body("name", hasItems("Sample Groovy Plugin", "Sample JS Plugin"))
             .body("sample", hasItems(false, false));
     }
 
     @Test
     void shouldExportAndImportPlugins() {
         given()
-            .contentType(ContentType.JSON)
-            .body(Map.of(
-                "name", "ExportTest",
-                "language", "GROOVY",
-                "executionPhase", "REQUEST",
-                "script", "context.log('export-test')",
-                "enabled", true
-            ))
+            .multiPart("name", "ExportTest")
+            .multiPart("slug", "export-test")
+            .multiPart("language", "GROOVY")
+            .multiPart("executionPhase", "REQUEST")
+            .multiPart("mode", "SINGLE_SCRIPT")
+            .multiPart("script", "context.log('export-test')")
+            .multiPart("enabled", "true")
             .when().post("/api/plugins")
             .then()
             .statusCode(201)
@@ -254,22 +259,25 @@ class AdminApiTest {
 
         Long id = pluginRepository.listAll().get(0).id;
 
+        // /api/plugins/export produces an application/zip download (matches what the
+        // admin UI imports); verify only the status and content-type here.
         given()
             .contentType(ContentType.JSON)
             .body(Map.of("ids", java.util.List.of(id)))
             .when().post("/api/plugins/export")
             .then()
             .statusCode(200)
-            .body("size()", equalTo(1))
-            .body("[0].name", equalTo("ExportTest"));
+            .contentType("application/zip");
 
         given()
             .contentType(ContentType.JSON)
             .body(java.util.List.of(Map.of(
                 "name", "ImportTest",
+                "slug", "import-test",
                 "description", "",
                 "language", "GROOVY",
                 "executionPhase", "REQUEST",
+                "mode", "SINGLE_SCRIPT",
                 "script", "context.log('import-test')",
                 "enabled", true
             )))
@@ -283,9 +291,11 @@ class AdminApiTest {
             .contentType(ContentType.JSON)
             .body(java.util.List.of(Map.of(
                 "name", "ImportTestDup",
+                "slug", "import-test",
                 "description", "",
                 "language", "GROOVY",
                 "executionPhase", "REQUEST",
+                "mode", "SINGLE_SCRIPT",
                 "script", "context.log('import-test')",
                 "enabled", true
             )))
@@ -306,14 +316,13 @@ class AdminApiTest {
     @Test
     void shouldExportAndImportPluginGroups() {
         Long pluginId = given()
-            .contentType(ContentType.JSON)
-            .body(Map.of(
-                "name", "GroupExportPlugin",
-                "language", "GROOVY",
-                "executionPhase", "REQUEST",
-                "script", "context.log('group-export')",
-                "enabled", true
-            ))
+            .multiPart("name", "GroupExportPlugin")
+            .multiPart("slug", "group-export-plugin")
+            .multiPart("language", "GROOVY")
+            .multiPart("executionPhase", "REQUEST")
+            .multiPart("mode", "SINGLE_SCRIPT")
+            .multiPart("script", "context.log('group-export')")
+            .multiPart("enabled", "true")
             .when().post("/api/plugins")
             .then()
             .statusCode(201)
@@ -398,14 +407,13 @@ class AdminApiTest {
             .extract().jsonPath().getLong("id");
 
         Long pluginId = given()
-            .contentType(ContentType.JSON)
-            .body(Map.of(
-                "name", "InstanceExportPlugin",
-                "language", "GROOVY",
-                "executionPhase", "REQUEST",
-                "script", "context.log('instance-export')",
-                "enabled", true
-            ))
+            .multiPart("name", "InstanceExportPlugin")
+            .multiPart("slug", "instance-export-plugin")
+            .multiPart("language", "GROOVY")
+            .multiPart("executionPhase", "REQUEST")
+            .multiPart("mode", "SINGLE_SCRIPT")
+            .multiPart("script", "context.log('instance-export')")
+            .multiPart("enabled", "true")
             .when().post("/api/plugins")
             .then()
             .statusCode(201)

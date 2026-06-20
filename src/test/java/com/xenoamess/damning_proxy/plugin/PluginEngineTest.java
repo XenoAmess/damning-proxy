@@ -17,7 +17,7 @@ class PluginEngineTest {
         GroovyPluginEngine engine = new GroovyPluginEngine();
         Plugin plugin = new Plugin();
         plugin.language = Plugin.Language.GROOVY;
-        plugin.script = "context.getRequestHeaders().put('X-Custom', 'js-value') = 'groovy-value'";
+        plugin.script = "context.requestHeaders.put('X-Custom', 'groovy-value')";
 
         PluginContext context = new PluginContext();
         engine.execute(plugin, context);
