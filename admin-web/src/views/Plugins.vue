@@ -17,7 +17,8 @@
     <el-table :data="plugins" v-loading="loading" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="ID" width="60" />
-      <el-table-column prop="name" label="名称" />
+      <el-table-column prop="name" label="名称" min-width="140" />
+      <el-table-column prop="description" label="描述" min-width="180" show-overflow-tooltip />
       <el-table-column prop="language" label="语言" width="90" />
       <el-table-column prop="mode" label="模式" width="110">
         <template #default="{ row }">
