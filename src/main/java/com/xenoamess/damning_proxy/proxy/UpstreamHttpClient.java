@@ -176,7 +176,7 @@ public class UpstreamHttpClient {
     private static int clampTimeoutMs(int timeoutMs) {
         // 0 means "no timeout configured" – still enforce a hard ceiling so a
         // runaway upstream cannot pin the worker pool indefinitely.
-        int hardCeilingMs = 600_000; // 10 minutes
+        int hardCeilingMs = 1_800_000; // 30 minutes
         if (timeoutMs <= 0 || timeoutMs > hardCeilingMs) {
             return hardCeilingMs;
         }
