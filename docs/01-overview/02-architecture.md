@@ -129,6 +129,7 @@ admin-web/src/
 - **无认证**：所有 `/api/*` 与 `/v1/proxy/*` 均公开访问，仅依赖 `profile.bearerToken` 作为上行认证。如需认证，应在前置反向代理或后续版本中扩展。
 - **实例隔离**：每个 `ProxyInstance` 独立绑定一个上游 Profile 和一组插件，外部通过 `instanceSlug` 访问。
 - **H2 默认**：使用文件型 H2 便于本地开发，生产环境可切换为 PostgreSQL/MySQL。
+- **上行强制 HTTP/1.1**：`UpstreamHttpClient` 关闭 ALPN，强制使用 HTTP/1.1。Vert.x `HttpClient` 在 HTTP/2 下从工作线程读取 `response.body()` 时会出现响应体丢失/截断的问题，导致非流式返回变成非 JSON（如流量日志 #71）。
 - **插件拥有完整 JVM 权限**：Groovy 与 GraalJS 均可执行任意代码，部署时需谨慎。
 
 安全提示详见 [04 安全提示](../02-design/04-security-notes.md)。
