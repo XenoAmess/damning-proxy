@@ -34,13 +34,14 @@ public class ProfileAdminApi {
 
     @POST
     @Transactional
-    public Response create(ProxyProfile profile) {
-        if (profile.slug == null || profile.slug.isBlank()) {
+    public Response create(ProfileForm form) {
+        if (form.slug == null || form.slug.isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST).entity("slug is required").build();
         }
-        if (profileRepository.findBySlug(profile.slug).isPresent()) {
+        if (profileRepository.findBySlug(form.slug).isPresent()) {
             return Response.status(Response.Status.CONFLICT).entity("slug already exists").build();
         }
+        ProxyProfile profile = toEntity(form);
         profileRepository.save(profile);
         return Response.status(Response.Status.CREATED).entity(profile).build();
     }
@@ -48,13 +49,14 @@ public class ProfileAdminApi {
     @PUT
     @Path("/{id}")
     @Transactional
-    public Response update(@PathParam("id") Long id, ProxyProfile profile) {
+    public Response update(@PathParam("id") Long id, ProfileForm form) {
         return profileRepository.findById(id)
             .map(existing -> {
-                profile.id = id;
-                if (profile.slug == null || profile.slug.isBlank()) {
+                if (form.slug == null || form.slug.isBlank()) {
                     return Response.status(Response.Status.BAD_REQUEST).entity("slug is required").build();
                 }
+                ProxyProfile profile = toEntity(form);
+                profile.id = id;
                 profileRepository.save(profile);
                 return Response.ok(profile).build();
             })
@@ -128,6 +130,25 @@ public class ProfileAdminApi {
             imported++;
         }
         return Response.ok(new ImportResult(imported, skipped)).build();
+    }
+
+    private ProxyProfile toEntity(ProfileForm form) {
+        ProxyProfile profile = new ProxyProfile();
+        profile.name = form.name;
+        profile.slug = form.slug;
+        profile.baseUrl = form.baseUrl;
+        profile.bearerToken = form.bearerToken;
+        profile.customHeaders = form.customHeaders;
+        profile.customBody = form.customBody;
+        profile.defaultModel = form.defaultModel;
+        profile.timeoutMs = form.timeoutMs;
+        profile.enabled = form.enabled;
+        return profile;
+    }
+
+    public record ProfileForm(String name, String slug, String baseUrl, String bearerToken,
+                               String customHeaders, String customBody, String defaultModel,
+                               Integer timeoutMs, boolean enabled) {
     }
 
     public record ExportRequest(List<Long> ids) {
