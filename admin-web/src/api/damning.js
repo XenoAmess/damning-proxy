@@ -1,8 +1,30 @@
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
 
 const api = axios.create({
   baseURL: '/api',
 })
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      const { status, data } = error.response
+      if (status >= 500) {
+        ElMessage.error(`服务器错误 (${status})`)
+      } else if (status === 404) {
+        ElMessage.error('资源不存在')
+      } else if (status === 409) {
+        ElMessage.warning(typeof data === 'string' ? data : '冲突')
+      }
+    } else if (error.code === 'ECONNABORTED') {
+      ElMessage.error('请求超时')
+    } else {
+      ElMessage.error('网络错误，请检查连接')
+    }
+    return Promise.reject(error)
+  }
+)
 
 export function listProfiles() {
   return api.get('/profiles')

@@ -1,5 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
+const NotFound = { template: '<div style="text-align:center;padding:60px 20px"><h2>404</h2><p>页面不存在</p></div>' }
+
 const routes = [
   { path: '/', redirect: '/instances' },
   { path: '/instances', component: () => import('./views/Instances.vue') },
@@ -8,6 +10,7 @@ const routes = [
   { path: '/profiles', component: () => import('./views/Profiles.vue') },
   { path: '/chat', component: () => import('./views/Chat.vue') },
   { path: '/logs', component: () => import('./views/Logs.vue') },
+  { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]
 
 export default createRouter({
