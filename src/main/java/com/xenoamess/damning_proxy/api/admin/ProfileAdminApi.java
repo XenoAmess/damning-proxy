@@ -52,6 +52,9 @@ public class ProfileAdminApi {
         return profileRepository.findById(id)
             .map(existing -> {
                 Validation.validateSlug(form.slug);
+                if (profileRepository.findBySlug(form.slug).map(p -> !p.id.equals(id)).orElse(false)) {
+                    return Response.status(Response.Status.CONFLICT).entity("slug already exists").build();
+                }
                 ProxyProfile profile = toEntity(form);
                 profile.id = id;
                 profileRepository.save(profile);
