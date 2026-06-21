@@ -410,7 +410,7 @@ async function deleteSession(id) {
       createSession()
     }
   } catch (e) {
-    if (e !== 'cancel') {
+    if (e !== 'cancel' && e !== 'close') {
       ElMessage.error('删除失败')
     }
   }
