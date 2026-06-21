@@ -94,7 +94,7 @@ jobs:
       - name: Package Windows installer
         run: |
           $jar = Get-ChildItem target\*runner.jar | Select-Object -First 1
-          $version = $jar.Name -replace '^[^-]+-(.+)-runner\.jar$', '$1'
+          $version = $jar.Name -replace '^.*-(\d+\.\d+\.\d+)-runner\.jar$', '$1'
           & "$env:JAVA_HOME\bin\jpackage.exe" --name damning-proxy --input target --main-jar $jar.Name --win-console --type exe --java-options "-Duser.home=%APPDATA%" --dest dist --app-version $version
         shell: pwsh
 
