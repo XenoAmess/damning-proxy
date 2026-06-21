@@ -260,7 +260,6 @@ public class PluginAdminApi {
             plugin.enabled = m.enabled;
             plugin.sample = false;
             plugin.script = "";
-            pluginRepository.save(plugin);
 
             if (plugin.mode == Plugin.Mode.ZIP_PACKAGE && pluginZips != null) {
                 byte[] zipBytes = pluginZips.get(m.packageFile);
@@ -273,6 +272,7 @@ public class PluginAdminApi {
                     }
                 }
             }
+            pluginRepository.save(plugin);
             imported++;
         }
         return Response.ok(new ImportResult(imported, skipped)).build();
