@@ -134,13 +134,14 @@
         <el-tabs v-model="activeTab">
           <el-tab-pane v-if="isChatLike(current)" label="对话摘要" name="summary">
             <div class="chat-flow">
-              <template v-for="(msg, idx) in (current.requestMessages || [])" :key="'req-' + idx">
+               <template v-for="(msg, idx) in (current.requestMessages || [])" :key="'req-' + idx">
                 <div :class="['chat-bubble', bubbleClass(msg.role)]">
                   <div class="chat-role">
                     <span class="chat-role-label">{{ roleLabel(msg.role) }}</span>
                     <el-tag v-if="msg.name" size="small" type="info" class="chat-role-name">{{ msg.name }}</el-tag>
                   </div>
-                  <pre v-if="msg.content" class="chat-text">{{ msg.content }}</pre>
+                  <pre v-if="msg.content && msg.role === 'tool'" class="chat-text tool-result">{{ formatToolResult(msg.content) }}</pre>
+                  <pre v-else-if="msg.content" class="chat-text">{{ msg.content }}</pre>
                   <pre v-else class="chat-text muted">（无文本内容）</pre>
                 </div>
               </template>
@@ -152,9 +153,13 @@
                   </div>
                   <pre v-if="msg.reasoningContent" class="chat-text reasoning">{{ msg.reasoningContent }}</pre>
                   <div v-if="msg.content" class="chat-text markdown-body" v-html="renderModelOutput(msg.content)"></div>
-                  <pre v-else-if="!msg.reasoningContent" class="chat-text muted">（无文本内容）</pre>
+                  <pre v-else-if="!msg.reasoningContent && !msg.toolCallIds?.length" class="chat-text muted">（无文本内容）</pre>
                   <div v-if="msg.toolCallIds && msg.toolCallIds.length" class="chat-tool-calls">
-                    🔧 工具调用：{{ msg.toolCallIds.join(', ') }}
+                    <div v-for="(id, i) in msg.toolCallIds" :key="id" class="tool-call-item">
+                      🔧 <strong>{{ msg.toolCallFunctions?.[i] || '工具调用' }}</strong>
+                      <span class="tool-call-id">{{ id }}</span>
+                      <pre v-if="msg.toolCallArguments?.[i]" class="tool-call-args">{{ tryFormatJson(msg.toolCallArguments[i]) }}</pre>
+                    </div>
                   </div>
                 </div>
               </template>
@@ -514,6 +519,24 @@ function formatFullTime(value) {
 function formatTime(value) {
   if (!value) return '-'
   return formatFullTime(value)
+}
+
+function formatToolResult(content) {
+  try {
+    const obj = JSON.parse(content)
+    return JSON.stringify(obj, null, 2)
+  } catch (e) {
+    return content
+  }
+}
+
+function tryFormatJson(text) {
+  try {
+    const obj = JSON.parse(text)
+    return JSON.stringify(obj, null, 2)
+  } catch (e) {
+    return text
+  }
 }
 
 function setCardRef(id, el) {
@@ -913,6 +936,36 @@ pre {
 
 .error-text {
   color: #f56c6c;
+}
+
+.tool-call-item {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #f0f9ff;
+  border-left: 3px solid #409eff;
+  border-radius: 4px;
+}
+
+.tool-call-id {
+  font-size: 11px;
+  color: #909399;
+  margin-left: 8px;
+  font-family: monospace;
+}
+
+.tool-call-args {
+  margin: 6px 0 0 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  max-height: 120px;
+}
+
+.tool-result {
+  background: #f0f9ff !important;
+  border: 1px solid #b3d8ff;
 }
 
 :deep(.el-tabs__content) {

@@ -202,19 +202,41 @@ public class LogAdminApi {
         if (!(first instanceof Map)) {
             return null;
         }
-        Object message = ((Map<?, ?>) first).get("message");
+        Map<?, ?> choice = (Map<?, ?>) first;
+        Object message = choice.get("message");
         if (message instanceof Map) {
-            Object content = ((Map<?, ?>) message).get("content");
-            if (content instanceof String) {
-                return (String) content;
-            }
+            return extractOutputContent((Map<?, ?>) message);
         }
-        Object delta = ((Map<?, ?>) first).get("delta");
+        Object delta = choice.get("delta");
         if (delta instanceof Map) {
-            Object content = ((Map<?, ?>) delta).get("content");
-            if (content instanceof String) {
-                return (String) content;
+            return extractOutputContent((Map<?, ?>) delta);
+        }
+        return null;
+    }
+
+    private String extractOutputContent(Map<?, ?> msg) {
+        Object content = msg.get("content");
+        if (content instanceof String && !((String) content).isBlank()) {
+            return (String) content;
+        }
+        Object toolCalls = msg.get("tool_calls");
+        if (toolCalls instanceof List && !((List<?>) toolCalls).isEmpty()) {
+            List<String> names = new ArrayList<>();
+            for (Object tc : (List<?>) toolCalls) {
+                if (tc instanceof Map) {
+                    Object fn = ((Map<?, ?>) tc).get("function");
+                    if (fn instanceof Map) {
+                        Object name = ((Map<?, ?>) fn).get("name");
+                        if (name instanceof String) {
+                            names.add((String) name);
+                        }
+                    }
+                }
             }
+            if (!names.isEmpty()) {
+                return "调用工具: " + String.join(", ", names);
+            }
+            return "调用工具 (" + ((List<?>) toolCalls).size() + "个)";
         }
         return null;
     }
@@ -339,16 +361,31 @@ public class LogAdminApi {
         Object toolCalls = m.get("tool_calls");
         if (toolCalls instanceof List) {
             List<String> ids = new ArrayList<>();
+            List<String> funcs = new ArrayList<>();
+            List<String> args = new ArrayList<>();
             for (Object tc : (List<?>) toolCalls) {
                 if (tc instanceof Map) {
-                    Object id = ((Map<?, ?>) tc).get("id");
+                    Map<?, ?> tcm = (Map<?, ?>) tc;
+                    Object id = tcm.get("id");
                     if (id instanceof String) {
                         ids.add((String) id);
+                    }
+                    Object fn = tcm.get("function");
+                    if (fn instanceof Map) {
+                        Object fname = ((Map<?, ?>) fn).get("name");
+                        Object fargs = ((Map<?, ?>) fn).get("arguments");
+                        funcs.add(fname instanceof String ? (String) fname : "?");
+                        args.add(fargs instanceof String ? (String) fargs : "{}");
+                    } else {
+                        funcs.add("?");
+                        args.add("{}");
                     }
                 }
             }
             if (!ids.isEmpty()) {
                 cm.toolCallIds = ids;
+                cm.toolCallFunctions = funcs;
+                cm.toolCallArguments = args;
             }
         }
         if (cm.role == null && cm.content == null && cm.reasoningContent == null

@@ -35,6 +35,18 @@ public class ChatMessage {
     public java.util.List<String> toolCallIds;
 
     /**
+     * Tool call function names, parallel to {@link #toolCallIds}.
+     * Null for non-assistant messages.
+     */
+    public java.util.List<String> toolCallFunctions;
+
+    /**
+     * Tool call function arguments (JSON strings), parallel to {@link #toolCallIds}.
+     * Null for non-assistant messages.
+     */
+    public java.util.List<String> toolCallArguments;
+
+    /**
      * Raw text length (for very long messages, the UI may want to collapse
      * the bubble and offer an expand toggle).
      */
