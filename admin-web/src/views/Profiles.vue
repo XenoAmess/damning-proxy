@@ -72,7 +72,7 @@
       </el-form>
       <template #footer>
         <el-button @click="visible = false">取消</el-button>
-        <el-button type="primary" @click="save">保存</el-button>
+        <el-button type="primary" @click="save" :loading="saving">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -87,6 +87,7 @@ import CodeEditor from '../components/CodeEditor.vue'
 
 const profiles = ref([])
 const loading = ref(false)
+const saving = ref(false)
 const visible = ref(false)
 const selectedIds = ref([])
 const errors = ref({ customHeaders: '', customBody: '' })
@@ -144,8 +145,9 @@ function openDialog(row) {
 }
 
 async function save() {
-  if (!validateJsonFields()) return
+  saving.value = true
   try {
+    if (!validateJsonFields()) return
     if (form.value.id) {
       await updateProfile(form.value.id, form.value)
     } else {
@@ -156,6 +158,8 @@ async function save() {
     await load()
   } catch (e) {
     ElMessage.error(e.response?.data || '保存失败')
+  } finally {
+    saving.value = false
   }
 }
 

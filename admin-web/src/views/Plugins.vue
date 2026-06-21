@@ -117,7 +117,7 @@
       </el-form>
       <template #footer>
         <el-button @click="visible = false">取消</el-button>
-        <el-button v-if="!readOnly" type="primary" @click="save">保存</el-button>
+        <el-button v-if="!readOnly" type="primary" @click="save" :loading="saving">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -140,6 +140,7 @@ import { formatTimestamp } from '../utils/format.js'
 
 const plugins = ref([])
 const loading = ref(false)
+const saving = ref(false)
 const visible = ref(false)
 const readOnly = ref(false)
 const selectedIds = ref([])
@@ -321,6 +322,7 @@ function buildFormData() {
 }
 
 async function save() {
+  saving.value = true
   try {
     const fd = buildFormData()
     if (form.value.id) {
@@ -333,6 +335,8 @@ async function save() {
     await load()
   } catch (e) {
     ElMessage.error(e.response?.data || '保存失败')
+  } finally {
+    saving.value = false
   }
 }
 

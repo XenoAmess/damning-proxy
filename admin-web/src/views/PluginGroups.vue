@@ -102,7 +102,7 @@
       </el-form>
       <template #footer>
         <el-button @click="visible = false">取消</el-button>
-        <el-button type="primary" @click="save">保存</el-button>
+        <el-button type="primary" @click="save" :loading="saving">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -125,6 +125,7 @@ import { formatTimestamp } from '../utils/format.js'
 const groups = ref([])
 const plugins = ref([])
 const loading = ref(false)
+const saving = ref(false)
 const visible = ref(false)
 const selectedIds = ref([])
 const selectedPluginId = ref(null)
@@ -231,6 +232,7 @@ function recalcOrder() {
 }
 
 async function save() {
+  saving.value = true
   try {
     recalcOrder()
     const payload = {
@@ -255,6 +257,8 @@ async function save() {
     await load()
   } catch (e) {
     ElMessage.error(e.response?.data || '保存失败')
+  } finally {
+    saving.value = false
   }
 }
 

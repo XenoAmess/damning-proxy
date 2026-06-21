@@ -88,7 +88,7 @@
       </el-form>
       <template #footer>
         <el-button @click="visible = false">取消</el-button>
-        <el-button type="primary" @click="save">保存</el-button>
+        <el-button type="primary" @click="save" :loading="saving">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -114,6 +114,7 @@ const instances = ref([])
 const profiles = ref([])
 const groups = ref([])
 const loading = ref(false)
+const saving = ref(false)
 const visible = ref(false)
 const selectedIds = ref([])
 const form = ref({
@@ -186,6 +187,7 @@ function openDialog(row) {
 }
 
 async function save() {
+  saving.value = true
   try {
     if (form.value.id) {
       await updateInstance(form.value.id, form.value)
@@ -197,6 +199,8 @@ async function save() {
     await load()
   } catch (e) {
     ElMessage.error(e.response?.data || '保存失败')
+  } finally {
+    saving.value = false
   }
 }
 
