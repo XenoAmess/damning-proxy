@@ -10,8 +10,11 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Path("/api/instances")
@@ -105,12 +108,24 @@ public class InstanceAdminApi {
         } else {
             instances = instanceRepository.listAll();
         }
+
+        Set<Long> profileIds = instances.stream().map(i -> i.profileId).collect(Collectors.toSet());
+        Set<Long> groupIds = instances.stream().map(i -> i.pluginGroupId).collect(Collectors.toSet());
+        Map<Long, String> profileSlugMap = new HashMap<>();
+        Map<Long, String> groupSlugMap = new HashMap<>();
+        for (Long id : profileIds) {
+            profileRepository.findById(id).ifPresent(p -> profileSlugMap.put(id, p.slug));
+        }
+        for (Long id : groupIds) {
+            pluginGroupRepository.findById(id).ifPresent(g -> groupSlugMap.put(id, g.slug));
+        }
+
         List<ExportInstance> exportInstances = instances.stream()
             .map(i -> new ExportInstance(
                 i.name,
                 i.slug,
-                profileRepository.findById(i.profileId).map(p -> p.slug).orElse(null),
-                pluginGroupRepository.findById(i.pluginGroupId).map(g -> g.slug).orElse(null),
+                profileSlugMap.get(i.profileId),
+                groupSlugMap.get(i.pluginGroupId),
                 i.defaultModel,
                 i.enabled))
             .collect(Collectors.toList());
