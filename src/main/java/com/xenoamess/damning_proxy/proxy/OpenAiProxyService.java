@@ -337,37 +337,6 @@ public class OpenAiProxyService {
         });
     }
 
-    private Object parseStreamingResponse(String rawSse, String accumulatedContent) {
-        if (rawSse == null || rawSse.isBlank()) {
-            return Map.of("choices", List.of(Map.of("delta", Map.of("content", accumulatedContent))));
-        }
-        StringBuilder content = new StringBuilder(accumulatedContent);
-        try {
-            for (String line : rawSse.split("\n")) {
-                String trimmed = line.trim();
-                if (!trimmed.startsWith("data: ")) continue;
-                String data = trimmed.substring(6).trim();
-                if ("[DONE]".equals(data)) continue;
-                JsonNode node = objectMapper.readTree(data);
-                JsonNode choices = node.get("choices");
-                if (choices == null || !choices.isArray() || choices.isEmpty()) continue;
-                JsonNode delta = choices.get(0).get("delta");
-                if (delta == null) continue;
-                JsonNode reasoning = delta.get("reasoning_content");
-                JsonNode c = delta.get("content");
-                if (reasoning != null && !reasoning.isNull()) {
-                    content.append(reasoning.asText());
-                }
-                if (c != null && !c.isNull()) {
-                    content.append(c.asText());
-                }
-            }
-        } catch (IOException e) {
-            Log.warn("Failed to parse streaming response for log", e);
-        }
-        return Map.of("choices", List.of(Map.of("delta", Map.of("content", content.toString()))));
-    }
-
     private Object buildStreamingResponseBody(String accumulatedContent) {
         return Map.of("choices", List.of(Map.of("delta", Map.of("content", accumulatedContent == null ? "" : accumulatedContent))));
     }
@@ -520,18 +489,6 @@ public class OpenAiProxyService {
         return result;
     }
 
-    private boolean isStreamingRequest(Object requestBody) {
-        if (requestBody == null) {
-            return false;
-        }
-        try {
-            JsonNode node = objectMapper.valueToTree(requestBody);
-            return node.has("stream") && node.get("stream").asBoolean(false);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
     private Object parseJson(String body) {
         if (body == null || body.isBlank()) {
             return null;
@@ -543,7 +500,6 @@ public class OpenAiProxyService {
         }
     }
 
-    @SuppressWarnings("unused")
     private String toJson(Object body) {
         if (body == null) {
             return "{}";
