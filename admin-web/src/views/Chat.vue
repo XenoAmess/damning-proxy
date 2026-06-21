@@ -192,12 +192,21 @@
             @keydown.enter.exact.prevent="send"
           />
           <el-button
+            v-if="!loading"
             type="primary"
-            :disabled="!canSend || loading"
+            :disabled="!canSend"
             @click="send"
             class="send-btn"
           >
             <el-icon><Promotion /></el-icon> 发送
+          </el-button>
+          <el-button
+            v-else
+            type="danger"
+            @click="stopStreaming"
+            class="send-btn"
+          >
+            <el-icon><Delete /></el-icon> 停止
           </el-button>
         </div>
       </div>
@@ -214,7 +223,7 @@ import {
   ArrowDown, ArrowRight,
 } from '@element-plus/icons-vue'
 import { listInstances, listProfiles } from '../api/damning.js'
-import { chatCompletion, chatCompletionStream, listModels } from '../api/chat.js'
+import { chatCompletion, chatCompletionStream, createAbortController, listModels } from '../api/chat.js'
 import html2canvas from 'html2canvas'
 import { formatTimestamp } from '../utils/format.js'
 import { copyToClipboard } from '../utils/clipboard.js'
@@ -232,6 +241,7 @@ const profiles = ref([])
 const inputText = ref('')
 const pendingFiles = ref([])
 const loading = ref(false)
+const abortController = ref(null)
 const messagesRef = ref(null)
 const uploadRef = ref(null)
 const typewriterTarget = ref(null)
@@ -511,6 +521,14 @@ function buildContent(text, files) {
   return parts
 }
 
+function stopStreaming() {
+  if (abortController.value) {
+    abortController.value.abort()
+    abortController.value = null
+  }
+  loading.value = false
+}
+
 async function send() {
   if (!canSend.value || loading.value) return
   if (!config.value.instanceSlug) {
@@ -548,6 +566,11 @@ async function send() {
   }
 
   loading.value = true
+  if (abortController.value) {
+    abortController.value.abort()
+  }
+  abortController.value = createAbortController()
+  const signal = abortController.value.signal
   const assistantMsg = {
     role: 'assistant',
     content: '',
@@ -560,7 +583,7 @@ async function send() {
 
   try {
     if (config.value.stream) {
-      for await (const chunk of chatCompletionStream(config.value.instanceSlug, body, config.value.token)) {
+      for await (const chunk of chatCompletionStream(config.value.instanceSlug, body, config.value.token, signal)) {
         const delta = chunk.choices?.[0]?.delta
         if (delta) {
           if (delta.content) {

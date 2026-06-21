@@ -18,7 +18,11 @@ export function chatCompletion(instanceSlug, body, token) {
   })
 }
 
-export async function* chatCompletionStream(instanceSlug, body, token) {
+export function createAbortController() {
+  return new AbortController()
+}
+
+export async function* chatCompletionStream(instanceSlug, body, token, signal) {
   const headers = {
     'Content-Type': 'application/json',
     'Accept': 'text/event-stream',
@@ -31,6 +35,7 @@ export async function* chatCompletionStream(instanceSlug, body, token) {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
+    signal,
   })
 
   if (!response.ok) {
@@ -45,6 +50,10 @@ export async function* chatCompletionStream(instanceSlug, body, token) {
   const reader = response.body
     .pipeThrough(new TextDecoderStream())
     .getReader()
+
+  if (signal) {
+    signal.addEventListener('abort', () => reader.cancel(), { once: true })
+  }
 
   let buffer = ''
   while (true) {
