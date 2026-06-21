@@ -1,24 +1,25 @@
 package com.xenoamess.damning_proxy.plugin;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class PluginContext {
 
-    private final Map<String, String> requestHeaders = new HashMap<>();
+    private final Map<String, String> requestHeaders = new ConcurrentHashMap<>();
     private Object requestBody;
 
-    private final Map<String, String> responseHeaders = new HashMap<>();
+    private final Map<String, String> responseHeaders = new ConcurrentHashMap<>();
     private Object responseBody;
-    private int responseStatus = 200;
+    private volatile int responseStatus = 200;
 
-    private final List<String> pluginLogs = new ArrayList<>();
+    private final List<String> pluginLogs = new CopyOnWriteArrayList<>();
     private final FriendlyLogCollector friendlyLogCollector = new FriendlyLogCollector();
 
-    private boolean stopped = false;
-    private boolean returned = false;
+    private volatile boolean stopped = false;
+    private volatile boolean returned = false;
 
     public PluginContext() {
     }
