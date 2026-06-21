@@ -42,6 +42,21 @@ public class PanacheLogRepository implements LogRepository {
     }
 
     @Override
+    public long count() {
+        return TrafficLog.count();
+    }
+
+    @Override
+    public long countByProfileId(Long profileId) {
+        return TrafficLog.count("profileId", profileId);
+    }
+
+    @Override
+    public long countByInstanceId(Long instanceId) {
+        return TrafficLog.count("instanceId", instanceId);
+    }
+
+    @Override
     public boolean deleteById(Long id) {
         return TrafficLog.deleteById(id);
     }

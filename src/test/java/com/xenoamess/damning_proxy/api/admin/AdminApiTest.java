@@ -151,7 +151,7 @@ class AdminApiTest {
             .when().get("/api/logs")
             .then()
             .statusCode(200)
-            .body("size()", equalTo(1));
+            .body("items.size()", equalTo(1));
 
         Long id = logRepository.listRecent(1).get(0).id;
 

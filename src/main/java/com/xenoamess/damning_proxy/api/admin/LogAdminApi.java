@@ -3,6 +3,7 @@ package com.xenoamess.damning_proxy.api.admin;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xenoamess.damning_proxy.dto.ChatMessage;
+import com.xenoamess.damning_proxy.dto.PageResponse;
 import com.xenoamess.damning_proxy.dto.PluginExecutionSnapshot;
 import com.xenoamess.damning_proxy.dto.TrafficLogFriendlyDto;
 import com.xenoamess.damning_proxy.entity.TrafficLog;
@@ -30,16 +31,24 @@ public class LogAdminApi {
     ObjectMapper objectMapper;
 
     @GET
-    public List<TrafficLog> list(@QueryParam("limit") @DefaultValue("100") int limit,
-                                     @QueryParam("profileId") Long profileId,
-                                     @QueryParam("instanceId") Long instanceId) {
+    public PageResponse<TrafficLog> list(@QueryParam("limit") @DefaultValue("100") int limit,
+                                         @QueryParam("offset") @DefaultValue("0") int offset,
+                                         @QueryParam("profileId") Long profileId,
+                                         @QueryParam("instanceId") Long instanceId) {
+        int effectiveLimit = Math.min(limit, 1000);
+        List<TrafficLog> items;
+        long total;
         if (instanceId != null) {
-            return logRepository.findByInstanceId(instanceId, Math.min(limit, 1000));
+            items = logRepository.findByInstanceId(instanceId, effectiveLimit);
+            total = logRepository.countByInstanceId(instanceId);
+        } else if (profileId != null) {
+            items = logRepository.findByProfileId(profileId, effectiveLimit);
+            total = logRepository.countByProfileId(profileId);
+        } else {
+            items = logRepository.listRecent(effectiveLimit);
+            total = logRepository.count();
         }
-        if (profileId != null) {
-            return logRepository.findByProfileId(profileId, Math.min(limit, 1000));
-        }
-        return logRepository.listRecent(Math.min(limit, 1000));
+        return new PageResponse<>(items, total, effectiveLimit, offset);
     }
 
     @GET
