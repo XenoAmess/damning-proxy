@@ -47,6 +47,12 @@ public class ChatMessage {
     public java.util.List<String> toolCallArguments;
 
     /**
+     * The {@code tool_call_id} from a tool-result message (role {@code "tool"}).
+     * Null for non-tool messages.
+     */
+    public String toolResultCallId;
+
+    /**
      * Raw text length (for very long messages, the UI may want to collapse
      * the bubble and offer an expand toggle).
      */

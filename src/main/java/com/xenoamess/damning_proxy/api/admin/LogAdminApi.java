@@ -358,6 +358,10 @@ public class LogAdminApi {
             cm.content = sb.toString();
             cm.contentLength = cm.content.length();
         }
+        Object toolCallId = m.get("tool_call_id");
+        if (toolCallId instanceof String) {
+            cm.toolResultCallId = (String) toolCallId;
+        }
         Object toolCalls = m.get("tool_calls");
         if (toolCalls instanceof List) {
             List<String> ids = new ArrayList<>();

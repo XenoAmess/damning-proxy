@@ -140,10 +140,16 @@
                     <span class="chat-role-label">{{ roleLabel(msg.role) }}</span>
                     <el-tag v-if="msg.name" size="small" type="info" class="chat-role-name">{{ msg.name }}</el-tag>
                   </div>
-                  <pre v-if="msg.reasoningContent" class="chat-text reasoning">{{ msg.reasoningContent }}</pre>
-                  <div v-if="msg.content && msg.role === 'tool'" class="chat-text tool-result">{{ formatToolResult(msg.content) }}</div>
+                  <div v-if="msg.reasoningContent" class="chat-text reasoning">{{ msg.reasoningContent }}</div>
+                  <div v-if="msg.role === 'tool' && msg.content" class="chat-tool-calls">
+                    <div class="tool-call-item tool-result-item">
+                      📋 <strong>工具结果</strong>
+                      <span v-if="msg.toolResultCallId" class="tool-call-id">{{ msg.toolResultCallId }}</span>
+                      <pre class="tool-call-args">{{ tryFormatJson(msg.content) }}</pre>
+                    </div>
+                  </div>
                   <div v-else-if="msg.content" class="chat-text markdown-body" v-html="renderModelOutput(msg.content)"></div>
-                  <pre v-else-if="!msg.toolCallIds?.length && !msg.reasoningContent" class="chat-text muted">（无文本内容）</pre>
+                  <pre v-else-if="!msg.toolCallIds?.length && !msg.reasoningContent && msg.role !== 'tool'" class="chat-text muted">（无文本内容）</pre>
                   <div v-if="msg.toolCallIds && msg.toolCallIds.length" class="chat-tool-calls">
                     <div v-for="(id, i) in msg.toolCallIds" :key="id" class="tool-call-item">
                       🔧 <strong>{{ msg.toolCallFunctions?.[i] || '工具调用' }}</strong>
@@ -527,15 +533,6 @@ function formatFullTime(value) {
 function formatTime(value) {
   if (!value) return '-'
   return formatFullTime(value)
-}
-
-function formatToolResult(content) {
-  try {
-    const obj = JSON.parse(content)
-    return JSON.stringify(obj, null, 2)
-  } catch (e) {
-    return content
-  }
 }
 
 function tryFormatJson(text) {
@@ -971,9 +968,9 @@ pre {
   max-height: 120px;
 }
 
-.tool-result {
-  background: #f0f9ff !important;
-  border: 1px solid #b3d8ff;
+.tool-result-item {
+  border-left-color: #67c23a !important;
+  background: #f0f9eb !important;
 }
 
 :deep(.el-tabs__content) {
