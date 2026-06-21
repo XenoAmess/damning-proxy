@@ -1,6 +1,6 @@
 # 03 配置说明
 
-> 最后更新：2026-06-17  
+> 最后更新：2026-06-21  
 > 对应源码版本：当前工作区
 
 ## 主配置文件
@@ -15,10 +15,11 @@
 
 ```properties
 quarkus.http.port=12360
+quarkus.http.host=0.0.0.0
 ```
 
-- 服务监听端口。
-- 可通过环境变量 `QUARKUS_HTTP_PORT` 或 `-Dquarkus.http.port=...` 覆盖。
+- 服务监听端口和绑定地址。
+- 可通过环境变量 `QUARKUS_HTTP_PORT`、`QUARKUS_HTTP_HOST` 或系统属性覆盖。
 
 ---
 
@@ -104,6 +105,49 @@ damning-proxy.default-timeout-ms=30000
 
 ---
 
+### 日志截断配置
+
+控制 TrafficLog 中存储的各字段最大长度（字符数），超出部分会被截断并追加 `...[truncated]`。
+
+```properties
+damning-proxy.log.max-body-length=1073741824
+damning-proxy.log.max-headers-length=2000
+damning-proxy.log.max-plugin-logs-length=5000
+damning-proxy.log.max-friendly-snapshots-length=8000
+```
+
+| 配置项 | 默认值 | 说明 |
+|---|---|---|
+| `damning-proxy.log.max-body-length` | `1073741824` | requestBody / responseBody 最大存储长度 |
+| `damning-proxy.log.max-headers-length` | `2000` | requestHeaders / responseHeaders 最大存储长度 |
+| `damning-proxy.log.max-plugin-logs-length` | `5000` | pluginLogs 最大存储长度 |
+| `damning-proxy.log.max-friendly-snapshots-length` | `8000` | friendlyPluginSnapshots 最大存储长度 |
+
+### 日志保留配置
+
+```properties
+damning-proxy.log.max-count=100000
+```
+
+- 最大日志条目数，超出后自动删除最旧的日志。
+- 每写入 100 条日志检查一次。
+
+### 频率限制
+
+```properties
+damning-proxy.rate-limit.max-requests=60
+damning-proxy.rate-limit.window-seconds=60
+```
+
+| 配置项 | 默认值 | 说明 |
+|---|---|---|
+| `damning-proxy.rate-limit.max-requests` | `60` | 每个窗口内每个实例 slug 允许的最大请求数 |
+| `damning-proxy.rate-limit.window-seconds` | `60` | 滑动窗口时长（秒） |
+
+`src/main/resources/application.properties:27`
+
+---
+
 ## 环境变量覆盖
 
 Quarkus 支持通过环境变量覆盖配置，规则：把点号 `.` 替换为下划线 `_`，并转大写。
@@ -138,6 +182,7 @@ quarkus.hibernate-orm.database.generation=drop-and-create
 | 配置项 | 默认值 | 说明 |
 |---|---|---|
 | `quarkus.http.port` | `12360` | 服务端口 |
+| `quarkus.http.host` | `0.0.0.0` | 绑定地址 |
 | `quarkus.datasource.db-kind` | `h2` | 数据库类型 |
 | `quarkus.datasource.jdbc.url` | `${user.home}/.damning-proxy/data` | JDBC URL |
 | `quarkus.hibernate-orm.database.generation` | `update` | 自动建表/更新 |
@@ -145,3 +190,10 @@ quarkus.hibernate-orm.database.generation=drop-and-create
 | `quarkus.http.cors.origins` | `*` | 允许的跨域来源 |
 | `quarkus.log.level` | `INFO` | 全局日志级别 |
 | `damning-proxy.default-timeout-ms` | `30000` | 默认上游超时 |
+| `damning-proxy.log.max-body-length` | `1073741824` | request/response body 最大存储长度 |
+| `damning-proxy.log.max-headers-length` | `2000` | request/response headers 最大存储长度 |
+| `damning-proxy.log.max-plugin-logs-length` | `5000` | pluginLogs 最大存储长度 |
+| `damning-proxy.log.max-friendly-snapshots-length` | `8000` | friendlyPluginSnapshots 最大存储长度 |
+| `damning-proxy.log.max-count` | `100000` | 最大日志条目数，超出自动删旧 |
+| `damning-proxy.rate-limit.max-requests` | `60` | 每窗口每实例最大请求数 |
+| `damning-proxy.rate-limit.window-seconds` | `60` | 频率限制滑动窗口秒数 |

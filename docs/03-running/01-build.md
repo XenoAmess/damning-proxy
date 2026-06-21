@@ -21,7 +21,7 @@ mvn clean package
 
 ```text
 target/
-├── damning-proxy-1.0-SNAPSHOT.jar          # 普通 jar，不可直接运行
+├── damning-proxy-0.1.0.jar          # 普通 jar，不可直接运行
 └── quarkus-app/
     └── quarkus-run.jar                     # Quarkus 可运行 jar
 ```
@@ -61,13 +61,13 @@ mvn clean package -Pnative -DskipTests
 产物：
 
 ```text
-target/damning-proxy-1.0-SNAPSHOT-runner
+target/damning-proxy-0.1.0-runner
 ```
 
 运行：
 
 ```bash
-./target/damning-proxy-1.0-SNAPSHOT-runner
+./target/damning-proxy-0.1.0-runner
 ```
 
 注意：
@@ -126,7 +126,7 @@ mvn clean package -DskipFrontend
 | 构建可运行 JAR | `mvn clean package` |
 | 运行 JAR | `java -jar target/quarkus-app/quarkus-run.jar` |
 | 构建 Native Image | `mvn clean package -Pnative` |
-| 运行 Native | `./target/damning-proxy-1.0-SNAPSHOT-runner` |
+| 运行 Native | `./target/damning-proxy-0.1.0-runner` |
 | 前端独立开发 | `cd admin-web && npm run dev` |
 | 前端独立构建 | `cd admin-web && npm run build` |
 | 运行测试 | `mvn test` |

@@ -1,6 +1,6 @@
 # 02 管理后台端点
 
-> 最后更新：2026-06-17  
+> 最后更新：2026-06-21  
 > 对应源码版本：当前工作区
 
 管理后台端点前缀为 `/api`，所有接口均返回 JSON，当前无认证。
@@ -13,6 +13,8 @@
 
 `src/main/java/com/xenoamess/damning_proxy/api/admin/ProfileAdminApi.java:16`
 
+create() 和 update() 接受 `ProfileForm` record（而非 `ProxyProfile` 实体），字段映射表如下。
+
 | Method | Path | 说明 |
 |---|---|---|
 | `GET` | `/api/profiles` | 列出所有 Profile |
@@ -21,7 +23,7 @@
 | `PUT` | `/api/profiles/{id}` | 更新 Profile |
 | `DELETE` | `/api/profiles/{id}` | 删除 Profile |
 
-### 创建/更新请求体示例
+### 创建/更新请求体示例（ProfileForm）
 
 ```json
 {
@@ -30,14 +32,24 @@
   "baseUrl": "https://api.openai.com/v1",
   "bearerToken": "sk-xxxxxxxx",
   "customHeaders": "{\"X-Project\": \"demo\"}",
+  "customBody": "{\"model\": \"gpt-4\"}",
   "defaultModel": "gpt-4",
   "timeoutMs": 30000,
   "enabled": true
 }
 ```
 
-- `slug` 必填且唯一。
-- `customHeaders` 为 JSON 字符串。
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| `name` | String | 非空 | 显示名称 |
+| `slug` | String | 非空，唯一 | URL 友好标识 |
+| `baseUrl` | String | 非空 | 上游 API 根地址 |
+| `bearerToken` | String | 可空 | Authorization: Bearer Token |
+| `customHeaders` | String | 可空，JSON | 自定义请求头，JSON 字符串 |
+| `customBody` | String | 可空，JSON | 请求体默认字段合并，JSON 字符串 |
+| `defaultModel` | String | 可空 | 默认模型名 |
+| `timeoutMs` | Integer | 可空，默认 600000 | 上行超时毫秒 |
+| `enabled` | boolean | 默认 true | 是否启用 |
 
 ---
 
@@ -279,19 +291,33 @@
 
 | Method | Path | 说明 |
 |---|---|---|
-| `GET` | `/api/logs?limit=100&profileId=&instanceId=` | 列出日志 |
+| `GET` | `/api/logs?limit=100&offset=0&profileId=&instanceId=` | 列出日志（分页） |
 | `GET` | `/api/logs/{id}` | 获取原始日志 |
 | `GET` | `/api/logs/{id}/friendly` | 获取友好格式日志 |
 | `DELETE` | `/api/logs/{id}` | 删除单条日志 |
 | `POST` | `/api/logs/clear` | 清空所有日志 |
 
+### GET /api/logs 响应格式
+
+返回 `PageResponse` 对象：
+
+```json
+{
+  "items": [ ... ],
+  "total": 150,
+  "limit": 100,
+  "offset": 0
+}
+```
+
 ### 查询参数
 
-| 参数 | 类型 | 说明 |
-|---|---|---|
-| `limit` | int | 最大返回条数，默认 100，最大 1000 |
-| `profileId` | Long | 按上游 Profile 筛选 |
-| `instanceId` | Long | 按 Instance 筛选 |
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `limit` | int | 100 | 最大返回条数，最大 1000 |
+| `offset` | int | 0 | 分页偏移量 |
+| `profileId` | Long | — | 按上游 Profile 筛选 |
+| `instanceId` | Long | — | 按 Instance 筛选 |
 
 ### 友好日志结构
 

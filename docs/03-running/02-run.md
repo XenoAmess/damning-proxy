@@ -43,7 +43,7 @@ mvn clean package -Pnative -DskipTests
 运行：
 
 ```bash
-./target/damning-proxy-1.0-SNAPSHOT-runner
+./target/damning-proxy-0.1.0-runner
 ```
 
 ---

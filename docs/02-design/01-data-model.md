@@ -1,6 +1,6 @@
 # 01 数据模型
 
-> 最后更新：2026-06-17  
+> 最后更新：2026-06-21  
 > 对应源码版本：当前工作区
 
 ## 实体清单
@@ -28,8 +28,9 @@
 | baseUrl | String | 非空 | 上游 API 根地址，如 `https://api.openai.com/v1` |
 | bearerToken | String | 可空 | 上行 Authorization: Bearer Token |
 | customHeaders | String | 可空，长度 4000 | JSON 格式自定义请求头 |
+| customBody | String | 可空，长度 10000 | JSON 格式请求体默认字段合并 |
 | defaultModel | String | 可空 | 默认模型名 |
-| timeoutMs | Integer | 默认 30000 | 上行请求超时毫秒 |
+| timeoutMs | Integer | 默认 600000 | 上行请求超时毫秒 |
 | enabled | boolean | 默认 true | 是否启用 |
 | createdAt | LocalDateTime | 自动 | 创建时间 |
 | updatedAt | LocalDateTime | 自动 | 更新时间 |
@@ -152,28 +153,34 @@ public enum ExecutionPhase {
 | requestPath | String | 可空 | 请求路径 |
 | requestMethod | String | 可空 | 请求方法 |
 | requestHeaders | String | 可空，长度 4000 | JSON 格式请求头 |
-| requestBody | String | 可空，长度 20000 | JSON 格式请求体 |
+| requestBody | String | 可空，Lob | JSON 格式请求体 |
+| requestBodyLength | Integer | 可空 | 截断前请求体原始长度 |
+| upstreamBaseUrl | String | 可空 | 上行请求的 baseUrl |
+| timeoutMs | Integer | 可空 | 上行请求超时毫秒 |
+| streaming | Boolean | 可空 | 是否为流式请求 |
 | requestTime | LocalDateTime | 自动 | 请求时间 |
 | responseStatus | Integer | 可空 | 响应状态码 |
 | responseHeaders | String | 可空，长度 4000 | JSON 格式响应头 |
-| responseBody | String | 可空，长度 20000 | JSON 格式响应体 |
+| responseBody | String | 可空，Lob | JSON 格式响应体 |
+| responseBodyLength | Integer | 可空 | 截断前响应体原始长度 |
+| errorMessage | String | 可空，长度 2000 | 上游请求错误信息 |
 | responseTime | LocalDateTime | 可空 | 响应时间 |
 | durationMs | Long | 可空 | 请求耗时毫秒 |
-| pluginLogs | String | 可空，长度 10000 | JSON 数组，插件日志 |
-| friendlyPluginSnapshots | String | 可空，长度 10000 | JSON 数组，插件执行快照 |
+| pluginLogs | String | 可空，Lob | JSON 数组，插件日志 |
+| friendlyPluginSnapshots | String | 可空，Lob | JSON 数组，插件执行快照 |
 
 ### 长度截断
 
-`TrafficLogService` 在序列化时会对以下字段做截断：
+`TrafficLogService` 在序列化时会对以下字段做截断，各字段的最大长度通过配置项控制：
 
-| 字段 | 最大长度 |
-|---|---|
-| requestHeaders / responseHeaders | 2000 |
-| requestBody / responseBody | 10000 |
-| pluginLogs | 5000 |
-| friendlyPluginSnapshots | 8000 |
+| 字段 | 配置项 | 默认最大长度 |
+|---|---|---|
+| requestHeaders / responseHeaders | `damning-proxy.log.max-headers-length` | 2000 |
+| requestBody / responseBody | `damning-proxy.log.max-body-length` | 1073741824 |
+| pluginLogs | `damning-proxy.log.max-plugin-logs-length` | 5000 |
+| friendlyPluginSnapshots | `damning-proxy.log.max-friendly-snapshots-length` | 8000 |
 
-超出后会追加 `...[truncated]`。
+超出后截断并追加 `...[truncated]`，`requestBodyLength` / `responseBodyLength` 保留截断前的原始长度。
 
 `src/main/java/com/xenoamess/damning_proxy/service/TrafficLogService.java:27`
 

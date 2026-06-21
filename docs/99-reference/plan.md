@@ -1,5 +1,7 @@
 # 大明proxy 改造实施计划
 
+> ⚠️ 这是初始设计文档，部分设计决策在实际实现中已调整。以当前代码和 API 文档为准。
+
 ## 项目目标
 将当前 OpenAI 兼容 Mock 服务改造为 **插件化 OpenAI 协议代理服务器**。
 
@@ -15,7 +17,7 @@
 
 | 项 | 决策 |
 |---|---|
-| 路由形式 | `/v1/proxy/{profileId}/chat/completions`、`/v1/proxy/{profileId}/models` |
+| 路由形式 | `/v1/proxy/{instanceSlug}/chat/completions`、`/v1/proxy/{instanceSlug}/models`（注：设计阶段使用 `{profileId}`，实际实现改为 `{instanceSlug}`） |
 | 数据库 | H2（开发/本地），通过 Panache 抽象便于切换 PostgreSQL/MySQL |
 | Web 管理页 | Vite + Vue 3 + Element Plus，构建后嵌入 Quarkus 静态资源 |
 | 插件语言 | Groovy + JavaScript（GraalJS） |
@@ -67,8 +69,8 @@ durationMs, pluginLogs(JSON)
 ## 阶段二：OpenAI 代理核心
 
 ### 2.1 新端点
-- `POST /v1/proxy/{profileId}/chat/completions`
-- `GET  /v1/proxy/{profileId}/models`
+- `POST /v1/proxy/{instanceSlug}/chat/completions`
+- `GET  /v1/proxy/{instanceSlug}/models`
 
 ### 2.2 处理流程
 1. 解析 profileId，加载 ProxyProfile。

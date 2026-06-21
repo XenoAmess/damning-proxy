@@ -1,6 +1,6 @@
 # 02 健康检查与监控
 
-> 最后更新：2026-06-17  
+> 最后更新：2026-06-21  
 > 对应源码版本：当前工作区
 
 ## 健康检查端点
@@ -14,7 +14,7 @@ curl http://localhost:12360/v1/health
 预期响应：
 
 ```json
-{ "status": "ok" }
+{ "status": "ok"|"degraded", "database": "ok"|"error" }
 ```
 
 ---
@@ -59,8 +59,37 @@ DEBUG [com.xenoamess.damning_proxy.proxy.UpstreamHttpClient] Upstream request: P
 
 ---
 
+## 已实现功能
+
+### 熔断器 (CircuitBreaker)
+
+`src/main/java/com/xenoamess/damning_proxy/proxy/CircuitBreaker.java`
+
+每个上游 baseUrl 独立熔断：
+- 连续失败 3 次 → 熔断器打开，拒绝后续请求
+- 打开 30 秒后 → 半开状态，允许一次探测请求
+- 探测成功 → 恢复关闭；探测失败 → 重新打开
+
+### 频率限制 (RateLimiter)
+
+`src/main/java/com/xenoamess/damning_proxy/proxy/RateLimiter.java`
+
+滑动窗口频率限制，按实例 slug 计数：
+- 默认每 60 秒窗口内每实例最多 60 个请求
+- 可通过 `damning-proxy.rate-limit.max-requests` 和 `damning-proxy.rate-limit.window-seconds` 调整
+- 超限请求返回 HTTP 429
+
+### 日志保留策略
+
+`src/main/java/com/xenoamess/damning_proxy/service/TrafficLogService.java`
+
+- 每写入 100 条日志检查一次总数
+- 超出 `damning-proxy.log.max-count`（默认 100000）时自动删除最旧的日志
+- 可通过配置项调整阈值
+
+---
+
 ## 未来改进
 
 - 集成 `quarkus-micrometer` 暴露 Prometheus 指标。
 - 统计 QPS、延迟分位值、上游错误率。
-- 增加数据库连接池健康检查。

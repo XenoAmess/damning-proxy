@@ -59,8 +59,10 @@ OpenAI 兼容风格：
 | 400 | 请求参数错误，或 stream=true 却调用非流式端点 |
 | 403 | Instance 或 Profile 被禁用 |
 | 404 | Instance / Profile / PluginGroup 不存在 |
+| 429 | 请求频率超限（rate limit exceeded） |
 | 502 | 上游请求失败（`UpstreamHttpClient` 抛出的 `WebApplicationException(BAD_GATEWAY)`） |
 | 500 | 未捕获异常 |
+| 503 | 上游断路器打开（circuit breaker open），服务暂时不可用 |
 
 ---
 

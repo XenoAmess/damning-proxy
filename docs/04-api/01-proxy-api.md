@@ -85,7 +85,7 @@ curl -H "Authorization: Bearer sk-test" \
 
 - 上行认证使用 `ProxyProfile.bearerToken`，客户端传入的 `Authorization` 头**不会**被用于上游认证。
 - 请求头透传优先级：客户端传入 > Profile 自定义头 > 自动注入的 `Authorization: Bearer {bearerToken}` > 插件修改。
-- 请求体合并优先级：客户端传入 > Profile `customBody` > 插件修改。
+- 请求体合并优先级：客户端传入 > Profile `customBody`（由 `ProfileForm` DTO 传入 `ProxyProfile`）> 插件修改。
 
 ---
 

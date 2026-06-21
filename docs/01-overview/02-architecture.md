@@ -18,6 +18,8 @@
 │  业务服务层                                                          │
 │  proxy/       : OpenAiProxyService（代理编排）                        │
 │  proxy/       : UpstreamHttpClient（Vert.x 上行请求）                 │
+│  proxy/       : CircuitBreaker（上游熔断器）                          │
+│  proxy/       : RateLimiter（请求速率限制器）                         │
 │  service/     : TrafficLogService（流量日志记录）                     │
 │  plugin/      : PluginExecutionService（插件流水线执行）              │
 ├─────────────────────────────────────────────────────────────────────┤
@@ -88,7 +90,9 @@ OpenAiProxyService.chatCompletionsStream()         [OpenAiProxyService.java:152]
 | 包/类 | 职责 | 关键文件 |
 |---|---|---|
 | `api/` | REST 端点定义 | `src/main/java/com/xenoamess/damning_proxy/api/HomeResource.java`, `src/main/java/com/xenoamess/damning_proxy/api/HealthResource.java`, `src/main/java/com/xenoamess/damning_proxy/api/admin/` |
-| `proxy/` | OpenAI 代理核心与上行 HTTP | `src/main/java/com/xenoamess/damning_proxy/proxy/ProxyApi.java`, `src/main/java/com/xenoamess/damning_proxy/proxy/OpenAiProxyService.java`, `src/main/java/com/xenoamess/damning_proxy/proxy/UpstreamHttpClient.java` |
+| `proxy/` | OpenAI 代理核心与上行 HTTP | `src/main/java/com/xenoamess/damning_proxy/proxy/ProxyApi.java`, `src/main/java/com/xenoamess/damning_proxy/proxy/OpenAiProxyService.java`, `src/main/java/com/xenoamess/damning_proxy/proxy/UpstreamHttpClient.java`, `src/main/java/com/xenoamess/damning_proxy/proxy/CircuitBreaker.java`, `src/main/java/com/xenoamess/damning_proxy/proxy/RateLimiter.java` |
+| `proxy/CircuitBreaker` | 上游故障熔断保护 | `src/main/java/com/xenoamess/damning_proxy/proxy/CircuitBreaker.java` |
+| `proxy/RateLimiter` | 代理请求速率限制 | `src/main/java/com/xenoamess/damning_proxy/proxy/RateLimiter.java` |
 | `plugin/` | 插件上下文、执行器、引擎 | `src/main/java/com/xenoamess/damning_proxy/plugin/PluginContext.java`, `src/main/java/com/xenoamess/damning_proxy/plugin/PluginExecutionService.java`, `src/main/java/com/xenoamess/damning_proxy/plugin/engine/` |
 | `entity/` | JPA 实体 | `src/main/java/com/xenoamess/damning_proxy/entity/` |
 | `repository/` | 数据访问接口与 Panache 实现 | `src/main/java/com/xenoamess/damning_proxy/repository/`, `src/main/java/com/xenoamess/damning_proxy/repository/panache/` |

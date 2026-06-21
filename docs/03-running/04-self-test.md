@@ -58,7 +58,7 @@ curl http://localhost:12360/v1/health
 预期返回：
 
 ```json
-{ "status": "ok" }
+{ "status": "ok", "database": "ok" }
 ```
 
 ### 3. 创建上游 Profile
@@ -123,6 +123,27 @@ curl -H "Authorization: Bearer sk-test" \
 
 ```bash
 curl http://localhost:12360/api/logs
+```
+
+预期返回 PageResponse 格式：
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "instanceName": "My Instance",
+      "requestPath": "/v1/proxy/my-instance/chat/completions",
+      "requestMethod": "POST",
+      "responseStatus": 200,
+      "durationMs": 1234,
+      "requestTime": "2026-06-21T10:00:00"
+    }
+  ],
+  "total": 100,
+  "limit": 20,
+  "offset": 0
+}
 ```
 
 ---
