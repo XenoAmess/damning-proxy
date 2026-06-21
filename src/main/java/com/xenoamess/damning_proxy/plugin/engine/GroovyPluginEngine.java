@@ -11,8 +11,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 @ApplicationScoped
@@ -21,7 +21,7 @@ public class GroovyPluginEngine implements PluginEngine {
     private final GroovyShell shell = new GroovyShell();
     // Cache the compiled Script *class*, not instance: Script objects are not thread-safe
     // and should not be reused across concurrent requests.
-    private final Map<String, Class<? extends Script>> scriptClassCache = new HashMap<>();
+    private final Map<String, Class<? extends Script>> scriptClassCache = new ConcurrentHashMap<>();
 
     @Inject
     PluginPackageStorage packageStorage;
