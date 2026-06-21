@@ -342,7 +342,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { marked } from 'marked'
 import { listLogs, getLogFriendly, deleteLog, clearLogs } from '../api/damning.js'
-import { parseThink, formatBytes } from '../utils/parse.js'
+import { parseThink, formatBytes, sanitizeHtml } from '../utils/parse.js'
 
 const logs = ref([])
 const loading = ref(false)
@@ -459,9 +459,9 @@ function bubbleClass(role) {
 function renderModelOutput(text) {
   if (typeof text !== 'string') return ''
   const parsed = parseThink(text)
-  let html = marked.parse(parsed.text, { breaks: true, gfm: true })
+  let html = sanitizeHtml(marked.parse(parsed.text, { breaks: true, gfm: true }))
   if (parsed.reasoning) {
-    html = `<div class="reasoning-block"><div class="reasoning-label">推理过程</div><pre>${parsed.reasoning}</pre></div>` + html
+    html = `<div class="reasoning-block"><div class="reasoning-label">推理过程</div><pre>${sanitizeHtml(parsed.reasoning)}</pre></div>` + html
   }
   return html
 }

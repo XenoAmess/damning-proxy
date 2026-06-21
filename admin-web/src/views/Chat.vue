@@ -227,7 +227,7 @@ import { chatCompletion, chatCompletionStream, createAbortController, listModels
 import html2canvas from 'html2canvas'
 import { formatTimestamp } from '../utils/format.js'
 import { copyToClipboard } from '../utils/clipboard.js'
-import { parseThink } from '../utils/parse.js'
+import { parseThink, sanitizeHtml } from '../utils/parse.js'
 
 const TYPEWRITER_DELAY = 16
 const TYPEWRITER_CHUNK = 2
@@ -686,7 +686,7 @@ function formatTime(ts) {
 
 function renderMarkdown(text) {
   if (typeof text !== 'string') return ''
-  return marked.parse(text, { breaks: true, gfm: true })
+  return sanitizeHtml(marked.parse(text, { breaks: true, gfm: true }))
 }
 </script>
 
