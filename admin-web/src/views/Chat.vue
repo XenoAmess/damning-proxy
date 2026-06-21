@@ -369,7 +369,7 @@ function debouncedSaveSessions() {
 
 function loadConfig() {
   try {
-    const saved = localStorage.getItem(CONFIG_KEY)
+    const saved = sessionStorage.getItem(CONFIG_KEY)
     if (saved) {
       config.value = { ...config.value, ...JSON.parse(saved) }
     }
@@ -379,7 +379,7 @@ function loadConfig() {
 }
 
 function saveConfig() {
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(config.value))
+  sessionStorage.setItem(CONFIG_KEY, JSON.stringify(config.value))
 }
 
 function loadSessions() {
