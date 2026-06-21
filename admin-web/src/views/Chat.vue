@@ -215,7 +215,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { marked } from 'marked'
 import {
@@ -339,6 +339,13 @@ onMounted(() => {
   loadInstances()
 })
 
+onUnmounted(() => {
+  if (abortController.value) {
+    abortController.value.abort()
+    abortController.value = null
+  }
+})
+
 watch(() => config.value, () => {
   debouncedSaveConfig()
 }, { deep: true })
@@ -378,7 +385,11 @@ function loadSessions() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
-      sessions.value = JSON.parse(saved)
+      const raw = JSON.parse(saved)
+      sessions.value = raw.slice(0, MAX_SESSIONS).map(s => ({
+        ...s,
+        messages: s.messages ? s.messages.slice(-MAX_MESSAGES_PER_SESSION) : [],
+      }))
     }
   } catch (e) {
     sessions.value = []
@@ -390,8 +401,15 @@ function loadSessions() {
   }
 }
 
+const MAX_SESSIONS = 50
+const MAX_MESSAGES_PER_SESSION = 200
+
 function saveSessions() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.value))
+  const pruned = sessions.value.slice(0, MAX_SESSIONS).map(s => ({
+    ...s,
+    messages: s.messages ? s.messages.slice(-MAX_MESSAGES_PER_SESSION) : [],
+  }))
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(pruned))
 }
 
 function createSession() {
