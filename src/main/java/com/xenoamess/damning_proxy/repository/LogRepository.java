@@ -26,4 +26,6 @@ public interface LogRepository {
     boolean deleteById(Long id);
 
     long deleteAll();
+
+    void deleteOldest(int count);
 }

@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 @ApplicationScoped
 public class TrafficLogService {
@@ -38,6 +39,12 @@ public class TrafficLogService {
 
     @ConfigProperty(name = "damning-proxy.log.max-friendly-snapshots-length", defaultValue = "8000")
     int maxFriendlySnapshotsLength;
+
+    @ConfigProperty(name = "damning-proxy.log.max-count", defaultValue = "100000")
+    long maxLogCount;
+
+    private final AtomicLong recordCounter = new AtomicLong(0);
+    private static final long PRUNE_INTERVAL = 100;
 
     @Transactional
     public TrafficLog recordRequest(Long instanceId, String instanceSlug, Long profileId, String path, String method,
@@ -89,6 +96,10 @@ public class TrafficLogService {
         existing.friendlyPluginSnapshots = serializeFriendlySnapshots(friendlySnapshots);
         existing.errorMessage = errorMessage;
         logRepository.save(existing);
+
+        if (recordCounter.incrementAndGet() % PRUNE_INTERVAL == 0) {
+            pruneOldLogs();
+        }
     }
 
     @Transactional
@@ -178,5 +189,19 @@ public class TrafficLogService {
             return value;
         }
         return value.substring(0, maxLength) + "...[truncated]";
+    }
+
+    private void pruneOldLogs() {
+        long total = logRepository.count();
+        if (total <= maxLogCount) {
+            return;
+        }
+        long toDelete = total - maxLogCount;
+        Log.infof("Pruning %d old traffic logs (total=%d, max=%d)", toDelete, total, maxLogCount);
+        try {
+            logRepository.deleteOldest((int) Math.min(toDelete, Integer.MAX_VALUE));
+        } catch (Exception e) {
+            Log.error("Failed to prune old logs", e);
+        }
     }
 }

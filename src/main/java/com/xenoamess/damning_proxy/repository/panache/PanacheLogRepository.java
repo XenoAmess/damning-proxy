@@ -65,4 +65,12 @@ public class PanacheLogRepository implements LogRepository {
     public long deleteAll() {
         return TrafficLog.deleteAll();
     }
+
+    @Override
+    public void deleteOldest(int count) {
+        List<TrafficLog> oldest = TrafficLog.findAll(Sort.ascending("requestTime")).page(0, count).list();
+        for (TrafficLog log : oldest) {
+            log.delete();
+        }
+    }
 }
