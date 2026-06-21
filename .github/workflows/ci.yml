@@ -93,7 +93,9 @@ jobs:
 
       - name: Package Windows installer
         run: |
-          & "$env:JAVA_HOME\bin\jpackage.exe" --name damning-proxy --input target --main-jar damning-proxy-1.0-SNAPSHOT-runner.jar --win-console --type exe --java-options "-Duser.home=%APPDATA%" --dest dist --app-version 1.0.0
+          $jar = Get-ChildItem target\*runner.jar | Select-Object -First 1
+          $version = $jar.Name -replace '^[^-]+-(.+)-runner\.jar$', '$1'
+          & "$env:JAVA_HOME\bin\jpackage.exe" --name damning-proxy --input target --main-jar $jar.Name --win-console --type exe --java-options "-Duser.home=%APPDATA%" --dest dist --app-version $version
         shell: pwsh
 
       - name: Upload Windows artifact
