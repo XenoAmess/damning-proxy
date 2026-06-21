@@ -76,68 +76,30 @@ public class OpenAiProxyService {
     });
 
     public Response listModels(String instanceSlug, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
-        ProxyContext ctx = resolveInstance(instanceSlug);
-        List<Plugin> plugins = loadPlugins(ctx.group);
-
-        PluginContext context = createRequestContext(ctx.profile, null, incomingHeaders);
-
-        long start = System.currentTimeMillis();
-        TrafficLog trafficLog = trafficLogService.recordRequest(
-            ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/models", "GET",
-            context.getRequestHeaders(), null,
-            ctx.profile.baseUrl, ctx.profile.timeoutMs, false
-        );
-
-        pluginExecutionService.executeRequestPlugins(plugins, context);
-
-        if (context.isReturned()) {
-            trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
-                context.getResponseHeaders(), context.getResponseBody(),
-                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
-            return Response.status(context.getResponseStatus())
-                .entity(context.getResponseBody())
-                .build();
-        }
-
-        boolean responseRecorded = false;
-        try {
-            UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
-                "GET", ctx.profile.baseUrl, "/models",
-                toMultiMap(context.getRequestHeaders()), null, ctx.profile.timeoutMs
-            );
-
-            context.setResponseStatus(upstream.statusCode);
-            context.getResponseHeaders().putAll(toMap(upstream.headers));
-            context.setResponseBody(parseJson(upstream.body));
-
-            pluginExecutionService.executeResponsePlugins(plugins, context);
-
-            trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
-                context.getResponseHeaders(), context.getResponseBody(),
-                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
-            responseRecorded = true;
-
-            return Response.status(context.getResponseStatus())
-                .entity(context.getResponseBody())
-                .build();
-        } catch (Exception e) {
-            int status = (e instanceof jakarta.ws.rs.WebApplicationException wae) ? wae.getResponse().getStatus() : 502;
-            trafficLogService.recordResponse(trafficLog, status,
-                Map.of(), "Upstream request failed: " + e.getMessage(),
-                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), e.getMessage());
-            responseRecorded = true;
-            throw e;
-        } finally {
-            if (!responseRecorded) {
-                trafficLogService.recordResponse(trafficLog, 504,
-                    Map.of(), "Upstream request completed without producing a response",
-                    System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(),
-                    "Upstream request completed without producing a response");
-            }
-        }
+        return proxyRequest(instanceSlug, null, "GET", "/v1/models", incomingHeaders,
+            (profile, context) -> upstreamHttpClient.send(
+                "GET", profile.baseUrl, "/models",
+                toMultiMap(context.getRequestHeaders()), null, profile.timeoutMs
+            ));
     }
 
     public Response chatCompletions(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        return proxyRequest(instanceSlug, requestBody, "POST", "/v1/chat/completions", incomingHeaders,
+            (profile, context) -> upstreamHttpClient.send(
+                "POST", profile.baseUrl, "/chat/completions",
+                toMultiMap(context.getRequestHeaders()), context.getRequestBody(), profile.timeoutMs
+            ));
+    }
+
+    @FunctionalInterface
+    private interface UpstreamCall {
+        UpstreamHttpClient.UpstreamResponse execute(ProxyProfile profile, PluginContext context);
+    }
+
+    private Response proxyRequest(String instanceSlug, Object requestBody,
+                                   String method, String requestPath,
+                                   jakarta.ws.rs.core.HttpHeaders incomingHeaders,
+                                   UpstreamCall upstreamCall) {
         ProxyContext ctx = resolveInstance(instanceSlug);
         List<Plugin> plugins = loadPlugins(ctx.group);
 
@@ -145,7 +107,7 @@ public class OpenAiProxyService {
 
         long start = System.currentTimeMillis();
         TrafficLog trafficLog = trafficLogService.recordRequest(
-            ctx.instance.id, ctx.instance.slug, ctx.profile.id, "/v1/chat/completions", "POST",
+            ctx.instance.id, ctx.instance.slug, ctx.profile.id, requestPath, method,
             context.getRequestHeaders(), requestBody,
             ctx.profile.baseUrl, ctx.profile.timeoutMs, false
         );
@@ -163,10 +125,7 @@ public class OpenAiProxyService {
 
         boolean responseRecorded = false;
         try {
-            UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.send(
-                "POST", ctx.profile.baseUrl, "/chat/completions",
-                toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs
-            );
+            UpstreamHttpClient.UpstreamResponse upstream = upstreamCall.execute(ctx.profile, context);
 
             context.setResponseStatus(upstream.statusCode);
             context.getResponseHeaders().putAll(toMap(upstream.headers));
@@ -188,13 +147,8 @@ public class OpenAiProxyService {
                 Map.of(), "Upstream request failed: " + e.getMessage(),
                 System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), e.getMessage());
             responseRecorded = true;
-            throw e;
+            throw new RuntimeException(e);
         } finally {
-            // Safety net: if neither the success path nor the catch block recorded
-            // a response (e.g. the upstream send() returned silently without
-            // throwing and we somehow skipped recordResponse), still capture
-            // whatever plugin state was produced so traffic logs reflect the
-            // request-phase plugin activity.
             if (!responseRecorded) {
                 trafficLogService.recordResponse(trafficLog, 504,
                     Map.of(), "Upstream request completed without producing a response",

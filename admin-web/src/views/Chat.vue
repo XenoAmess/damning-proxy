@@ -227,6 +227,7 @@ import { chatCompletion, chatCompletionStream, createAbortController, listModels
 import html2canvas from 'html2canvas'
 import { formatTimestamp } from '../utils/format.js'
 import { copyToClipboard } from '../utils/clipboard.js'
+import { parseThink } from '../utils/parse.js'
 
 const TYPEWRITER_DELAY = 16
 const TYPEWRITER_CHUNK = 2
@@ -686,19 +687,6 @@ function formatTime(ts) {
 function renderMarkdown(text) {
   if (typeof text !== 'string') return ''
   return marked.parse(text, { breaks: true, gfm: true })
-}
-
-function parseThink(content) {
-  if (typeof content !== 'string') {
-    return { text: content || '', reasoning: '' }
-  }
-  const match = content.match(/\u003cthink\u003e([\s\S]*?)\u003c\/think\u003e/)
-  if (!match) {
-    return { text: content, reasoning: '' }
-  }
-  const reasoning = match[1].trim()
-  const text = content.replace(/\u003cthink\u003e[\s\S]*?\u003c\/think\u003e/, '').trim()
-  return { text, reasoning }
 }
 </script>
 

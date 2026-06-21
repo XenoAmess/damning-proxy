@@ -14,24 +14,20 @@ public class PanacheProfileRepository implements ProfileRepository {
     public ProxyProfile save(ProxyProfile profile) {
         if (profile.id == null) {
             profile.persistAndFlush();
-        } else {
-            ProxyProfile existing = findById(profile.id).orElse(null);
-            if (existing == null) {
-                profile.persistAndFlush();
-            } else {
-                existing.name = profile.name;
-                existing.slug = profile.slug;
-                existing.baseUrl = profile.baseUrl;
-                existing.bearerToken = profile.bearerToken;
-                existing.customHeaders = profile.customHeaders;
-                existing.customBody = profile.customBody;
-                existing.defaultModel = profile.defaultModel;
-                existing.timeoutMs = profile.timeoutMs;
-                existing.enabled = profile.enabled;
-                existing.persistAndFlush();
-            }
+            return profile;
         }
-        return profile;
+        return PanacheUtils.saveOrUpdate(profile, findById(profile.id).orElse(null),
+            (from, to) -> {
+                to.name = from.name;
+                to.slug = from.slug;
+                to.baseUrl = from.baseUrl;
+                to.bearerToken = from.bearerToken;
+                to.customHeaders = from.customHeaders;
+                to.customBody = from.customBody;
+                to.defaultModel = from.defaultModel;
+                to.timeoutMs = from.timeoutMs;
+                to.enabled = from.enabled;
+            });
     }
 
     @Override

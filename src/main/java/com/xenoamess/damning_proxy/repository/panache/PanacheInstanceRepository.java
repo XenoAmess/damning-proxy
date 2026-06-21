@@ -14,21 +14,17 @@ public class PanacheInstanceRepository implements InstanceRepository {
     public ProxyInstance save(ProxyInstance instance) {
         if (instance.id == null) {
             instance.persistAndFlush();
-        } else {
-            ProxyInstance existing = findById(instance.id).orElse(null);
-            if (existing == null) {
-                instance.persistAndFlush();
-            } else {
-                existing.name = instance.name;
-                existing.slug = instance.slug;
-                existing.profileId = instance.profileId;
-                existing.pluginGroupId = instance.pluginGroupId;
-                existing.defaultModel = instance.defaultModel;
-                existing.enabled = instance.enabled;
-                existing.persistAndFlush();
-            }
+            return instance;
         }
-        return instance;
+        return PanacheUtils.saveOrUpdate(instance, findById(instance.id).orElse(null),
+            (from, to) -> {
+                to.name = from.name;
+                to.slug = from.slug;
+                to.profileId = from.profileId;
+                to.pluginGroupId = from.pluginGroupId;
+                to.defaultModel = from.defaultModel;
+                to.enabled = from.enabled;
+            });
     }
 
     @Override

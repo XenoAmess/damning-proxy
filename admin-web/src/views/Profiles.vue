@@ -83,6 +83,7 @@ import { ref, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listProfiles, createProfile, updateProfile, deleteProfile, exportProfiles as exportProfilesApi, importProfiles } from '../api/damning.js'
 import { formatTimestamp } from '../utils/format.js'
+import { exportJson, importJson } from '../utils/export.js'
 import CodeEditor from '../components/CodeEditor.vue'
 
 const profiles = ref([])
@@ -203,15 +204,7 @@ function validateJsonFields() {
 async function exportProfiles() {
   try {
     const res = await exportProfilesApi(selectedIds.value)
-    const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `damning_proxy_profiles_${formatTimestamp()}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    exportJson(res.data, `damning_proxy_profiles_${formatTimestamp()}.json`)
     ElMessage.success('导出成功')
   } catch (e) {
     ElMessage.error(e.response?.data || '导出失败')
@@ -222,8 +215,7 @@ async function handleImport(file) {
   const raw = file.raw
   if (!raw) return
   try {
-    const text = await raw.text()
-    const list = JSON.parse(text)
+    const list = await importJson(raw)
     if (!Array.isArray(list)) {
       ElMessage.error('文件格式错误：应为配置数组')
       return

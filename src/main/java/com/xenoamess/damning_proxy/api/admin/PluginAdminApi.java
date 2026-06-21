@@ -5,6 +5,7 @@ import com.xenoamess.damning_proxy.entity.Plugin;
 import com.xenoamess.damning_proxy.plugin.storage.PluginPackageStorage;
 import com.xenoamess.damning_proxy.plugin.storage.ZipBuilder;
 import com.xenoamess.damning_proxy.repository.PluginRepository;
+import com.xenoamess.damning_proxy.util.Validation;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -55,6 +56,7 @@ public class PluginAdminApi {
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Transactional
     public Response create(PluginForm form) {
+        Validation.validateSlug(form.slug);
         Plugin plugin = toEntity(form);
         plugin.sample = false;
         pluginRepository.save(plugin);
@@ -76,6 +78,7 @@ public class PluginAdminApi {
     public Response update(@PathParam("id") Long id, PluginForm form) {
         return pluginRepository.findById(id)
             .map(existing -> {
+                Validation.validateSlug(form.slug);
                 Plugin plugin = toEntity(form);
                 plugin.id = id;
                 plugin.sample = false;

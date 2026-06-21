@@ -342,6 +342,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { marked } from 'marked'
 import { listLogs, getLogFriendly, deleteLog, clearLogs } from '../api/damning.js'
+import { parseThink, formatBytes } from '../utils/parse.js'
 
 const logs = ref([])
 const loading = ref(false)
@@ -464,18 +465,7 @@ function renderModelOutput(text) {
   return html
 }
 
-function parseThink(content) {
-  if (typeof content !== 'string') {
-    return { text: content || '', reasoning: '' }
-  }
-  const match = content.match(/<think>([\s\S]*?)<\/think>/)
-  if (!match) {
-    return { text: content, reasoning: '' }
-  }
-  const reasoning = match[1].trim()
-  const text = content.replace(/<think>[\s\S]*?<\/think>/, '').trim()
-  return { text, reasoning }
-}
+
 
 function formatJson(value) {
   if (value === null || value === undefined) return ''
@@ -519,14 +509,6 @@ function formatFullTime(value) {
 function formatTime(value) {
   if (!value) return '-'
   return formatFullTime(value)
-}
-
-function formatBytes(value) {
-  if (value === null || value === undefined) return '-'
-  const n = Number(value)
-  if (n < 1024) return n + ' B'
-  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB'
-  return (n / (1024 * 1024)).toFixed(2) + ' MB'
 }
 
 function setCardRef(id, el) {

@@ -4,6 +4,7 @@ import com.xenoamess.damning_proxy.entity.ProxyInstance;
 import com.xenoamess.damning_proxy.repository.InstanceRepository;
 import com.xenoamess.damning_proxy.repository.PluginGroupRepository;
 import com.xenoamess.damning_proxy.repository.ProfileRepository;
+import com.xenoamess.damning_proxy.util.Validation;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -47,9 +48,7 @@ public class InstanceAdminApi {
     @POST
     @Transactional
     public Response create(InstanceRequest request) {
-        if (request.slug == null || request.slug.isBlank()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("slug is required").build();
-        }
+        Validation.validateSlug(request.slug);
         if (instanceRepository.findBySlug(request.slug).isPresent()) {
             return Response.status(Response.Status.CONFLICT).entity("slug already exists").build();
         }
@@ -70,9 +69,7 @@ public class InstanceAdminApi {
         if (existingOpt.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
-        if (request.slug == null || request.slug.isBlank()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("slug is required").build();
-        }
+        Validation.validateSlug(request.slug);
         Optional<ProxyInstance> bySlug = instanceRepository.findBySlug(request.slug);
         if (bySlug.isPresent() && !bySlug.get().id.equals(id)) {
             return Response.status(Response.Status.CONFLICT).entity("slug already exists").build();

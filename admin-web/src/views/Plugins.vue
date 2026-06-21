@@ -94,7 +94,7 @@
               <el-button @click="loadTemplate">使用模板</el-button>
             </div>
             <div v-if="packageFile" class="package-info">
-              已选择: {{ packageFile.name }} ({{ formatSize(packageFile.size) }})
+              已选择: {{ packageFile.name }} ({{ formatBytes(packageFile.size) }})
             </div>
             <div v-else-if="form.id && form.packagePath" class="package-info">
               当前包: {{ form.packagePath }}
@@ -137,6 +137,7 @@ import {
 import axios from 'axios'
 import CodeEditor from '../components/CodeEditor.vue'
 import { formatTimestamp } from '../utils/format.js'
+import { formatBytes } from '../utils/parse.js'
 
 const plugins = ref([])
 const loading = ref(false)
@@ -274,7 +275,7 @@ async function readPackageEntries(file) {
     packageEntries.value = []
     zip.forEach((relativePath, zipEntry) => {
       if (!zipEntry.dir) {
-        packageEntries.value.push({ name: relativePath, size: formatSize(zipEntry._data.uncompressedSize || 0) })
+        packageEntries.value.push({ name: relativePath, size: formatBytes(zipEntry._data.uncompressedSize || 0) })
       }
     })
   } catch (e) {
@@ -295,14 +296,6 @@ async function loadTemplate() {
   } catch (e) {
     ElMessage.error('加载模板失败')
   }
-}
-
-function formatSize(bytes) {
-  if (bytes === 0 || bytes === '-') return '-'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 function buildFormData() {

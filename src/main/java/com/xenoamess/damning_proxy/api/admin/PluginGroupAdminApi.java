@@ -5,6 +5,7 @@ import com.xenoamess.damning_proxy.entity.PluginGroup;
 import com.xenoamess.damning_proxy.entity.PluginGroupItem;
 import com.xenoamess.damning_proxy.repository.PluginGroupRepository;
 import com.xenoamess.damning_proxy.repository.PluginRepository;
+import com.xenoamess.damning_proxy.util.Validation;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -43,9 +44,7 @@ public class PluginGroupAdminApi {
     @POST
     @Transactional
     public Response create(PluginGroupRequest request) {
-        if (request.slug == null || request.slug.isBlank()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("slug is required").build();
-        }
+        Validation.validateSlug(request.slug);
         if (groupRepository.findBySlug(request.slug).isPresent()) {
             return Response.status(Response.Status.CONFLICT).entity("slug already exists").build();
         }
@@ -62,9 +61,7 @@ public class PluginGroupAdminApi {
         if (existingOpt.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
-        if (request.slug == null || request.slug.isBlank()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("slug is required").build();
-        }
+        Validation.validateSlug(request.slug);
         Optional<PluginGroup> bySlug = groupRepository.findBySlug(request.slug);
         if (bySlug.isPresent() && !bySlug.get().id.equals(id)) {
             return Response.status(Response.Status.CONFLICT).entity("slug already exists").build();

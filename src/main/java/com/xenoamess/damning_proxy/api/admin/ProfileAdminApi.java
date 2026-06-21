@@ -2,6 +2,7 @@ package com.xenoamess.damning_proxy.api.admin;
 
 import com.xenoamess.damning_proxy.entity.ProxyProfile;
 import com.xenoamess.damning_proxy.repository.ProfileRepository;
+import com.xenoamess.damning_proxy.util.Validation;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -35,9 +36,7 @@ public class ProfileAdminApi {
     @POST
     @Transactional
     public Response create(ProfileForm form) {
-        if (form.slug == null || form.slug.isBlank()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("slug is required").build();
-        }
+        Validation.validateSlug(form.slug);
         if (profileRepository.findBySlug(form.slug).isPresent()) {
             return Response.status(Response.Status.CONFLICT).entity("slug already exists").build();
         }
@@ -52,9 +51,7 @@ public class ProfileAdminApi {
     public Response update(@PathParam("id") Long id, ProfileForm form) {
         return profileRepository.findById(id)
             .map(existing -> {
-                if (form.slug == null || form.slug.isBlank()) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("slug is required").build();
-                }
+                Validation.validateSlug(form.slug);
                 ProxyProfile profile = toEntity(form);
                 profile.id = id;
                 profileRepository.save(profile);

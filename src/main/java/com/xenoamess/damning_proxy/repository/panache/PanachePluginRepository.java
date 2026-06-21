@@ -15,25 +15,21 @@ public class PanachePluginRepository implements PluginRepository {
     public Plugin save(Plugin plugin) {
         if (plugin.id == null) {
             plugin.persistAndFlush();
-        } else {
-            Plugin existing = findById(plugin.id).orElse(null);
-            if (existing == null) {
-                plugin.persistAndFlush();
-            } else {
-                existing.name = plugin.name;
-                existing.slug = plugin.slug;
-                existing.description = plugin.description;
-                existing.language = plugin.language;
-                existing.mode = plugin.mode;
-                existing.script = plugin.script;
-                existing.packagePath = plugin.packagePath;
-                existing.executionPhase = plugin.executionPhase;
-                existing.enabled = plugin.enabled;
-                existing.sample = plugin.sample;
-                existing.persistAndFlush();
-            }
+            return plugin;
         }
-        return plugin;
+        return PanacheUtils.saveOrUpdate(plugin, findById(plugin.id).orElse(null),
+            (from, to) -> {
+                to.name = from.name;
+                to.slug = from.slug;
+                to.description = from.description;
+                to.language = from.language;
+                to.mode = from.mode;
+                to.script = from.script;
+                to.packagePath = from.packagePath;
+                to.executionPhase = from.executionPhase;
+                to.enabled = from.enabled;
+                to.sample = from.sample;
+            });
     }
 
     @Override
