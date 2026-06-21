@@ -26,6 +26,11 @@ public class JavaScriptPluginEngine implements PluginEngine {
 
     private final NashornScriptEngineFactory engineFactory = new NashornScriptEngineFactory();
 
+    // Nashorn ScriptEngine instances are not thread-safe. Cache them per-thread
+    // via ThreadLocal to avoid the heavy creation cost on every execution.
+    private final ThreadLocal<ScriptEngine> engineCache = ThreadLocal.withInitial(() ->
+        engineFactory.getScriptEngine(new String[]{"--language=es6"}));
+
     @Inject
     PluginPackageStorage packageStorage;
 
@@ -41,7 +46,7 @@ public class JavaScriptPluginEngine implements PluginEngine {
         ensureCompiled(plugin, script);
 
         // Nashorn engines are stateful and not thread-safe: one engine per execution.
-        ScriptEngine engine = engineFactory.getScriptEngine(new String[]{"--language=es6"});
+            ScriptEngine engine = engineCache.get();
         try {
             engine.put("context", context);
             if (plugin.mode == Plugin.Mode.ZIP_PACKAGE) {
@@ -65,7 +70,7 @@ public class JavaScriptPluginEngine implements PluginEngine {
             // errors during this dry run are swallowed because they usually mean
             // the script just touched a body field that the dummy context doesn't
             // have – the real execute() call supplies the actual request body.
-            ScriptEngine engine = engineFactory.getScriptEngine(new String[]{"--language=es6"});
+        ScriptEngine engine = engineCache.get();
             try {
                 PluginContext dummy = new PluginContext();
                 dummy.setRequestBody(new java.util.LinkedHashMap<String, Object>() {{
