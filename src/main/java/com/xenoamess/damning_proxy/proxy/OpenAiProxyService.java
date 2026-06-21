@@ -240,7 +240,7 @@ public class OpenAiProxyService {
         return Multi.createFrom().emitter(emitter -> {
             StringBuilder responseBuffer = new StringBuilder();
             StringBuilder sseBuffer = new StringBuilder();
-            StringBuilder contentBuffer = new StringBuilder();
+            List<Map<String, Object>> accumulatedChoices = new ArrayList<>();
             AtomicBoolean logged = new AtomicBoolean(false);
 
             Runnable recordOnce = () -> {
@@ -304,7 +304,7 @@ public class OpenAiProxyService {
                                 return;
                             }
                             emitter.emit("data: " + data + "\n\n");
-                            accumulateStreamContent(data, contentBuffer);
+                            accumulateStreamDelta(data, accumulatedChoices);
                         }
                     }
                 });
@@ -317,10 +317,10 @@ public class OpenAiProxyService {
                         String data = remaining.substring(6).trim();
                         if (!"[DONE]".equals(data)) {
                             emitter.emit("data: " + data + "\n\n");
-                            accumulateStreamContent(data, contentBuffer);
+                            accumulateStreamDelta(data, accumulatedChoices);
                         }
                     }
-                    Object parsedBody = buildStreamingResponseBody(contentBuffer.toString());
+                    Object parsedBody = buildStreamingResponseBody(accumulatedChoices);
                     context.setResponseBody(parsedBody);
                     pluginExecutionService.executeResponsePlugins(plugins, context);
                     recordOnce.run();
@@ -337,27 +337,77 @@ public class OpenAiProxyService {
         });
     }
 
-    private Object buildStreamingResponseBody(String accumulatedContent) {
-        return Map.of("choices", List.of(Map.of("delta", Map.of("content", accumulatedContent == null ? "" : accumulatedContent))));
+    private Object buildStreamingResponseBody(List<Map<String, Object>> accumulatedChoices) {
+        if (accumulatedChoices.isEmpty()) {
+            return Map.of("choices", List.of(Map.of("delta", Map.of())));
+        }
+        return Map.of("choices", (Object) accumulatedChoices);
     }
 
-    private void accumulateStreamContent(String data, StringBuilder buffer) {
+    private void accumulateStreamDelta(String data, List<Map<String, Object>> accumulatedChoices) {
         try {
             JsonNode node = objectMapper.readTree(data);
             JsonNode choices = node.get("choices");
             if (choices == null || !choices.isArray() || choices.isEmpty()) return;
-            JsonNode delta = choices.get(0).get("delta");
-            if (delta == null) return;
-            JsonNode reasoning = delta.get("reasoning_content");
-            JsonNode content = delta.get("content");
-            if (reasoning != null && !reasoning.isNull()) {
-                buffer.append(reasoning.asText());
-            }
-            if (content != null && !content.isNull()) {
-                buffer.append(content.asText());
+            for (int i = 0; i < choices.size(); i++) {
+                JsonNode choice = choices.get(i);
+                JsonNode delta = choice.get("delta");
+                if (delta == null) continue;
+                while (accumulatedChoices.size() <= i) {
+                    accumulatedChoices.add(new HashMap<>());
+                }
+                @SuppressWarnings("unchecked")
+                Map<String, Object> accChoice = accumulatedChoices.get(i);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> accDelta = (Map<String, Object>) accChoice.computeIfAbsent("delta", k -> new HashMap<>());
+                if (!accChoice.containsKey("index")) {
+                    accChoice.put("index", i);
+                }
+                JsonNode finishReason = choice.get("finish_reason");
+                if (finishReason != null && !finishReason.isNull()) {
+                    accChoice.put("finish_reason", finishReason.asText());
+                }
+                mergeDeltaFields(delta, accDelta);
             }
         } catch (IOException e) {
             // ignore malformed chunk
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mergeDeltaFields(JsonNode delta, Map<String, Object> accDelta) {
+        var fields = delta.fields();
+        while (fields.hasNext()) {
+            var field = fields.next();
+            String key = field.getKey();
+            JsonNode value = field.getValue();
+            if ("tool_calls".equals(key) && value.isArray()) {
+                List<Map<String, Object>> accToolCalls = (List<Map<String, Object>>) accDelta.computeIfAbsent("tool_calls", k -> new ArrayList<>());
+                for (JsonNode tc : value) {
+                    int tcIndex = tc.has("index") ? tc.get("index").asInt() : 0;
+                    while (accToolCalls.size() <= tcIndex) {
+                        accToolCalls.add(new HashMap<>());
+                    }
+                    Map<String, Object> accTc = accToolCalls.get(tcIndex);
+                    if (tc.has("id")) accTc.putIfAbsent("id", tc.get("id").asText());
+                    if (tc.has("type")) accTc.put("type", tc.get("type").asText());
+                    if (!accTc.containsKey("index")) accTc.put("index", tcIndex);
+                    if (tc.has("function")) {
+                        Map<String, Object> accFn = (Map<String, Object>) accTc.computeIfAbsent("function", k -> new HashMap<>());
+                        JsonNode fn = tc.get("function");
+                        if (fn.has("name")) accFn.putIfAbsent("name", fn.get("name").asText());
+                        if (fn.has("arguments")) {
+                            accFn.merge("arguments", fn.get("arguments").asText(), (a, b) -> (String) a + (String) b);
+                        }
+                    }
+                }
+            } else if ("role".equals(key)) {
+                accDelta.putIfAbsent("role", value.asText());
+            } else if (value.isTextual()) {
+                accDelta.merge(key, value.asText(), (a, b) -> (String) a + (String) b);
+            } else {
+                accDelta.putIfAbsent(key, objectMapper.convertValue(value, Object.class));
+            }
         }
     }
 
