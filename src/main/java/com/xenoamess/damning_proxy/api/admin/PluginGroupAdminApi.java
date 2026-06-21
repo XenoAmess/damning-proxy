@@ -100,6 +100,7 @@ public class PluginGroupAdminApi {
                 g.description,
                 g.enabled,
                 g.sortedItems().stream()
+                    .filter(i -> i.plugin != null && i.plugin.script != null)
                     .map(i -> new ExportItem(i.plugin.script, i.orderIndex, i.priority, i.enabled))
                     .collect(Collectors.toList())))
             .collect(Collectors.toList());
