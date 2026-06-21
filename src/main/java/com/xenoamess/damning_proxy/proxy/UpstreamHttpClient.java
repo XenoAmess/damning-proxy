@@ -32,6 +32,9 @@ public class UpstreamHttpClient {
     ObjectMapper objectMapper;
 
     @Inject
+    CircuitBreaker circuitBreaker;
+
+    @Inject
     public UpstreamHttpClient(Vertx vertx) {
         this.vertx = vertx;
         // Use Vert.x WebClient over HTTP/1.1: the low-level HttpClient has
@@ -49,6 +52,11 @@ public class UpstreamHttpClient {
 
     public UpstreamResponse send(String method, String baseUrl, String path,
                                  MultiMap headers, Object body, int timeoutMs) {
+        if (!circuitBreaker.allowRequest(baseUrl)) {
+            throw new WebApplicationException("Circuit breaker open for upstream: " + baseUrl,
+                Response.Status.SERVICE_UNAVAILABLE);
+        }
+
         URI uri = buildUri(baseUrl, path);
         Log.debugf("Upstream request: %s %s", method, uri);
 
@@ -102,8 +110,11 @@ public class UpstreamHttpClient {
                 result.body != null ? result.body.substring(0, Math.min(100, result.body.length())) : "null",
                 result.body != null ? result.body.substring(Math.max(0, result.body.length() - 100)) : "null");
 
+            circuitBreaker.recordSuccess(baseUrl);
+
             return result;
         } catch (java.util.concurrent.TimeoutException e) {
+            circuitBreaker.recordFailure(baseUrl);
             Log.errorf("Upstream request timed out after %d ms (request=%d bytes, url=%s %s)",
                 effectiveTimeoutMs,
                 bodyJson != null ? bodyJson.length() : -1,
@@ -113,6 +124,7 @@ public class UpstreamHttpClient {
                 (bodyJson != null ? bodyJson.length() : 0) + " bytes)",
                 Response.Status.GATEWAY_TIMEOUT);
         } catch (Exception e) {
+            circuitBreaker.recordFailure(baseUrl);
             Log.errorf(e, "Upstream request failed: %s %s", method, uri);
             throw new WebApplicationException("Upstream request failed: " + e.getMessage(), Response.Status.BAD_GATEWAY);
         }
