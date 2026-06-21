@@ -362,7 +362,7 @@ async function load() {
   loading.value = true
   try {
     const res = await listLogs({ limit: 100 })
-    logs.value = res.data
+    logs.value = res.data.items
     await nextTick()
     observeCards()
   } finally {
