@@ -26,6 +26,7 @@ public class UpstreamHttpClient {
 
     private final Vertx vertx;
     private final WebClient webClient;
+    private final io.vertx.core.http.HttpClient streamHttpClient;
 
     @Inject
     ObjectMapper objectMapper;
@@ -35,10 +36,12 @@ public class UpstreamHttpClient {
         this.vertx = vertx;
         // Use Vert.x WebClient over HTTP/1.1: the low-level HttpClient has
         // repeatedly corrupted large non-streaming response bodies when
-        // response.body() is consumed from a worker thread, leaving plain
-        // text from the LLM's reasoning concatenated before the JSON payload
-        // (e.g. traffic logs #128, #132).
+        // response.body() is consumed from a worker thread.
         this.webClient = WebClient.create(vertx, new WebClientOptions()
+            .setProtocolVersion(HttpVersion.HTTP_1_1)
+            .setUseAlpn(false)
+            .setTryUseCompression(false));
+        this.streamHttpClient = vertx.createHttpClient(new io.vertx.core.http.HttpClientOptions()
             .setProtocolVersion(HttpVersion.HTTP_1_1)
             .setUseAlpn(false)
             .setTryUseCompression(false));
@@ -117,15 +120,13 @@ public class UpstreamHttpClient {
 
     public Future<HttpClientResponse> sendStream(String method, String baseUrl, String path,
                                                   MultiMap headers, Object body, int timeoutMs) {
-        // Streaming still uses the low-level HttpClient because we need
-        // per-chunk access to the response body for SSE. We keep a separate
-        // HttpClient instance for this case.
-        return createStreamClient().request(new io.vertx.core.http.RequestOptions()
+        URI uri = buildUri(baseUrl, path);
+        return streamHttpClient.request(new io.vertx.core.http.RequestOptions()
                 .setMethod(io.vertx.core.http.HttpMethod.valueOf(method))
-                .setHost(buildUri(baseUrl, path).getHost())
-                .setPort(resolvePort(buildUri(baseUrl, path)))
-                .setSsl(isSsl(buildUri(baseUrl, path)))
-                .setURI(buildUri(baseUrl, path).getPath() + (buildUri(baseUrl, path).getQuery() != null ? "?" + buildUri(baseUrl, path).getQuery() : ""))
+                .setHost(uri.getHost())
+                .setPort(resolvePort(uri))
+                .setSsl(isSsl(uri))
+                .setURI(uri.getPath() + (uri.getQuery() != null ? "?" + uri.getQuery() : ""))
                 .setTimeout(timeoutMs > 0 ? timeoutMs : 0))
             .compose(req -> {
                 if (headers != null) {
@@ -146,13 +147,6 @@ public class UpstreamHttpClient {
                 }
                 return req.send();
             });
-    }
-
-    private io.vertx.core.http.HttpClient createStreamClient() {
-        return vertx.createHttpClient(new io.vertx.core.http.HttpClientOptions()
-            .setProtocolVersion(HttpVersion.HTTP_1_1)
-            .setUseAlpn(false)
-            .setTryUseCompression(false));
     }
 
     private URI buildUri(String baseUrl, String path) {
