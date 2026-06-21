@@ -5,18 +5,7 @@
 
 ---
 
-## 一、安全 (Critical)
-
-| # | 问题 | 位置 | 建议 |
-|---|------|------|------|
-| 1 | XSS 风险 — `marked.parse()` 渲染 Markdown 无 sanitizer，可注入 `<script>` | `admin-web/src/views/Chat.vue` `Logs.vue` | 配置 `marked` 的 sanitizer 或引入 DOMPurify |
-| 2 | API 无鉴权 — 所有 `/api/` 管理端点完全开放 | `api/admin/*.java` | 添加认证/授权中间件 |
-| 3 | `bearerToken` 明文存储 — DB 和 API 响应中均暴露 | `entity/ProxyProfile.java`, `api/admin/ProfileAdminApi.java` | 存储时加密，API 响应中脱敏 |
-| 4 | 插件无沙箱 — Groovy/JS 脚本可执行任意 JVM 操作 | `plugin/engine/GroovyPluginEngine.java`, `JavaScriptPluginEngine.java` | 添加 `SecureASTCustomizer` / ClassFilter / 沙箱限制 |
-
----
-
-## 二、线程安全 Bug (Critical)
+## 一、线程安全 Bug (Critical)
 
 | # | 问题 | 位置 | 建议 |
 |---|------|------|------|
@@ -27,7 +16,7 @@
 
 ---
 
-## 三、性能 (High)
+## 二、性能 (High)
 
 | # | 问题 | 位置 | 建议 |
 |---|------|------|------|
@@ -44,7 +33,7 @@
 
 ---
 
-## 四、代码重复 (Medium)
+## 三、代码重复 (Medium)
 
 | # | 问题 | 位置 | 建议 |
 |---|------|------|------|
@@ -57,7 +46,7 @@
 
 ---
 
-## 五、缺失功能 (Medium)
+## 四、缺失功能 (Medium)
 
 | # | 问题 | 建议 |
 |---|------|------|
@@ -78,7 +67,7 @@
 
 ---
 
-## 六、代码质量与可维护性 (Low-Medium)
+## 五、代码质量与可维护性 (Low-Medium)
 
 | # | 问题 | 位置 | 建议 |
 |---|------|------|------|
@@ -94,7 +83,7 @@
 
 ---
 
-## 七、可访问性 (Low-Medium)
+## 六、可访问性 (Low-Medium)
 
 | # | 问题 | 位置 |
 |---|------|------|
@@ -108,25 +97,23 @@
 ## 改进优先级建议
 
 ### 第一优先级 (本次迭代)
-1. 安全 #1 (XSS) — 引入 DOMPurify sanitize Markdown 输出
-2. 线程安全 #5 (HashMap 改 ConcurrentHashMap)
-3. Bug 修复 #8 (SSL 硬编码)
-4. Bug 修复 #38 (packagePath stale null)
+1. 线程安全 #5 (HashMap 改 ConcurrentHashMap)
+2. Bug 修复 #8 (SSL 硬编码)
+3. Bug 修复 #38 (packagePath stale null)
 
 ### 第二优先级 (近期)
-5. 安全 #2, #3, #4 (API 鉴权、token 加密、插件沙箱)
-6. 性能 #9, #10, #11 (HttpClient 复用、阻塞改异步、ScriptEngine 复用)
-7. 线程安全 #6, #7 (PluginContext 线程化、executor 泄漏)
+4. 性能 #9, #10, #11 (HttpClient 复用、阻塞改异步、ScriptEngine 复用)
+5. 线程安全 #6, #7 (PluginContext 线程化、executor 泄漏)
 
 ### 第三优先级 (中期)
-8. 代码重复 #19-#24 (重构去重)
-9. 缺失功能 #25-#30 (超时、断路器、限流、分页、健康检查)
+6. 代码重复 #19-#24 (重构去重)
+7. 缺失功能 #25-#30 (超时、断路器、限流、分页、健康检查)
 
 ### 第四优先级 (长期)
-10. 前端 TypeScript 化 / 测试覆盖
-11. 可访问性改进
-12. 国际化
+8. 前端 TypeScript 化 / 测试覆盖
+9. 可访问性改进
+10. 国际化
 
 ---
 
-> 共计 **51 个改进点**，其中安全 4 个，Bug 4 个，性能 10 个，重复 6 个，缺失功能 14 个，代码质量 9 个，可访问性 4 个。
+> 共计 **47 个改进点**，其中 Bug 4 个，性能 10 个，重复 6 个，缺失功能 14 个，代码质量 9 个，可访问性 4 个。
