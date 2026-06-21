@@ -35,6 +35,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -65,6 +68,12 @@ public class OpenAiProxyService {
 
     @Inject
     ExecutorService executorService;
+
+    private final ScheduledExecutorService heartbeatScheduler = Executors.newScheduledThreadPool(2, r -> {
+        Thread t = new Thread(r, "stream-heartbeat");
+        t.setDaemon(true);
+        return t;
+    });
 
     public Response listModels(String instanceSlug, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
         ProxyContext ctx = resolveInstance(instanceSlug);
@@ -260,11 +269,7 @@ public class OpenAiProxyService {
                     executorService.execute(() -> trafficLogService.appendPluginLog(trafficLog, msg));
                 }
             };
-            heartbeatHolder[0] = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r, "stream-heartbeat-" + trafficLog.id);
-                t.setDaemon(true);
-                return t;
-            }).scheduleAtFixedRate(heartbeat, 30, 30, java.util.concurrent.TimeUnit.SECONDS);
+            heartbeatHolder[0] = heartbeatScheduler.scheduleAtFixedRate(heartbeat, 30, 30, TimeUnit.SECONDS);
 
             emitter.onTermination(() -> {
                 if (heartbeatHolder[0] != null) {
