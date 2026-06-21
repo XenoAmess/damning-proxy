@@ -140,9 +140,13 @@
                     <span class="chat-role-label">{{ roleLabel(msg.role) }}</span>
                     <el-tag v-if="msg.name" size="small" type="info" class="chat-role-name">{{ msg.name }}</el-tag>
                   </div>
-                  <pre v-if="msg.content && msg.role === 'tool'" class="chat-text tool-result">{{ formatToolResult(msg.content) }}</pre>
-                  <pre v-else-if="msg.content" class="chat-text">{{ msg.content }}</pre>
-                  <pre v-else class="chat-text muted">（无文本内容）</pre>
+                  <pre v-if="msg.reasoningContent" class="chat-text reasoning">{{ msg.reasoningContent }}</pre>
+                  <div v-if="msg.content && msg.role === 'tool'" class="chat-text tool-result">{{ formatToolResult(msg.content) }}</div>
+                  <div v-else-if="msg.content" class="chat-text markdown-body" v-html="renderModelOutput(msg.content)"></div>
+                  <pre v-else-if="!msg.toolCallIds?.length && !msg.reasoningContent" class="chat-text muted">（无文本内容）</pre>
+                  <div v-if="msg.toolCallIds && msg.toolCallIds.length" class="chat-tool-calls">
+                    🔧 需要调用工具
+                  </div>
                 </div>
               </template>
               <template v-for="(msg, idx) in (current.responseMessages || [])" :key="'res-' + idx">
