@@ -14,6 +14,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @ApplicationScoped
 public class JavaScriptPluginEngine implements PluginEngine {
@@ -34,6 +39,13 @@ public class JavaScriptPluginEngine implements PluginEngine {
     @Inject
     PluginPackageStorage packageStorage;
 
+    private static final long SCRIPT_TIMEOUT_MS = 30_000;
+    private final ExecutorService scriptExecutor = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "js-plugin-exec");
+        t.setDaemon(true);
+        return t;
+    });
+
     @Override
     public boolean supports(Plugin.Language language) {
         return language == Plugin.Language.JS;
@@ -45,18 +57,28 @@ public class JavaScriptPluginEngine implements PluginEngine {
         // ensureCompiled is a no-op when the cache already has this exact script.
         ensureCompiled(plugin, script);
 
-        // Nashorn engines are stateful and not thread-safe: one engine per execution.
-            ScriptEngine engine = engineCache.get();
+        Future<?> future = null;
         try {
-            engine.put("context", context);
-            if (plugin.mode == Plugin.Mode.ZIP_PACKAGE) {
-                engine.put("readResource", new ResourceReader(plugin, false, packageStorage));
-                engine.put("readResourceText", new ResourceReader(plugin, true, packageStorage));
+            future = scriptExecutor.submit(() -> {
+                ScriptEngine engine = engineCache.get();
+                engine.put("context", context);
+                if (plugin.mode == Plugin.Mode.ZIP_PACKAGE) {
+                    engine.put("readResource", new ResourceReader(plugin, false, packageStorage));
+                    engine.put("readResourceText", new ResourceReader(plugin, true, packageStorage));
+                }
+                try {
+                    engine.eval("(function(){\n" + script + "\n})();");
+                } catch (ScriptException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            future.get(SCRIPT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            if (future != null) {
+                future.cancel(true);
             }
-            // Wrap in an IIFE so plugin scripts can use top-level `return` to bail out
-            // early. Nashorn (and ES modules) reject top-level `return` otherwise.
-            engine.eval("(function(){\n" + script + "\n})();");
-        } catch (ScriptException e) {
+            throw new RuntimeException("JavaScript plugin timed out after " + (SCRIPT_TIMEOUT_MS / 1000) + "s: " + plugin.name);
+        } catch (Exception e) {
             throw new RuntimeException("Failed to execute JavaScript plugin: " + plugin.name, e);
         }
     }

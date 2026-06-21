@@ -13,6 +13,11 @@ import jakarta.inject.Inject;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 @ApplicationScoped
@@ -25,6 +30,13 @@ public class GroovyPluginEngine implements PluginEngine {
 
     @Inject
     PluginPackageStorage packageStorage;
+
+    private static final long SCRIPT_TIMEOUT_MS = 30_000;
+    private final ExecutorService scriptExecutor = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "groovy-plugin-exec");
+        t.setDaemon(true);
+        return t;
+    });
 
     @Override
     public boolean supports(Plugin.Language language) {
@@ -54,9 +66,16 @@ public class GroovyPluginEngine implements PluginEngine {
                 }
             });
         }
+        Future<?> future = null;
         try {
             Script instance = scriptClass.getDeclaredConstructor(Binding.class).newInstance(binding);
-            instance.run();
+            future = scriptExecutor.submit(() -> instance.run());
+            future.get(SCRIPT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            if (future != null) {
+                future.cancel(true);
+            }
+            throw new RuntimeException("Groovy plugin timed out after " + (SCRIPT_TIMEOUT_MS / 1000) + "s: " + plugin.name);
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute Groovy plugin: " + plugin.name, e);
         }
