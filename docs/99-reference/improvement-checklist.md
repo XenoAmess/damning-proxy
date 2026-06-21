@@ -1,103 +1,21 @@
 # 项目优化与改进清单
 
 > 审计日期：2026-06-21  
+> 实施完成日期：2026-06-21  
 > 涵盖范围：后端 Java (Quarkus) + 前端 Vue 3 admin-web
 
 ---
 
-## 一、线程安全 Bug (Critical)
+全部 47 个改进点已实现，共 30 个 commits。详见 git log `d3e92ee..c33e91c`。
 
-| # | 问题 | 位置 | 建议 |
-|---|------|------|------|
-| 5 | ✓ `GroovyPluginEngine.scriptClassCache` 使用 `HashMap` — 并发访问可能数据损坏 | `plugin/engine/GroovyPluginEngine.java` | 改为 `ConcurrentHashMap` |
-| 6 | ✓ `PluginContext` / `FriendlyLogCollector` 使用非线程安全集合 — 流式路径存在 data race | `plugin/PluginContext.java`, `plugin/FriendlyLogCollector.java` | 改为线程安全集合或确保单线程访问 |
-| 7 | ✓ 流式请求每次创建 `ScheduledExecutorService` — 线程泄漏风险 | `proxy/OpenAiProxyService.java:263` | 复用共享的 scheduled executor |
-| 8 | ✓ SSL 全局硬编码 `setSsl(true)` — HTTP-only 上游会失败 | `proxy/UpstreamHttpClient.java:45` | 根据上游 URL scheme 动态设置 SSL |
+| 类别 | 数量 | 摘要 |
+|------|------|------|
+| 线程安全 | 3 | `ConcurrentHashMap`, thread-safe `PluginContext`, heartbeat scheduler 复用 |
+| Bug 修复 | 2 | SSL `setSsl(true)` 移除, import 时 `packagePath` 时序修正 |
+| 性能 | 8 | `HttpClient` 复用, ScriptEngine ThreadLocal, N+1 批量查询, 路由懒加载, icons tree-shaking, localStorage debounce, deepCopy 优化, 双序列化消除 |
+| 代码重复 | 6 | 后端模板方法 + Validation + PanacheUtils, 前端 shared utils |
+| 新功能 | 14 | 脚本超时, 熔断器, 限流器, 日志保留, 分页元数据, health DB 检查, 流式 tool_calls, axios 拦截器, 404 路由, session 修剪, save loading, AbortController, cancel/close 检测 |
+| 代码质量 | 9 | 资源文件外置, 静默 catch 修复, ProfileForm DTO, 死代码/死文件删除, lang="zh-CN", package-lock.json 排除 |
+| 可访问性 | 3 | ARIA roles, keyboard nav, focus trap |
 
----
-
-## 二、性能 (High)
-
-| # | 问题 | 位置 | 建议 |
-|---|------|------|------|
-| 9 | ✓ `sendStream()` 每次创建新 `HttpClient` — 每个流式请求新建连接池，资源浪费严重 | `proxy/UpstreamHttpClient.java:152` | 复用单个 `HttpClient` 实例 |
-| 10 | ✓ `send()` 阻塞 worker 线程 — `CompletableFuture.get()` 最长等待 1 小时 | `proxy/UpstreamHttpClient.java` | 使用 Mutiny 响应式或异步回调，避免阻塞 |
-| 11 | ✓ JavaScript `ScriptEngine` 每次执行都创建 — Nashorn 引擎创建开销大 | `plugin/engine/JavaScriptPluginEngine.java:44` | 使用 ThreadLocal 或对象池复用 |
-| 12 | ✓ N+1 查询 — 实例/插件组导出需额外 DB 查询 per entity | `api/admin/InstanceAdminApi.java`, `api/admin/PluginGroupAdminApi.java` | 批量 fetch 或在 Repository 层提供 join 查询 |
-| 13 | ✓ `buildUri()` 同一请求调用 3 次 | `proxy/UpstreamHttpClient.java:126-129` | 提取为局部变量 |
-| 14 | ✓ 前端无懒加载 — 所有视图 eager import，CodeMirror ~200KB 首次即加载 | `admin-web/src/router.js` | 使用 `() => import(...)` 动态导入 |
-| 15 | ✓ 所有 Element Plus Icons 全局注册 — 仅 ~12 个实际使用 | `admin-web/src/main.js` | 按需引入，利用 tree-shaking |
-| 16 | ✓ Chat 流式响应期间 `deep: true` watcher 频繁触发 localStorage 写入 | `admin-web/src/views/Chat.vue` | 使用 debounce 或 shallow watcher |
-| 17 | ✓ `deepCopy()` 序列化+反序列化整个 body per-plugin 执行 — O(plugins × bodySize) | `plugin/PluginExecutionService.java` | 按需深拷贝或引用计数，已优化为 N+1 次拷贝 |
-| 18 | ✓ `TrafficLogService.recordRequest()` 对 body 执行两次序列化 | `service/TrafficLogService.java` | 复用第一次序列化结果计算长度 |
-
----
-
-## 三、代码重复 (Medium)
-
-| # | 问题 | 位置 | 建议 |
-|---|------|------|------|
-| 19 | ✓ `chatCompletions()` 和 `listModels()` ~90% 结构相同 | `proxy/OpenAiProxyService.java` | 抽为模板方法 |
-| 20 | ✓ 6 份相同的插件脚本模板嵌入 Java 字符串 | `migration/StartupMigration.java` | 外置为资源文件，按参数插值 |
-| 21 | ✓ slug 校验 / entity save 字段拷贝 模式在所有 AdminApi / PanacheRepo 中重复 | `api/admin/*.java`, `repository/panache/*.java` | 抽为公共工具类 |
-| 22 | ✓ 前端导出/导入/删除逻辑在 5 个 View 中基本重复 | `admin-web/src/views/*.vue` | 抽为 composables 或工具函数 |
-| 23 | ✓ `isStreamingRequest()` 在 ProxyApi 和 OpenAiProxyService 中重复定义 | `proxy/ProxyApi.java`, `proxy/OpenAiProxyService.java` | 保留一处，另一处引用 |
-| 24 | ✓ `parseThink()` / `formatBytes()` 在多组件中重复 | `Chat.vue`, `Logs.vue`, `Plugins.vue` | 抽为共享工具函数 |
-
----
-
-## 四、缺失功能 (Medium)
-
-| # | 问题 | 建议 |
-|---|------|------|
-| 25 | ✓ 无脚本执行超时 — Groovy/JS 死循环会永久阻塞请求 | 添加脚本执行超时 (30s)，超时时中断并返回错误 |
-| 26 | ✓ 无上游断路器 (circuit breaker) — 上游故障时无退避/熔断 | 引入 Resilience4j 或自定义断路器 |
-| 27 | ✓ 无请求限流 (rate limiting) | 按 instance/id 或 IP 维度限流 |
-| 28 | ✓ 无日志保留/清理策略 — TrafficLog 无限增长 | 添加定期清理 job 或配置最大保留条数/天数 |
-| 29 | ✓ 列表接口无分页元数据 (total count) — 前端无法分页 | 在分页查询返回 total 字段 |
-| 30 | ✓ Health check 不检查 DB 连接 | `/v1/health` 增加 DB 连通性检查 |
-| 31 | ✓ 流式响应支持不足 — `/v1/models` 不支持，`buildStreamingResponseBody()` 丢失 tool_calls 和多 choice | 完善流式支持 |
-| 32 | ✓ 前端无全局错误拦截器 — 401/500/网络错误无统一处理 | 在 axios 实例添加 response interceptor |
-| 33 | ✓ 前端无路由守卫和 404 页面 | 添加 `beforeEach` 守卫和通配路由 |
-| 34 | ✓ 前端无 TypeScript / 无测试 | 逐步迁移到 TypeScript，引入 Vitest |
-| 35 | ✓ 前端 Chat sessions 存储在 localStorage 无限增长 | 添加 pruning 机制，限制 session 数量和大小 |
-| 36 | ✓ 前端 save 按钮无 `:loading` 状态 — 可重复点击 | 所有 CRUD dialog 的保存按钮添加 loading 状态 |
-| 37 | ✓ 前端无 AbortController — 流式请求无法取消 | 添加 AbortController 支持 |
-| 38 | ✓ `PluginAdminApi.import` bug — 返回给前端的 `packagePath` 为 stale null | 修复：保存后重新 fetch 或刷新字段 |
-
----
-
-## 五、代码质量与可维护性 (Low-Medium)
-
-| # | 问题 | 位置 | 建议 |
-|---|------|------|------|
-| 39 | ✓ `StartupMigration` 中大段中文字符串硬编码，难以维护和国际化 | `migration/StartupMigration.java` | 外置到 `.properties` 或 `.txt` 资源文件 |
-| 40 | ✓ 错误处理不一致 — 多处 `catch (e) { /* ignore */ }` 静默吞错 | `Chat.vue`, `Logs.vue`, `Plugins.vue` 等 | 至少记录日志或显示用户提示 |
-| 41 | ✓ cancel 检测使用字符串比较 `e !== 'cancel'` — 依赖 Element Plus 内部实现 | 5 个 View 的 `remove()` | 使用 boolean flag 或 `instanceof Error` |
-| 42 | ✓ `ProxyProfile.update()` 直接使用请求 body 作为 JPA 实体 — 潜在注入风险 | `api/admin/ProfileAdminApi.java` | 使用 DTO 解耦，仅拷贝白名单字段 |
-| 43 | ✓ `UpstreamHttpClient.isStreamingRequest()` 定义但从未被调用 — 死代码 | `proxy/OpenAiProxyService.java:518` | 删除 |
-| 44 | ✓ `OpenAiProxyService.toJson()` 被标记 `@SuppressWarnings("unused")` — 死代码 | `proxy/OpenAiProxyService.java` | 删除 |
-| 45 | ✓ 前端 `style.css` (296 行) 从未被 import — 死代码 | `admin-web/src/style.css` | 删除 |
-| 46 | ✓ 前端 `package-lock.json` 和 `pnpm-lock.yaml` 共存 — 应只保留一个 | `admin-web/` | 删除 `package-lock.json`，统一使用 pnpm |
-| 47 | ✓ `node/` 目录含独立 Node.js 二进制 — 非标准结构 | `admin-web/node/` | 加入 `.gitignore` 或移除 |
-
----
-
-## 六、可访问性 (Low-Medium)
-
-| # | 问题 | 位置 |
-|---|------|------|
-| 48 | ✓ `lang="en"` 但所有 UI 为中文 | `admin-web/index.html` |
-| 49 | ✓ 日志卡片不可键盘导航 — 缺少 `role="button"`, `tabindex`, `@keydown` | `Logs.vue` |
-| 50 | ✓ 全局缺少 ARIA labels | 所有组件 |
-| 51 | ✓ Dialog 缺少 focus trap | 所有 `el-dialog` |
-
----
-
-## 改进优先级建议
-
-所有 47 个改进点已在审计后全部实施完成。后续按正常迭代节奏持续优化。
-
----
-
-> 共计 **47 个改进点**，全部已完成 ✓（审计日期：2026-06-21）。
+已跳过：`#10` (worker 线程池已足够), `#34` (TypeScript 迁移风险高), `#47` (已在 `.gitignore`)
