@@ -4,6 +4,10 @@
 
 大明proxy 可以代理多个上游 OpenAI 接口，并通过 **Groovy / JavaScript 插件** 按顺序篡改出入报文，实现自定义的模型映射、请求改写、响应替换、日志审计等功能。
 
+## 实机演示
+
+https://www.bilibili.com/video/BV1oojW6uEbF
+
 ## 特性
 
 - **OpenAI 协议代理**：对外暴露 OpenAI 兼容接口，转发到配置的上游源
