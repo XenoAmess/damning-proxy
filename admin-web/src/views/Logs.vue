@@ -378,7 +378,9 @@ function observeCards() {
     for (const entry of entries) {
       if (entry.isIntersecting) {
         const id = Number(entry.target.dataset.id)
-        loadFriendlyIfNeeded(id)
+        if (id && !isNaN(id)) {
+          loadFriendlyIfNeeded(id)
+        }
       }
     }
   }, { rootMargin: '100px' })
@@ -515,6 +517,8 @@ function formatTime(value) {
 function setCardRef(id, el) {
   if (el) {
     cardRefs.value[id] = el
+  } else {
+    delete cardRefs.value[id]
   }
 }
 
