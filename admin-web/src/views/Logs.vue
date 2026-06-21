@@ -391,6 +391,7 @@ function observeCards() {
 }
 
 async function loadFriendlyIfNeeded(id) {
+  if (!id || isNaN(Number(id))) return
   if (loadedFriendlyIds.value.has(id)) return
   loadedFriendlyIds.value.add(id)
   try {
@@ -406,6 +407,7 @@ async function loadFriendlyIfNeeded(id) {
 }
 
 async function openFriendly(id) {
+  if (!id || isNaN(Number(id))) return
   detailVisible.value = true
   current.value = null
   activeTab.value = 'summary'
