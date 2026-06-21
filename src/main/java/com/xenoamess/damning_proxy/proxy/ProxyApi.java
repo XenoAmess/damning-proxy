@@ -27,6 +27,9 @@ public class ProxyApi {
     @Inject
     ObjectMapper objectMapper;
 
+    @Inject
+    RateLimiter rateLimiter;
+
     private static boolean isStreamingRequest(Map<String, Object> requestBody) {
         if (requestBody == null) {
             return false;
@@ -44,10 +47,19 @@ public class ProxyApi {
         return false;
     }
 
+    private static Response rateLimitedResponse(String instanceSlug) {
+        return Response.status(429)
+            .entity(Map.of("error", "Rate limit exceeded for instance: " + instanceSlug))
+            .build();
+    }
+
     @GET
     @Path("/models")
     @Produces(MediaType.APPLICATION_JSON)
     public Response listModels(@PathParam("instanceSlug") String instanceSlug, @Context HttpHeaders headers) {
+        if (!rateLimiter.tryAcquire(instanceSlug)) {
+            return rateLimitedResponse(instanceSlug);
+        }
         return proxyService.listModels(instanceSlug, headers);
     }
 
@@ -57,6 +69,9 @@ public class ProxyApi {
     @Blocking
     public Response chatCompletions(@PathParam("instanceSlug") String instanceSlug, Map<String, Object> requestBody,
                                      @Context HttpHeaders headers) {
+        if (!rateLimiter.tryAcquire(instanceSlug)) {
+            return rateLimitedResponse(instanceSlug);
+        }
         boolean wantsStream = isStreamingRequest(requestBody)
             || headers.getAcceptableMediaTypes().stream().anyMatch(mt -> {
                 return mt.isCompatible(MediaType.SERVER_SENT_EVENTS_TYPE)
