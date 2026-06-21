@@ -60,13 +60,13 @@ public class JavaScriptPluginEngine implements PluginEngine {
 @Override
     public void execute(Plugin plugin, PluginContext context) {
         String script = resolveScript(plugin);
-        // ensureCompiled is a no-op when the cache already has this exact script.
-        ensureCompiled(plugin, script);
 
         Future<?> future = null;
         try {
             future = scriptExecutor.submit(() -> {
                 try {
+                    // Compile and execute on the same thread to avoid double-compile
+                    ensureCompiled(plugin, script);
                     ScriptEngine engine = engineCache.get();
                     engine.put("context", context);
                     if (plugin.mode == Plugin.Mode.ZIP_PACKAGE) {
