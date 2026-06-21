@@ -50,8 +50,9 @@ public class TrafficLogService {
         log.requestPath = path;
         log.requestMethod = method;
         log.requestHeaders = serializeHeaders(requestHeaders);
-        log.requestBody = serializeBody(requestBody);
-        log.requestBodyLength = computeBodyLength(requestBody);
+        String fullBody = toJson(requestBody);
+        log.requestBodyLength = fullBody != null ? fullBody.length() : null;
+        log.requestBody = truncate(fullBody, maxBodyLength);
         log.upstreamBaseUrl = upstreamBaseUrl;
         log.timeoutMs = timeoutMs;
         log.streaming = streaming;
@@ -79,8 +80,9 @@ public class TrafficLogService {
         }
         existing.responseStatus = statusCode;
         existing.responseHeaders = serializeHeaders(responseHeaders);
-        existing.responseBody = serializeBody(responseBody);
-        existing.responseBodyLength = computeBodyLength(responseBody);
+        String fullBody = toJson(responseBody);
+        existing.responseBodyLength = fullBody != null ? fullBody.length() : null;
+        existing.responseBody = truncate(fullBody, maxBodyLength);
         existing.durationMs = durationMs;
         existing.responseTime = LocalDateTime.now();
         existing.pluginLogs = serializePluginLogs(pluginLogs);
@@ -133,28 +135,15 @@ public class TrafficLogService {
         return "***";
     }
 
-    private String serializeBody(Object body) {
+    private String toJson(Object body) {
         if (body == null) {
             return null;
         }
         try {
-            String json = (body instanceof String) ? (String) body : objectMapper.writeValueAsString(body);
-            return truncate(json, maxBodyLength);
+            return (body instanceof String) ? (String) body : objectMapper.writeValueAsString(body);
         } catch (JsonProcessingException e) {
             Log.warn("Failed to serialize body", e);
             return body.toString();
-        }
-    }
-
-    private Integer computeBodyLength(Object body) {
-        if (body == null) {
-            return null;
-        }
-        try {
-            String json = (body instanceof String) ? (String) body : objectMapper.writeValueAsString(body);
-            return json.length();
-        } catch (JsonProcessingException e) {
-            return body.toString().length();
         }
     }
 

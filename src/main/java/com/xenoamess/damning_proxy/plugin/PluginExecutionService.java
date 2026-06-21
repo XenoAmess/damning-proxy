@@ -27,6 +27,7 @@ public class PluginExecutionService {
 
     private void executePlugins(List<Plugin> plugins, PluginContext context,
                                 Plugin.ExecutionPhase phase1, Plugin.ExecutionPhase phase2) {
+        Object previousAfterBody = null;
         for (Plugin plugin : plugins) {
             if (!plugin.enabled || context.isStopped() || context.isReturned()) {
                 break;
@@ -45,18 +46,25 @@ public class PluginExecutionService {
                 continue;
             }
 
-            Object beforeBody = phase1 == Plugin.ExecutionPhase.REQUEST
-                ? deepCopy(context.getRequestBody())
-                : deepCopy(context.getResponseBody());
+            Object beforeBody;
+            if (previousAfterBody != null) {
+                beforeBody = previousAfterBody;
+            } else {
+                beforeBody = phase1 == Plugin.ExecutionPhase.REQUEST
+                    ? deepCopy(context.getRequestBody())
+                    : deepCopy(context.getResponseBody());
+            }
             try {
                 engine.execute(plugin, context);
                 Object afterBody = phase1 == Plugin.ExecutionPhase.REQUEST
                     ? context.getRequestBody()
                     : context.getResponseBody();
+                previousAfterBody = deepCopy(afterBody);
                 context.getFriendlyLogCollector().add(
                     plugin.name, phase1.name(), beforeBody, afterBody, false, null
                 );
             } catch (Exception e) {
+                previousAfterBody = null;
                 context.log("Plugin error [" + plugin.name + "]: " + e.getMessage());
                 context.getFriendlyLogCollector().add(
                     plugin.name, phase1.name(), beforeBody, beforeBody, true,
