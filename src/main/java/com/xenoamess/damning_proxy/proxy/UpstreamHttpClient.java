@@ -41,8 +41,7 @@ public class UpstreamHttpClient {
         this.webClient = WebClient.create(vertx, new WebClientOptions()
             .setProtocolVersion(HttpVersion.HTTP_1_1)
             .setUseAlpn(false)
-            .setTryUseCompression(false)
-            .setSsl(true));
+            .setTryUseCompression(false));
     }
 
     public UpstreamResponse send(String method, String baseUrl, String path,
