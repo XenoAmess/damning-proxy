@@ -5,6 +5,7 @@ import com.xenoamess.damning_proxy.plugin.PluginContext;
 import com.xenoamess.damning_proxy.plugin.PluginEngine;
 import com.xenoamess.damning_proxy.plugin.storage.PluginPackageStorage;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
 import org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory;
 
@@ -45,6 +46,11 @@ public class JavaScriptPluginEngine implements PluginEngine {
         t.setDaemon(true);
         return t;
     });
+
+    @PreDestroy
+    void shutdown() {
+        scriptExecutor.shutdownNow();
+    }
 
     @Override
     public boolean supports(Plugin.Language language) {

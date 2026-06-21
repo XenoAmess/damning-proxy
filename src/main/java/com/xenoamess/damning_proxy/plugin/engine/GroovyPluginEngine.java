@@ -8,6 +8,7 @@ import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
 
 import java.io.IOException;
@@ -37,6 +38,11 @@ public class GroovyPluginEngine implements PluginEngine {
         t.setDaemon(true);
         return t;
     });
+
+    @PreDestroy
+    void shutdown() {
+        scriptExecutor.shutdownNow();
+    }
 
     @Override
     public boolean supports(Plugin.Language language) {

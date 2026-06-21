@@ -23,6 +23,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpHeaders;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
@@ -74,6 +75,11 @@ public class OpenAiProxyService {
         t.setDaemon(true);
         return t;
     });
+
+    @PreDestroy
+    void shutdown() {
+        heartbeatScheduler.shutdownNow();
+    }
 
     public Response listModels(String instanceSlug, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
         return proxyRequest(instanceSlug, null, "GET", "/v1/models", incomingHeaders,
