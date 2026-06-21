@@ -219,8 +219,8 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { marked } from 'marked'
 import {
-  Plus, Delete, Promotion,
-  ArrowDown, ArrowRight,
+  Plus, Delete, Promotion, ArrowDown, ArrowRight,
+  User, ChatLineRound, CopyDocument, Paperclip,
 } from '@element-plus/icons-vue'
 import { listInstances, listProfiles } from '../api/damning.js'
 import { chatCompletion, chatCompletionStream, createAbortController, listModels } from '../api/chat.js'

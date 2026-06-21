@@ -1,6 +1,7 @@
 package com.xenoamess.damning_proxy.plugin.storage;
 
 import com.xenoamess.damning_proxy.entity.Plugin;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
@@ -53,7 +54,8 @@ public class PluginPackageStorage {
         if (path != null) {
             try {
                 Files.deleteIfExists(path);
-            } catch (IOException ignored) {
+            } catch (IOException e) {
+                Log.warnf("Failed to delete plugin package %s: %s", path, e.getMessage());
             }
         }
     }

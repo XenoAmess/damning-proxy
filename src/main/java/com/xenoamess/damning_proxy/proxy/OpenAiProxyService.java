@@ -330,7 +330,7 @@ public class OpenAiProxyService {
                 mergeDeltaFields(delta, accDelta);
             }
         } catch (IOException e) {
-            // ignore malformed chunk
+            Log.debugf("Ignoring malformed SSE chunk: %s", e.getMessage());
         }
     }
 

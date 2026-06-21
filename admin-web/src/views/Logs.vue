@@ -399,6 +399,7 @@ async function loadFriendlyIfNeeded(id) {
     }
   } catch (e) {
     console.error('加载友好数据失败', e)
+    ElMessage.warning('加载友好数据失败')
   }
 }
 
