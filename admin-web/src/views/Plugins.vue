@@ -210,6 +210,7 @@ async function loadPackageEntries(pluginId) {
     packageEntries.value = res.data.map(e => ({ name: e, size: '-' }))
   } catch (e) {
     packageEntries.value = []
+    ElMessage.warning('加载包内文件列表失败')
   }
 }
 

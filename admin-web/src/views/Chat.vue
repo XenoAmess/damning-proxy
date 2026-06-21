@@ -373,7 +373,7 @@ function loadConfig() {
       config.value = { ...config.value, ...JSON.parse(saved) }
     }
   } catch (e) {
-    // ignore
+    ElMessage.warning('配置数据已损坏，已重置')
   }
 }
 
@@ -393,6 +393,7 @@ function loadSessions() {
     }
   } catch (e) {
     sessions.value = []
+    ElMessage.warning('会话数据已损坏，已重置')
   }
   if (sessions.value.length === 0) {
     createSession()
@@ -500,6 +501,7 @@ async function loadModels() {
     }
   } catch (e) {
     modelOptions.value = []
+    ElMessage.warning('加载模型列表失败')
   }
 }
 

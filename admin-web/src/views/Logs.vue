@@ -397,7 +397,7 @@ async function loadFriendlyIfNeeded(id) {
       log._friendly = res.data
     }
   } catch (e) {
-    // ignore per-card load failures
+    console.error('加载友好数据失败', e)
   }
 }
 
