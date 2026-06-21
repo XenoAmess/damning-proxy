@@ -547,6 +547,8 @@ function stopStreaming() {
     abortController.value.abort()
     abortController.value = null
   }
+  typewriterBuffer.value = ''
+  typewriterTarget.value = null
   loading.value = false
 }
 
