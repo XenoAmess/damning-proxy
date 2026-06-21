@@ -45,7 +45,6 @@
 
 ### 99 参考资料
 - [变更日志](99-reference/changelog.md)
-- [改造实施计划](99-reference/plan.md)
 - [优化与改进清单](99-reference/improvement-checklist.md)
 
 ---
