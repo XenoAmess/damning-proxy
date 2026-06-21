@@ -206,16 +206,28 @@ public class OpenAiProxyService {
             Runnable recordOnce = () -> {
                 if (logged.compareAndSet(false, true)) {
                     int status = context.getResponseStatus() != 0 ? context.getResponseStatus() : 200;
-                    executorService.execute(() -> trafficLogService.recordResponse(trafficLog, status,
-                        context.getResponseHeaders(), context.getResponseBody(),
-                        System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots()));
+                    executorService.execute(() -> {
+                        try {
+                            trafficLogService.recordResponse(trafficLog, status,
+                                context.getResponseHeaders(), context.getResponseBody(),
+                                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
+                        } catch (Exception e) {
+                            Log.errorf(e, "Failed to record streaming response for log #%d", trafficLog.id);
+                        }
+                    });
                 }
             };
 
             java.util.function.Consumer<String> recordError = (message) -> {
                 if (logged.compareAndSet(false, true)) {
-                    executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 502,
-                        Map.of(), message, System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), message));
+                    executorService.execute(() -> {
+                        try {
+                            trafficLogService.recordResponse(trafficLog, 502,
+                                Map.of(), message, System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), message);
+                        } catch (Exception e) {
+                            Log.errorf(e, "Failed to record streaming error for log #%d", trafficLog.id);
+                        }
+                    });
                 }
             };
 
@@ -226,7 +238,13 @@ public class OpenAiProxyService {
                 Log.debugf("Streaming heartbeat for log #%d: idle %d ms", Long.valueOf(trafficLog.id), Long.valueOf(idle));
                 if (idle > 30_000) {
                     String msg = "Upstream idle for " + (idle / 1000) + " seconds, still waiting";
-                    executorService.execute(() -> trafficLogService.appendPluginLog(trafficLog, msg));
+                    executorService.execute(() -> {
+                        try {
+                            trafficLogService.appendPluginLog(trafficLog, msg);
+                        } catch (Exception e) {
+                            Log.errorf(e, "Failed to append plugin log for log #%d", trafficLog.id);
+                        }
+                    });
                 }
             };
             heartbeatHolder[0] = heartbeatScheduler.scheduleAtFixedRate(heartbeat, 30, 30, TimeUnit.SECONDS);
@@ -238,8 +256,14 @@ public class OpenAiProxyService {
                 if (logged.compareAndSet(false, true)) {
                     String message = "Client closed connection or stream terminated";
                     Log.warnf("Streaming request terminated (client cancelled or failure) for log #%d", trafficLog.id);
-                    executorService.execute(() -> trafficLogService.recordResponse(trafficLog, 499,
-                        Map.of(), message, System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), message));
+                    executorService.execute(() -> {
+                        try {
+                            trafficLogService.recordResponse(trafficLog, 499,
+                                Map.of(), message, System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), message);
+                        } catch (Exception e) {
+                            Log.errorf(e, "Failed to record termination response for log #%d", trafficLog.id);
+                        }
+                    });
                 }
             });
 
