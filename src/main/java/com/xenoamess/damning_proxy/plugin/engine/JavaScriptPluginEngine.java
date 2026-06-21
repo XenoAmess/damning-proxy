@@ -66,16 +66,20 @@ public class JavaScriptPluginEngine implements PluginEngine {
         Future<?> future = null;
         try {
             future = scriptExecutor.submit(() -> {
-                ScriptEngine engine = engineCache.get();
-                engine.put("context", context);
-                if (plugin.mode == Plugin.Mode.ZIP_PACKAGE) {
-                    engine.put("readResource", new ResourceReader(plugin, false, packageStorage));
-                    engine.put("readResourceText", new ResourceReader(plugin, true, packageStorage));
-                }
                 try {
-                    engine.eval("(function(){\n" + script + "\n})();");
-                } catch (ScriptException e) {
-                    throw new RuntimeException(e);
+                    ScriptEngine engine = engineCache.get();
+                    engine.put("context", context);
+                    if (plugin.mode == Plugin.Mode.ZIP_PACKAGE) {
+                        engine.put("readResource", new ResourceReader(plugin, false, packageStorage));
+                        engine.put("readResourceText", new ResourceReader(plugin, true, packageStorage));
+                    }
+                    try {
+                        engine.eval("(function(){\n" + script + "\n})();");
+                    } catch (ScriptException e) {
+                        throw new RuntimeException(e);
+                    }
+                } finally {
+                    engineCache.remove();
                 }
             });
             future.get(SCRIPT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
@@ -98,7 +102,7 @@ public class JavaScriptPluginEngine implements PluginEngine {
             // errors during this dry run are swallowed because they usually mean
             // the script just touched a body field that the dummy context doesn't
             // have – the real execute() call supplies the actual request body.
-        ScriptEngine engine = engineCache.get();
+            ScriptEngine engine = engineCache.get();
             try {
                 PluginContext dummy = new PluginContext();
                 dummy.setRequestBody(new java.util.LinkedHashMap<String, Object>() {{
@@ -114,6 +118,8 @@ public class JavaScriptPluginEngine implements PluginEngine {
                 io.quarkus.logging.Log.warnf(
                     "JavaScript plugin '%s' pre-validation warning: %s",
                     plugin.name, e.getMessage());
+            } finally {
+                engineCache.remove();
             }
             return script;
         });
