@@ -37,7 +37,7 @@
           </div>
         </div>
 
-        <div class="log-card-body" @click="openFriendly(log.id)">
+        <div class="log-card-body" @click="openFriendly(log.id)" @keydown.enter="openFriendly(log.id)" @keydown.space.prevent="openFriendly(log.id)" tabindex="0" role="button" :aria-label="'日志 #' + log.id + ' ' + log.requestMethod + ' ' + log.requestPath">
           <template v-if="isChatLike(log)">
             <div class="summary-section">
               <div class="summary-label">📝 用户输入</div>
