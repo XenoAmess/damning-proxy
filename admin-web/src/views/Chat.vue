@@ -330,12 +330,24 @@ onMounted(() => {
 })
 
 watch(() => config.value, () => {
-  saveConfig()
+  debouncedSaveConfig()
 }, { deep: true })
 
 watch(sessions, () => {
-  saveSessions()
+  debouncedSaveSessions()
 }, { deep: true })
+
+let saveConfigTimer = null
+function debouncedSaveConfig() {
+  clearTimeout(saveConfigTimer)
+  saveConfigTimer = setTimeout(saveConfig, 500)
+}
+
+let saveSessionsTimer = null
+function debouncedSaveSessions() {
+  clearTimeout(saveSessionsTimer)
+  saveSessionsTimer = setTimeout(saveSessions, 500)
+}
 
 function loadConfig() {
   try {
