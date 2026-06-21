@@ -44,4 +44,5 @@ build/
 admin-web/node/
 admin-web/node_modules/
 admin-web/dist/
+admin-web/package-lock.json
 src/main/resources/META-INF/resources/admin/
