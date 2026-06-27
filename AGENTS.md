@@ -76,11 +76,13 @@ Vite dev server proxies `/api` to `http://localhost:12360`. Requires a backend r
 
 ## Agent Workflow
 
-- After finishing any task, stage and commit all changes with a concise, repo-style commit message:
+- After finishing any task, stage and commit all changes with a concise, repo-style commit message, then push to the remote repository:
   ```bash
   git add .
   git commit -m "<message>"
+  git push
   ```
+- Perform this commit-and-push automatically as part of completing the task; do not wait for the user to ask for it.
 - After finishing any task, sync relevant documentation and the knowledge base under `docs/` if the change affects architecture, behavior, configuration, or conventions.
 - After finishing any task that changes backend APIs, frontend admin UI, or any runtime behavior, **restart the running service** so the new code takes effect. Use dev mode with live reload (`$JAVA_HOME/bin/mvn quarkus:dev`) to minimize downtime, or stop and restart the existing server process. When restarting via opencode Bash, always use the background command and avoid waiting on the process.
 
