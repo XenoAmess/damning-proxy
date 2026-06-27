@@ -61,7 +61,7 @@ export function createPlugin(data) {
 }
 
 export function updatePlugin(id, data) {
-  return api.post(`/plugins/${id}`, data, {
+  return api.put(`/plugins/${id}`, data, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
 }
