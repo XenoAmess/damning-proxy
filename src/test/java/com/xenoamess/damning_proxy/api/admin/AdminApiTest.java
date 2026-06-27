@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import jakarta.persistence.EntityManager;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
@@ -44,6 +45,9 @@ class AdminApiTest {
 
     @Inject
     InstanceRepository instanceRepository;
+
+    @Inject
+    EntityManager entityManager;
 
     @BeforeEach
     @Transactional
@@ -138,6 +142,20 @@ class AdminApiTest {
         Long id = pluginRepository.listAll().get(0).id;
 
         given()
+            .multiPart("name", "UpdatedPlugin")
+            .multiPart("slug", "test-plugin")
+            .multiPart("language", Plugin.Language.JS.name())
+            .multiPart("executionPhase", Plugin.ExecutionPhase.RESPONSE.name())
+            .multiPart("mode", Plugin.Mode.SINGLE_SCRIPT.name())
+            .multiPart("script", "context.log('updated')")
+            .multiPart("enabled", "true")
+            .when().put("/api/plugins/" + id)
+            .then()
+            .statusCode(200)
+            .body("name", equalTo("UpdatedPlugin"))
+            .body("language", equalTo("JS"));
+
+        given()
             .when().delete("/api/plugins/" + id)
             .then()
             .statusCode(204);
@@ -146,14 +164,84 @@ class AdminApiTest {
     }
 
     @Test
+    void shouldCrudInstances() {
+        Long profileId = given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("name", "CrudProfile", "slug", "crud-profile", "baseUrl", "http://localhost:1234"))
+            .when().post("/api/profiles")
+            .then()
+            .statusCode(201)
+            .extract().jsonPath().getLong("id");
+
+        Long pluginId = given()
+            .multiPart("name", "CrudPlugin")
+            .multiPart("slug", "crud-plugin")
+            .multiPart("language", "GROOVY")
+            .multiPart("executionPhase", "REQUEST")
+            .multiPart("mode", "SINGLE_SCRIPT")
+            .multiPart("script", "context.log('crud')")
+            .multiPart("enabled", "true")
+            .when().post("/api/plugins")
+            .then()
+            .statusCode(201)
+            .extract().jsonPath().getLong("id");
+
+        Long groupId = given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("name", "CrudGroup", "slug", "crud-group", "description", "", "enabled", true,
+                "items", java.util.List.of(Map.of("pluginId", pluginId, "orderIndex", 0, "priority", 0, "enabled", true))))
+            .when().post("/api/plugin-groups")
+            .then()
+            .statusCode(201)
+            .extract().jsonPath().getLong("id");
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("name", "CrudInstance", "slug", "crud-instance",
+                "profileId", profileId, "pluginGroupId", groupId,
+                "defaultModel", "gpt-4", "enabled", true))
+            .when().post("/api/instances")
+            .then()
+            .statusCode(201)
+            .body("slug", equalTo("crud-instance"));
+
+        given()
+            .when().get("/api/instances")
+            .then()
+            .statusCode(200)
+            .body("size()", equalTo(1));
+
+        Long instanceId = instanceRepository.listAll().get(0).id;
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("name", "UpdatedInstance", "slug", "crud-instance",
+                "profileId", profileId, "pluginGroupId", groupId,
+                "defaultModel", "gpt-3.5-turbo", "enabled", false))
+            .when().put("/api/instances/" + instanceId)
+            .then()
+            .statusCode(200)
+            .body("name", equalTo("UpdatedInstance"))
+            .body("enabled", equalTo(false));
+
+        given()
+            .when().delete("/api/instances/" + instanceId)
+            .then()
+            .statusCode(204);
+
+        assertTrue(instanceRepository.listAll().isEmpty());
+    }
+
+    @Test
+    @Transactional
     void shouldCrudLogs() {
+        Long id = logRepository.listRecent(1).get(0).id;
+
         given()
             .when().get("/api/logs")
             .then()
             .statusCode(200)
             .body("items.size()", equalTo(1));
-
-        Long id = logRepository.listRecent(1).get(0).id;
 
         given()
             .when().get("/api/logs/" + id)
@@ -161,6 +249,24 @@ class AdminApiTest {
             .statusCode(200)
             .body("id", equalTo(id.intValue()));
 
+        given()
+            .when().get("/api/logs/" + id + "/friendly")
+            .then()
+            .statusCode(200)
+            .body("id", equalTo(id.intValue()));
+
+        given()
+            .when().delete("/api/logs/" + id)
+            .then()
+            .statusCode(204);
+
+        entityManager.clear();
+        assertTrue(logRepository.findById(id).isEmpty());
+    }
+
+    @Test
+    @Transactional
+    void shouldClearLogs() {
         given()
             .when().post("/api/logs/clear")
             .then()
@@ -196,6 +302,16 @@ class AdminApiTest {
             .body("size()", equalTo(1));
 
         Long id = pluginGroupRepository.listAll().get(0).id;
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("name", "UpdatedGroup", "slug", "test-group", "description", "updated", "enabled", false,
+                "items", java.util.List.of(Map.of("pluginId", plugin.id, "orderIndex", 1, "priority", 1, "enabled", false))))
+            .when().put("/api/plugin-groups/" + id)
+            .then()
+            .statusCode(200)
+            .body("name", equalTo("UpdatedGroup"))
+            .body("enabled", equalTo(false));
 
         given()
             .when().delete("/api/plugin-groups/" + id)
