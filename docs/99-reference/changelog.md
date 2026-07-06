@@ -7,6 +7,7 @@
 
 ## 2026-07-06
 
+- `/v1/health` 健康检查新增熔断器状态快照，帮助区分代理自身与上游故障。
 - `ProxyProfile` 新增熔断器配置字段：失败阈值与熔断恢复时间，可在管理后台配置。
 - 新增流式代理测试 `ProxyApiTest.shouldProxyStreamingChatCompletions`。
 - 修复流式代理日志记录：正常 `[DONE]` 结束现在正确记录 200 与汇总后的响应体，不再提前记录为空或 499。

@@ -5,6 +5,7 @@ import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
@@ -102,5 +103,17 @@ public class CircuitBreaker {
 
     public void recordFailure(String baseUrl) {
         recordFailure(baseUrl, null);
+    }
+
+    public Map<String, Map<String, Object>> getSnapshot() {
+        Map<String, Map<String, Object>> snapshot = new java.util.HashMap<>();
+        circuits.forEach((baseUrl, state) -> {
+            Map<String, Object> info = new java.util.HashMap<>();
+            info.put("state", state.state.toString().toLowerCase());
+            info.put("failureCount", state.failureCount);
+            info.put("openUntil", state.openUntil != null ? state.openUntil.toString() : null);
+            snapshot.put(baseUrl, info);
+        });
+        return snapshot;
     }
 }

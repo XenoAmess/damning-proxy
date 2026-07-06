@@ -7,6 +7,7 @@
 
 ## 2026-07-06
 
+- `/v1/health` now includes a circuit breaker snapshot, making it easier to distinguish proxy issues from upstream failures.
 - `ProxyProfile` now has configurable circuit breaker fields: failure threshold and open timeout, exposed in the admin UI.
 - Added streaming proxy test `ProxyApiTest.shouldProxyStreamingChatCompletions`.
 - Fixed streaming proxy logging: a normal `[DONE]` termination now records status 200 and the aggregated response body, instead of prematurely recording an empty body or 499.

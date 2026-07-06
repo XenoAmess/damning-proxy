@@ -1,5 +1,6 @@
 package com.xenoamess.damning_proxy.api;
 
+import com.xenoamess.damning_proxy.proxy.CircuitBreaker;
 import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -9,6 +10,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Path("/v1/health")
@@ -16,6 +18,9 @@ public class HealthResource {
 
     @Inject
     EntityManager em;
+
+    @Inject
+    CircuitBreaker circuitBreaker;
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -27,9 +32,10 @@ public class HealthResource {
         } catch (Exception e) {
             Log.error("Health check: database connectivity failed", e);
         }
-        return Response.ok(Map.of(
-            "status", dbOk ? "ok" : "degraded",
-            "database", dbOk ? "ok" : "error"
-        )).build();
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", dbOk ? "ok" : "degraded");
+        result.put("database", dbOk ? "ok" : "error");
+        result.put("circuitBreakers", circuitBreaker.getSnapshot());
+        return Response.ok(result).build();
     }
 }
