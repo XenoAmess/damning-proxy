@@ -1,3 +1,5 @@
+[English Version](01-build.en.md)
+
 # 01 构建方式
 
 > 最后更新：2026-06-17  

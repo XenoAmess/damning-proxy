@@ -1,3 +1,5 @@
+[English Version](01-logging.en.md)
+
 # 01 流量日志
 
 > 最后更新：2026-06-17  

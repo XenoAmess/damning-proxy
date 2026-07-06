@@ -1,3 +1,5 @@
+[English Version](03-glossary.en.md)
+
 # 03 术语表
 
 > 最后更新：2026-06-17  

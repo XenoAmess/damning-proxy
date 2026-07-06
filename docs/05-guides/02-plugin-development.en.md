@@ -1,0 +1,190 @@
+[中文版](02-plugin-development.md)
+
+# 02 Plugin Development Guide
+
+> Last updated: 2026-06-17  
+> Source version: current workspace
+
+## Plugin Basics
+
+A plugin is a Groovy or JavaScript script that runs during the request/response phases of the proxy. The script accesses and modifies requests/responses through the global variable `context`.
+
+For the full API, see [02-design/03-plugin-system.md](../02-design/03-plugin-system.en.md).
+
+---
+
+## context API Quick Reference
+
+| Method | Description |
+|---|---|
+| `context.getRequestBody()` / `context.setRequestBody(obj)` | Read/write request body |
+| `context.getRequestHeaders()` / `context.setRequestHeader(k, v)` | Read/write request headers |
+| `context.getResponseBody()` / `context.setResponseBody(obj)` | Read/write response body |
+| `context.getResponseHeaders()` / `context.setResponseHeader(k, v)` | Read/write response headers |
+| `context.getResponseStatus()` / `context.setResponseStatus(code)` | Read/write response status code |
+| `context.log(message)` | Log a plugin message |
+| `context.stop()` | Stop subsequent plugin execution |
+| `context.returnResponse(status, body, headers)` | Return a response directly, skipping the upstream |
+
+---
+
+## Execution Phases
+
+When creating a plugin, select the execution phase:
+
+- `REQUEST`: executes only during the request phase
+- `RESPONSE`: executes only during the response phase
+- `BOTH`: executes during both request and response phases
+
+---
+
+## JavaScript Plugin Examples
+
+### Rewrite the request model name
+
+```javascript
+var body = context.getRequestBody();
+body.model = 'gpt-4o';
+context.setRequestBody(body);
+context.log('rewrote model to gpt-4o');
+```
+
+### Append a system prompt
+
+```javascript
+const body = context.getRequestBody();
+if (!body || !Array.isArray(body.messages)) return;
+
+const hint = 'Please answer in concise English.';
+const systemMessage = body.messages.find(m => m && m.role === 'system');
+
+if (systemMessage && typeof systemMessage.content === 'string') {
+  systemMessage.content += '\n' + hint;
+} else {
+  body.messages.unshift({ role: 'system', content: hint });
+}
+context.log('appended system hint');
+```
+
+### Return a response directly (mock)
+
+```javascript
+context.returnResponse(200, {
+  id: 'mock',
+  model: 'gpt-4o',
+  choices: [{
+    message: { role: 'assistant', content: 'This content is returned directly by the plugin.' }
+  }]
+}, { 'X-Mocked': 'true' });
+```
+
+---
+
+## Groovy Plugin Examples
+
+### Rewrite the request model name
+
+```groovy
+def body = context.getRequestBody()
+body.model = 'gpt-4o'
+context.setRequestBody(body)
+context.log('rewrote model to gpt-4o')
+```
+
+### Append a system prompt
+
+```groovy
+def body = context.getRequestBody()
+if (body == null) return
+
+def messages = body.get("messages")
+if (!(messages instanceof List)) return
+
+def hint = "Please answer in concise English."
+def systemMessage = null
+
+for (def m : messages) {
+  if (m == null) continue
+  if ("system".equals(m.get("role"))) {
+    systemMessage = m
+    break
+  }
+}
+
+if (systemMessage != null) {
+  def content = systemMessage.get("content")
+  if (content instanceof String) {
+    systemMessage.put("content", content + "\n" + hint)
+  }
+} else {
+  def newSystem = new LinkedHashMap()
+  newSystem.put("role", "system")
+  newSystem.put("content", hint)
+  messages.add(0, newSystem)
+}
+context.log('appended system hint')
+```
+
+### Return a response directly
+
+```groovy
+context.returnResponse(200,
+  [id: 'mock', model: 'gpt-4o', choices: [[message: [role: 'assistant', content: 'Groovy mocked']]]],
+  ['X-Mocked': 'true'])
+```
+
+---
+
+## Response-Phase Plugins
+
+In the response phase, plugins can modify content returned by the upstream, e.g., replacing the model name:
+
+```javascript
+var body = context.getResponseBody();
+if (body && body.model) {
+  body.model = 'custom-model';
+  context.setResponseBody(body);
+  context.log('rewrote response model');
+}
+```
+
+---
+
+## Plugin Group Configuration
+
+1. Go to the **Plugin Groups** page.
+2. Create a plugin group and select the plugins to combine.
+3. Adjust `orderIndex` and `priority`.
+4. In **Instance Management**, bind the instance to that plugin group.
+
+Execution order: `orderIndex` ascending → `priority` ascending → `id` ascending.
+
+---
+
+## Debug Plugins
+
+1. Use `context.log('...')` in the script to output debug information.
+2. Make a proxy request.
+3. Go to **Traffic Logs** → click details → view **Plugin Pipeline** and **Plugin Logs**.
+
+---
+
+## Notes
+
+- Plugin scripts are cached by content; restart the service for changes to take effect.
+- Plugins have full JVM permissions; do not run scripts from untrusted sources.
+- Response-phase plugins operate on the accumulated complete response body for streaming requests.
+- If a plugin throws an exception, the pipeline is not interrupted, but the error is recorded in the friendly snapshot.
+
+---
+
+## Built-in Sample Plugins
+
+Two sample plugins are created automatically on startup:
+
+- `大明战锤提示词（Groovy）`
+- `大明战锤提示词（JS）`
+
+Both append a fixed system prompt to the message list during the request phase.
+
+Source code: `src/main/java/com/xenoamess/damning_proxy/migration/StartupMigration.java:113`

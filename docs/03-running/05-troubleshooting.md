@@ -1,3 +1,5 @@
+[English Version](05-troubleshooting.en.md)
+
 # 05 常见问题排查
 
 > 最后更新：2026-06-18  

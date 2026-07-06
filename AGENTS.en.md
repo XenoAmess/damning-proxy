@@ -1,4 +1,4 @@
-[English Version](AGENTS.en.md)
+[中文版](AGENTS.md)
 
 # Agent Notes for damning-proxy
 
@@ -95,3 +95,10 @@ Vite dev server proxies `/api` to `http://localhost:12360`. Requires a backend r
 ## opencode.json
 
 - `opencode.json` registers this project as a local AI provider for OpenCode itself. It is not required for building or running the app.
+
+## Documentation i18n
+
+- Root README: `README.md` (Chinese) / `README.en.md` (English), linked at the top of each other.
+- Agent notes: `AGENTS.md` (Chinese) / `AGENTS.en.md` (English), linked at the top of each other.
+- Knowledge base: under `docs/`; each Chinese doc has a sibling `*.en.md` English version, and vice versa. The index `docs/README.md` lists both language versions.
+- When adding or modifying any document, update the corresponding language version and `docs/README.md` at the same time.

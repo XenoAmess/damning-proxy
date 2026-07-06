@@ -1,3 +1,5 @@
+[English Version](03-connect-opencode.en.md)
+
 # 03 接入 OpenCode
 
 > 最后更新：2026-06-17  

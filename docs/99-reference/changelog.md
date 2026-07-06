@@ -1,3 +1,5 @@
+[English Version](changelog.en.md)
+
 # 变更日志
 
 > 最后更新：2026-06-21  

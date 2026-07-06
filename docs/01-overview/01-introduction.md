@@ -1,3 +1,5 @@
+[English Version](01-introduction.en.md)
+
 # 01 项目介绍
 
 > 最后更新：2026-06-21  

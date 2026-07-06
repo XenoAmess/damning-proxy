@@ -1,3 +1,5 @@
+[English Version](03-data-migration.en.md)
+
 # 03 数据迁移
 
 > 最后更新：2026-06-17  

@@ -1,3 +1,5 @@
+[English Version](04-evolution-notes.en.md)
+
 # 04 知识库演进约定
 
 > 最后更新：2026-06-17  

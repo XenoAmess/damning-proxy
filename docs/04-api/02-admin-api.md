@@ -1,3 +1,5 @@
+[English Version](02-admin-api.en.md)
+
 # 02 管理后台端点
 
 > 最后更新：2026-06-21  

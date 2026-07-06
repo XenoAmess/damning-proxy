@@ -1,3 +1,5 @@
+[English Version](02-architecture.en.md)
+
 # 02 整体架构
 
 > 最后更新：2026-06-17  

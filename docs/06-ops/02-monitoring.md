@@ -1,3 +1,5 @@
+[English Version](02-monitoring.en.md)
+
 # 02 健康检查与监控
 
 > 最后更新：2026-06-21  

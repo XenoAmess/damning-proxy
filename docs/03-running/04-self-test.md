@@ -1,3 +1,5 @@
+[English Version](04-self-test.en.md)
+
 # 04 自测方式
 
 > 最后更新：2026-06-17  

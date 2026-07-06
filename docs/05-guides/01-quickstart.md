@@ -1,3 +1,5 @@
+[English Version](01-quickstart.en.md)
+
 # 01 快速开始
 
 > 最后更新：2026-06-17  

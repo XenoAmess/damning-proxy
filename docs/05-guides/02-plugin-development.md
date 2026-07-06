@@ -1,3 +1,5 @@
+[English Version](02-plugin-development.en.md)
+
 # 02 插件开发指南
 
 > 最后更新：2026-06-17  

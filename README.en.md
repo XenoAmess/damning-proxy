@@ -1,0 +1,219 @@
+[中文版](README.md)
+
+# damning-proxy
+
+An OpenAI-protocol proxy server built on **Java 21**, **Quarkus**, and **GraalVM Native Image**.
+
+damning-proxy can proxy multiple upstream OpenAI endpoints and sequentially modify inbound/outbound messages via **Groovy / JavaScript plugins**, enabling custom model mapping, request rewriting, response replacement, log auditing, and more.
+
+## Live Demo
+
+https://www.bilibili.com/video/BV1oojW6uEbF
+
+## Features
+
+- **OpenAI Protocol Proxy**: Exposes OpenAI-compatible endpoints and forwards to configured upstream sources.
+- **Instance-based Routing**: External callers use an *Instance*; each instance binds to one upstream Profile and one plugin group.
+- **Upstream Configuration Management**: Independently manage upstream OpenAI source URL, token, custom headers, etc.
+- **Plugin Group Management**: Pick plugins from the library, specify execution order, priority, and enabled status.
+- **Plugin Library Management**: Centrally manage Groovy / JavaScript plugin scripts.
+- **Full Traffic Logging**: Records request/response per instance, viewable and cleanable via the web UI.
+- **Web Admin Console**: Local management UI based on Vue 3 + Vite + Element Plus.
+- **GraalVM Native Image** support.
+
+## Tech Stack
+
+| Technology | Version |
+|------------|---------|
+| Java | 21 |
+| Quarkus | 3.15.1 |
+| Maven | 3.9+ |
+| H2 | (default, easy to switch to PG/MySQL) |
+| Vue | 3 |
+| Vite | 6 |
+| Element Plus | 2 |
+
+## Quick Start
+
+### 1. Run in Dev Mode
+
+```bash
+mvn quarkus:dev
+```
+
+The service starts at `http://localhost:12360`.
+
+Open `http://localhost:12360/` in a browser to be redirected to the admin console.
+
+### 2. Build and Run JAR
+
+```bash
+mvn clean package
+java -jar target/quarkus-app/quarkus-run.jar
+```
+
+Maven will automatically install Node/npm dependencies and build the frontend UI.
+
+### 3. Build Native Image (requires GraalVM)
+
+```bash
+mvn clean package -Pnative
+./target/damning-proxy-1.0-SNAPSHOT-runner
+```
+
+> Note: Native builds require GraalVM 21. First confirm that the normal JAR builds successfully with `mvn clean package -DskipTests`.
+
+## Proxy Endpoints
+
+All proxy endpoints are based on an **Instance** `slug`:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/proxy/{instanceSlug}/chat/completions` | Chat completions (supports SSE streaming) |
+| `GET`  | `/v1/proxy/{instanceSlug}/models` | Model list |
+
+Example:
+
+```bash
+curl -H "Authorization: Bearer sk-test" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}],"stream":false}' \
+  http://localhost:12360/v1/proxy/my-instance/chat/completions
+```
+
+> The old direct access by Profile slug has been replaced by Instance slug access. On first startup, the system automatically generates a default instance and a default plugin group for each existing Profile.
+
+## Web Admin Console
+
+Open `http://localhost:12360/admin/index.html` after startup.
+
+The console supports:
+
+- **Instance Management**: Create externally exposed instances, bind upstream profiles and plugin groups.
+- **Plugin Groups**: Pick plugins from the library, configure execution order, priority, and enabled status.
+- **Plugin Management**: Write Groovy / JS plugin scripts, set execution phase (request / response / both).
+- **Upstream Configuration**: Configure multiple OpenAI sources, including baseURL, Bearer Token, custom headers, timeouts, etc.
+- **Traffic Logs**: View full request/response and plugin logs per instance, support delete and clear.
+
+## Plugin Development
+
+Plugins access and modify request/response through the `context` object:
+
+```javascript
+// JS example: rewrite request model name
+var body = context.getRequestBody();
+body.model = 'gpt-4o';
+context.setRequestBody(body);
+context.log('rewrote model to gpt-4o');
+```
+
+```groovy
+// Groovy example: return a custom response directly
+context.returnResponse(200, [message: 'intercepted'], ['X-Custom': 'yes'])
+```
+
+### context API
+
+| Method | Description |
+|--------|-------------|
+| `getRequestBody()` / `setRequestBody(obj)` | Request body read/write |
+| `getRequestHeaders()` / `setRequestHeader(k, v)` | Request header read/write |
+| `getResponseBody()` / `setResponseBody(obj)` | Response body read/write |
+| `getResponseHeaders()` / `setResponseHeader(k, v)` | Response header read/write |
+| `getResponseStatus()` / `setResponseStatus(code)` | Response status code read/write |
+| `log(message)` | Record plugin log |
+| `stop()` | Stop subsequent plugin execution |
+| `returnResponse(status, body, headers)` | Return response directly, skip upstream |
+
+## Connect OpenCode
+
+Configure damning-proxy as a custom provider in `opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "damning-proxy": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "damning-proxy (local)",
+      "options": {
+        "baseURL": "http://localhost:12360/v1/proxy/my-instance",
+        "apiKey": "sk-test"
+      },
+      "models": {
+        "gpt-4": { "name": "GPT-4" },
+        "gpt-4o": { "name": "GPT-4o" }
+      }
+    }
+  }
+}
+```
+
+Model IDs in `models` must match the model IDs returned by the upstream `/v1/models`.
+
+## Configuration
+
+### application.properties
+
+```properties
+quarkus.http.port=12360
+
+# Database (default H2 file-based, can switch to PostgreSQL/MySQL)
+quarkus.datasource.db-kind=h2
+quarkus.datasource.jdbc.url=jdbc:h2:file:${user.home}/.damning-proxy/data
+
+# CORS
+quarkus.http.cors=true
+quarkus.http.cors.origins=*
+```
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `API_TOKEN` | Old global auth token (no longer used; each Profile configures its own token) |
+
+## Project Structure
+
+```
+src/
+├── main/
+│   ├── java/com/xenoamess/damning_proxy/
+│   │   ├── api/              # REST API (proxy, admin, home)
+│   │   ├── api/admin/        # Admin REST API
+│   │   ├── entity/           # Domain entities
+│   │   ├── plugin/           # Plugin context and execution engine
+│   │   ├── plugin/engine/    # Groovy / JS engines
+│   │   ├── proxy/            # OpenAI proxy core
+│   │   ├── repository/       # Repository interfaces
+│   │   ├── repository/panache/ # Panache H2 implementations
+│   │   └── service/          # Business services (log service)
+│   └── resources/
+│       ├── application.properties
+│       └── META-INF/resources/admin/  # Frontend build output
+├── test/
+│   └── java/.../             # Unit and integration tests
+└── admin-web/                # Vue 3 admin UI source
+```
+
+## Development
+
+### Run Tests
+
+```bash
+mvn test
+```
+
+### Frontend Development
+
+```bash
+cd admin-web
+npm install
+npm run dev
+```
+
+The dev server proxies `/api` to `http://localhost:12360`.
+
+## License
+
+MIT
