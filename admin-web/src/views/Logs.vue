@@ -4,6 +4,32 @@
       <el-button type="danger" @click="clear">清空日志</el-button>
     </div>
 
+    <div class="log-filters">
+      <el-select v-model="filters.instanceId" placeholder="实例" clearable style="width: 160px">
+        <el-option v-for="inst in instances" :key="inst.id" :label="inst.name" :value="inst.id" />
+      </el-select>
+      <el-select v-model="filters.status" placeholder="状态" clearable style="width: 120px">
+        <el-option v-for="opt in statusOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+      </el-select>
+      <el-input v-model="filters.path" placeholder="路径关键字" clearable style="width: 180px" />
+      <el-date-picker
+        v-model="filters.startTime"
+        type="datetime"
+        placeholder="开始时间"
+        value-format="YYYY-MM-DDTHH:mm:ss"
+        style="width: 180px"
+      />
+      <el-date-picker
+        v-model="filters.endTime"
+        type="datetime"
+        placeholder="结束时间"
+        value-format="YYYY-MM-DDTHH:mm:ss"
+        style="width: 180px"
+      />
+      <el-button type="primary" @click="search">查询</el-button>
+      <el-button @click="resetFilters">重置</el-button>
+    </div>
+
     <el-empty v-if="!loading && logs.length === 0" description="暂无流量日志" />
 
     <div class="log-card-list">
@@ -97,6 +123,18 @@
           <el-button size="small" type="danger" @click.stop="remove(log.id)">删除</el-button>
         </div>
       </div>
+    </div>
+
+    <div class="log-pagination">
+      <el-pagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pagination.limit"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="pagination.total"
+        layout="total, sizes, prev, pager, next"
+        @size-change="handleSizeChange"
+        @current-change="handlePageChange"
+      />
     </div>
 
     <el-drawer v-model="detailVisible" title="流量详情" size="70%">
@@ -363,6 +401,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { marked } from 'marked'
+import { listInstances } from '../api/damning.js'
 import { listLogs, getLogFriendly, deleteLog, clearLogs } from '../api/damning.js'
 import { parseThink, formatBytes, sanitizeHtml } from '../utils/parse.js'
 
@@ -376,10 +415,32 @@ const loadedFriendlyIds = ref(new Set())
 const router = useRouter()
 let observer = null
 
+const instances = ref([])
+const pagination = ref({
+  limit: 20,
+  offset: 0,
+  total: 0,
+})
+const filters = ref({
+  instanceId: null,
+  status: '',
+  path: '',
+  startTime: null,
+  endTime: null,
+})
+
+const statusOptions = [
+  { label: '全部', value: '' },
+  { label: '成功', value: 'success' },
+  { label: '错误', value: 'error' },
+]
+
 const statusType = computed(() => {
   if (!current.value || !current.value.responseStatus) return 'info'
   return current.value.responseStatus >= 400 ? 'danger' : 'success'
 })
+
+const currentPage = computed(() => Math.floor(pagination.value.offset / pagination.value.limit) + 1)
 
 function debugSnapshot(snapshot, phase) {
   // Find plugin id by name from already loaded friendly logs if possible,
@@ -390,13 +451,60 @@ function debugSnapshot(snapshot, phase) {
 async function load() {
   loading.value = true
   try {
-    const res = await listLogs({ limit: 100 })
+    const params = {
+      limit: pagination.value.limit,
+      offset: pagination.value.offset,
+      instanceId: filters.value.instanceId,
+      status: filters.value.status,
+      path: filters.value.path,
+      startTime: filters.value.startTime,
+      endTime: filters.value.endTime,
+    }
+    const res = await listLogs(params)
     logs.value = res.data.items
+    pagination.value.total = res.data.total
     await nextTick()
     observeCards()
   } finally {
     loading.value = false
   }
+}
+
+async function loadInstances() {
+  try {
+    const res = await listInstances()
+    instances.value = res.data
+  } catch (e) {
+    instances.value = []
+  }
+}
+
+function search() {
+  pagination.value.offset = 0
+  load()
+}
+
+function resetFilters() {
+  filters.value = {
+    instanceId: null,
+    status: '',
+    path: '',
+    startTime: null,
+    endTime: null,
+  }
+  pagination.value.offset = 0
+  load()
+}
+
+function handlePageChange(newPage) {
+  pagination.value.offset = (newPage - 1) * pagination.value.limit
+  load()
+}
+
+function handleSizeChange(newSize) {
+  pagination.value.limit = newSize
+  pagination.value.offset = 0
+  load()
 }
 
 function observeCards() {
@@ -588,7 +696,9 @@ async function clear() {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  await Promise.all([load(), loadInstances()])
+})
 onUnmounted(() => {
   if (observer) {
     observer.disconnect()
@@ -600,6 +710,23 @@ onUnmounted(() => {
 <style scoped>
 .toolbar {
   margin-bottom: 16px;
+}
+
+.log-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 6px;
+}
+
+.log-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
 }
 
 .log-card-list {

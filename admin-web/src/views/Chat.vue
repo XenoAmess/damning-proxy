@@ -50,9 +50,38 @@
           />
         </div>
         <div class="toolbar-right">
+          <el-button link @click="showParams = !showParams">
+            <el-icon><Setting /></el-icon> 参数
+          </el-button>
           <el-button style="margin-left: 12px" @click="clearCurrentHistory">清空当前</el-button>
           <el-button style="margin-left: 12px" type="primary" :disabled="selectedMessages.length === 0" @click="generateImage">生成图片</el-button>
           <el-checkbox v-model="selectMode" style="margin-left: 12px">选择模式</el-checkbox>
+        </div>
+      </div>
+
+      <div v-if="showParams" class="param-panel">
+        <div class="param-row">
+          <div class="param-item">
+            <label>Temperature</label>
+            <el-input-number v-model="config.temperature" :min="0" :max="2" :step="0.1" controls-position="right" style="width: 120px" />
+          </div>
+          <div class="param-item">
+            <label>Top P</label>
+            <el-input-number v-model="config.topP" :min="0" :max="1" :step="0.1" controls-position="right" style="width: 120px" />
+          </div>
+          <div class="param-item">
+            <label>Max Tokens</label>
+            <el-input-number v-model="config.maxTokens" :min="1" :max="32768" :step="1" controls-position="right" style="width: 130px" />
+          </div>
+        </div>
+        <div class="param-item" style="margin-top: 8px">
+          <label>System Prompt</label>
+          <el-input
+            v-model="config.systemPrompt"
+            type="textarea"
+            :rows="2"
+            placeholder="系统提示词（将作为第一条 system 消息发送）"
+          />
         </div>
       </div>
 
@@ -220,7 +249,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { marked } from 'marked'
 import {
   Plus, Delete, Promotion, ArrowDown, ArrowRight,
-  User, ChatLineRound, CopyDocument, Paperclip,
+  User, ChatLineRound, CopyDocument, Paperclip, Setting,
 } from '@element-plus/icons-vue'
 import { listInstances, listProfiles } from '../api/damning.js'
 import { chatCompletion, chatCompletionStream, createAbortController, listModels } from '../api/chat.js'
@@ -250,12 +279,17 @@ const typewriterBuffer = ref('')
 const imageExportRef = ref(null)
 const selectMode = ref(false)
 const selectedIndices = ref([])
+const showParams = ref(false)
 
 const config = ref({
   instanceSlug: '',
   model: '',
   token: '',
   stream: true,
+  temperature: null,
+  topP: null,
+  maxTokens: null,
+  systemPrompt: '',
 })
 
 const currentSession = computed(() =>
@@ -579,13 +613,28 @@ async function send() {
     m.role === 'user' || m.role === 'assistant'
   )
 
+  const messages = history.map(m => ({
+    role: m.role,
+    content: m.content,
+  }))
+  const systemPrompt = (config.value.systemPrompt || '').trim()
+  if (systemPrompt) {
+    messages.unshift({ role: 'system', content: systemPrompt })
+  }
+
   const body = {
     model: config.value.model || 'default',
-    messages: history.map(m => ({
-      role: m.role,
-      content: m.content,
-    })),
+    messages,
     stream: config.value.stream,
+  }
+  if (config.value.temperature != null) {
+    body.temperature = config.value.temperature
+  }
+  if (config.value.topP != null) {
+    body.top_p = config.value.topP
+  }
+  if (config.value.maxTokens != null) {
+    body.max_tokens = config.value.maxTokens
   }
 
   loading.value = true
@@ -755,6 +804,29 @@ function renderMarkdown(text) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.param-panel {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e4e7ed;
+  background: #fff;
+}
+
+.param-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.param-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.param-item label {
+  font-size: 12px;
+  color: #606266;
 }
 
 .toolbar-left,

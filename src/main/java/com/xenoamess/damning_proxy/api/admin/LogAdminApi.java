@@ -15,6 +15,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -34,21 +35,29 @@ public class LogAdminApi {
     public PageResponse<TrafficLog> list(@QueryParam("limit") @DefaultValue("100") int limit,
                                          @QueryParam("offset") @DefaultValue("0") int offset,
                                          @QueryParam("profileId") Long profileId,
-                                         @QueryParam("instanceId") Long instanceId) {
+                                         @QueryParam("instanceId") Long instanceId,
+                                         @QueryParam("status") String status,
+                                         @QueryParam("path") String path,
+                                         @QueryParam("startTime") String startTime,
+                                         @QueryParam("endTime") String endTime) {
         int effectiveLimit = Math.min(limit, 1000);
-        List<TrafficLog> items;
-        long total;
-        if (instanceId != null) {
-            items = logRepository.findByInstanceId(instanceId, effectiveLimit);
-            total = logRepository.countByInstanceId(instanceId);
-        } else if (profileId != null) {
-            items = logRepository.findByProfileId(profileId, effectiveLimit);
-            total = logRepository.countByProfileId(profileId);
-        } else {
-            items = logRepository.listRecent(effectiveLimit);
-            total = logRepository.count();
-        }
+        LocalDateTime start = parseDateTime(startTime);
+        LocalDateTime end = parseDateTime(endTime);
+        List<TrafficLog> items = logRepository.findByFilters(
+            instanceId, profileId, status, path, start, end, offset, effectiveLimit);
+        long total = logRepository.countByFilters(instanceId, profileId, status, path, start, end);
         return new PageResponse<>(items, total, effectiveLimit, offset);
+    }
+
+    private LocalDateTime parseDateTime(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(value);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @GET

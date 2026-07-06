@@ -2,8 +2,15 @@
 
 # Changelog
 
-> Last updated: 2026-06-21  
+> Last updated: 2026-07-06  
 > Source version: current workspace
+
+## 2026-07-06
+
+- Admin Chat page adds a parameter panel: configure temperature, top_p, max_tokens, and system prompt.
+- Admin traffic logs support filtering by instance, status, path keyword, and time range, plus pagination.
+- Added plugin debugger page with Groovy syntax highlighting, sample-request dry-run, and save-time script validation.
+- Fixed `PanacheLogRepository` dynamic query error caused by an unused parameter when no filters were applied.
 
 ## 0.1.0 — 2026-06-21
 

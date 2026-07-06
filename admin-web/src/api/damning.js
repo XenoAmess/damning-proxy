@@ -141,7 +141,13 @@ export function importInstances(data) {
 }
 
 export function listLogs(params) {
-  return api.get('/logs', { params })
+  const clean = {}
+  for (const [key, value] of Object.entries(params || {})) {
+    if (value !== undefined && value !== null && value !== '') {
+      clean[key] = value
+    }
+  }
+  return api.get('/logs', { params: clean })
 }
 
 export function getLog(id) {

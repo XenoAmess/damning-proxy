@@ -2,9 +2,12 @@ package com.xenoamess.damning_proxy.repository.panache;
 
 import com.xenoamess.damning_proxy.entity.TrafficLog;
 import com.xenoamess.damning_proxy.repository.LogRepository;
+import io.quarkus.panache.common.Parameters;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,6 +45,15 @@ public class PanacheLogRepository implements LogRepository {
     }
 
     @Override
+    public List<TrafficLog> findByFilters(Long instanceId, Long profileId, String status, String path,
+                                           LocalDateTime startTime, LocalDateTime endTime, int offset, int limit) {
+        FilterQuery fq = buildFilterQuery(instanceId, profileId, status, path, startTime, endTime);
+        return TrafficLog.find(fq.query, Sort.descending("requestTime"), fq.params)
+            .page(offset / limit, limit)
+            .list();
+    }
+
+    @Override
     public long count() {
         return TrafficLog.count();
     }
@@ -54,6 +66,13 @@ public class PanacheLogRepository implements LogRepository {
     @Override
     public long countByInstanceId(Long instanceId) {
         return TrafficLog.count("instanceId", instanceId);
+    }
+
+    @Override
+    public long countByFilters(Long instanceId, Long profileId, String status, String path,
+                               LocalDateTime startTime, LocalDateTime endTime) {
+        FilterQuery fq = buildFilterQuery(instanceId, profileId, status, path, startTime, endTime);
+        return TrafficLog.count(fq.query, fq.params);
     }
 
     @Override
@@ -72,5 +91,41 @@ public class PanacheLogRepository implements LogRepository {
         for (TrafficLog log : oldest) {
             log.delete();
         }
+    }
+
+    private record FilterQuery(String query, Parameters params) {
+    }
+
+    private FilterQuery buildFilterQuery(Long instanceId, Long profileId, String status, String path,
+                                         LocalDateTime startTime, LocalDateTime endTime) {
+        List<String> clauses = new ArrayList<>();
+        Parameters params = new Parameters();
+        if (instanceId != null) {
+            clauses.add("instanceId = :instanceId");
+            params = params.and("instanceId", instanceId);
+        }
+        if (profileId != null) {
+            clauses.add("profileId = :profileId");
+            params = params.and("profileId", profileId);
+        }
+        if ("success".equalsIgnoreCase(status)) {
+            clauses.add("(responseStatus < 400 or responseStatus is null)");
+        } else if ("error".equalsIgnoreCase(status)) {
+            clauses.add("responseStatus >= 400");
+        }
+        if (path != null && !path.isBlank()) {
+            clauses.add("requestPath like :path");
+            params = params.and("path", "%" + path + "%");
+        }
+        if (startTime != null) {
+            clauses.add("requestTime >= :startTime");
+            params = params.and("startTime", startTime);
+        }
+        if (endTime != null) {
+            clauses.add("requestTime <= :endTime");
+            params = params.and("endTime", endTime);
+        }
+        String query = clauses.isEmpty() ? "1=1" : String.join(" and ", clauses);
+        return new FilterQuery(query, params);
     }
 }

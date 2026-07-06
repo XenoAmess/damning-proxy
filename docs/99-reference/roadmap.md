@@ -22,13 +22,13 @@
 
 ## 第二阶段：管理后台使用体验
 
-| # | 事项 | 目标 |
-|---|------|------|
-| 5 | 流量日志支持筛选/分页/时间范围 | 现在固定 limit=100，日志多了不好找 |
-| 6 | Chat 页面支持 temperature/top_p/max_tokens/system 消息编辑 | 现在只能发 messages，参数调不了 |
-| 7 | 对话支持重新发送/重新生成 | 常见 LLM UI 功能，现在没有 |
-| 8 | 会话历史从 localStorage 改成 IndexedDB 或可选持久化 | localStorage 容量小、明文存，本地用 IndexedDB 更稳 |
-| 9 | markdown 代码块加一键复制 | 看日志/对话时复制代码方便 |
+| # | 事项 | 目标 | 状态 |
+|---|---|------|------|------|
+| 5 | 流量日志支持筛选/分页/时间范围 | 现在固定 limit=100，日志多了不好找 | 已完成 |
+| 6 | Chat 页面支持 temperature/top_p/max_tokens/system 消息编辑 | 现在只能发 messages，参数调不了 | 已完成 |
+| 7 | 对话支持重新发送/重新生成 | 常见 LLM UI 功能，现在没有 | 待做 |
+| 8 | 会话历史从 localStorage 改成 IndexedDB 或可选持久化 | localStorage 容量小、明文存，本地用 IndexedDB 更稳 | 待做 |
+| 9 | markdown 代码块加一键复制 | 看日志/对话时复制代码方便 | 待做 |
 
 ---
 

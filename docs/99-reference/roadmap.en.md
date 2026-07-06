@@ -22,13 +22,13 @@ This document lists the next executable optimization and feature backlog for dam
 
 ## Phase 2: Admin Console UX
 
-| # | Item | Goal |
-|---|------|------|
-| 5 | Log filtering / pagination / time range | Currently hardcoded limit=100; hard to browse large logs |
-| 6 | Chat page controls for temperature / top_p / max_tokens / system message | Currently only messages can be sent; parameters are missing |
-| 7 | Resend / regenerate in chat | Common LLM UI feature currently missing |
-| 8 | Move chat session history from localStorage to IndexedDB or optional persistence | localStorage is small and stores plaintext; IndexedDB is more robust locally |
-| 9 | One-click copy for markdown code blocks | Easier to copy code from logs / chat |
+| # | Item | Goal | Status |
+|---|------|------|--------|
+| 5 | Log filtering / pagination / time range | Currently hardcoded limit=100; hard to browse large logs | Done |
+| 6 | Chat page controls for temperature / top_p / max_tokens / system message | Currently only messages can be sent; parameters are missing | Done |
+| 7 | Resend / regenerate in chat | Common LLM UI feature currently missing | TODO |
+| 8 | Move chat session history from localStorage to IndexedDB or optional persistence | localStorage is small and stores plaintext; IndexedDB is more robust locally | TODO |
+| 9 | One-click copy for markdown code blocks | Easier to copy code from logs / chat | TODO |
 
 ---
 
