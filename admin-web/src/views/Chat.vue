@@ -112,6 +112,28 @@
               <span class="role-name">{{ msg.role === 'user' ? '我' : '助手' }}</span>
               <span class="message-time" v-if="msg.time">{{ formatTime(msg.time) }}</span>
               <el-button
+                v-if="msg.role === 'user'"
+                link
+                size="small"
+                class="action-btn"
+                :icon="RefreshRight"
+                @click.stop="resend(index)"
+                title="重新发送"
+              >
+                重发
+              </el-button>
+              <el-button
+                v-else
+                link
+                size="small"
+                class="action-btn"
+                :icon="Refresh"
+                @click.stop="regenerate(index)"
+                title="重新生成"
+              >
+                重新生成
+              </el-button>
+              <el-button
                 link
                 size="small"
                 class="copy-btn"
@@ -250,6 +272,7 @@ import { marked } from 'marked'
 import {
   Plus, Delete, Promotion, ArrowDown, ArrowRight,
   User, ChatLineRound, CopyDocument, Paperclip, Setting,
+  RefreshRight, Refresh,
 } from '@element-plus/icons-vue'
 import { listInstances, listProfiles } from '../api/damning.js'
 import { chatCompletion, chatCompletionStream, createAbortController, listModels } from '../api/chat.js'
@@ -586,33 +609,7 @@ function stopStreaming() {
   loading.value = false
 }
 
-async function send() {
-  if (!canSend.value || loading.value) return
-  if (!config.value.instanceSlug) {
-    ElMessage.warning('请先选择实例')
-    return
-  }
-
-  const text = inputText.value.trim()
-  const files = pendingFiles.value.slice()
-  inputText.value = ''
-  pendingFiles.value = []
-
-  const userContent = buildContent(text, files)
-  const userMessage = {
-    role: 'user',
-    content: userContent,
-    time: Date.now(),
-  }
-
-  currentSession.value.messages.push(userMessage)
-  updateSessionTitle(text || '附件消息')
-  scrollToBottom()
-
-  const history = currentSession.value.messages.filter(m =>
-    m.role === 'user' || m.role === 'assistant'
-  )
-
+function buildChatBody(history) {
   const messages = history.map(m => ({
     role: m.role,
     content: m.content,
@@ -636,6 +633,20 @@ async function send() {
   if (config.value.maxTokens != null) {
     body.max_tokens = config.value.maxTokens
   }
+  return body
+}
+
+async function startAssistantRequest() {
+  if (!config.value.instanceSlug) {
+    ElMessage.warning('请先选择实例')
+    return
+  }
+  if (loading.value) return
+
+  const history = currentSession.value.messages.filter(m =>
+    m.role === 'user' || m.role === 'assistant'
+  )
+  const body = buildChatBody(history)
 
   loading.value = true
   if (abortController.value) {
@@ -687,6 +698,91 @@ async function send() {
     loading.value = false
     scrollToBottom()
   }
+}
+
+function setInputFromMessage(msg) {
+  const content = msg.content
+  if (Array.isArray(content)) {
+    const texts = []
+    pendingFiles.value = []
+    for (const part of content) {
+      if (part.type === 'text') {
+        texts.push(part.text)
+      } else if (part.type === 'image_url' && part.image_url?.url) {
+        pendingFiles.value.push({
+          name: 'image',
+          type: 'image/*',
+          dataUrl: part.image_url.url,
+        })
+      } else if (part.type === 'file' && part.file?.data_url) {
+        pendingFiles.value.push({
+          name: part.file.name || 'file',
+          type: 'application/octet-stream',
+          dataUrl: part.file.data_url,
+        })
+      }
+    }
+    inputText.value = texts.join('\n')
+  } else {
+    inputText.value = typeof content === 'string' ? content : ''
+    pendingFiles.value = []
+  }
+}
+
+async function send() {
+  if (!canSend.value || loading.value) return
+  if (!config.value.instanceSlug) {
+    ElMessage.warning('请先选择实例')
+    return
+  }
+
+  const text = inputText.value.trim()
+  const files = pendingFiles.value.slice()
+  inputText.value = ''
+  pendingFiles.value = []
+
+  const userContent = buildContent(text, files)
+  const userMessage = {
+    role: 'user',
+    content: userContent,
+    time: Date.now(),
+  }
+
+  currentSession.value.messages.push(userMessage)
+  updateSessionTitle(text || '附件消息')
+  scrollToBottom()
+
+  await startAssistantRequest()
+}
+
+async function resend(index) {
+  const session = currentSession.value
+  if (!session || loading.value) return
+  const msg = session.messages[index]
+  if (!msg || msg.role !== 'user') return
+  setInputFromMessage(msg)
+  await send()
+}
+
+async function regenerate(index) {
+  const session = currentSession.value
+  if (!session || loading.value) return
+  const messages = session.messages
+  if (messages[index]?.role !== 'assistant') return
+  let prevUserIdx = -1
+  for (let i = index - 1; i >= 0; i--) {
+    if (messages[i].role === 'user') {
+      prevUserIdx = i
+      break
+    }
+  }
+  if (prevUserIdx === -1) {
+    ElMessage.warning('没有可重试的用户消息')
+    return
+  }
+  messages.splice(prevUserIdx + 1)
+  scrollToBottom()
+  await startAssistantRequest()
 }
 
 function appendWithTypewriter(index, text) {
@@ -903,6 +999,16 @@ function renderMarkdown(text) {
 .message.user .copy-btn {
   margin-left: 0;
   margin-right: auto;
+}
+
+.action-btn {
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  font-size: 12px;
+}
+
+.action-btn:hover {
+  opacity: 1;
 }
 
 .role-name {

@@ -8,6 +8,7 @@
 ## 2026-07-06
 
 - Admin Chat page adds a parameter panel: configure temperature, top_p, max_tokens, and system prompt.
+- Admin Chat messages now support "Resend" and "Regenerate" actions.
 - Admin traffic logs support filtering by instance, status, path keyword, and time range, plus pagination.
 - Added plugin debugger page with Groovy syntax highlighting, sample-request dry-run, and save-time script validation.
 - Fixed `PanacheLogRepository` dynamic query error caused by an unused parameter when no filters were applied.
