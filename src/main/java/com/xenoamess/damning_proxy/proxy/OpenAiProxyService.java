@@ -253,18 +253,6 @@ public class OpenAiProxyService {
                 if (heartbeatHolder[0] != null) {
                     heartbeatHolder[0].cancel(false);
                 }
-                if (logged.compareAndSet(false, true)) {
-                    String message = "Client closed connection or stream terminated";
-                    Log.warnf("Streaming request terminated (client cancelled or failure) for log #%d", trafficLog.id);
-                    executorService.execute(() -> {
-                        try {
-                            trafficLogService.recordResponse(trafficLog, 499,
-                                Map.of(), message, System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), message);
-                        } catch (Exception e) {
-                            Log.errorf(e, "Failed to record termination response for log #%d", trafficLog.id);
-                        }
-                    });
-                }
             });
 
             upstreamFuture.onSuccess(response -> {
@@ -283,7 +271,6 @@ public class OpenAiProxyService {
                         if (line.startsWith("data: ")) {
                             String data = line.substring(6).trim();
                             if ("[DONE]".equals(data)) {
-                                recordOnce.run();
                                 emitter.complete();
                                 return;
                             }

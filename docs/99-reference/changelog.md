@@ -7,6 +7,8 @@
 
 ## 2026-07-06
 
+- 新增流式代理测试 `ProxyApiTest.shouldProxyStreamingChatCompletions`。
+- 修复流式代理日志记录：正常 `[DONE]` 结束现在正确记录 200 与汇总后的响应体，不再提前记录为空或 499。
 - Chat 消息中的 Markdown 代码块新增悬停「复制」按钮。
 - 管理后台 Chat 会话历史从 localStorage 迁移到 IndexedDB，首次启动时自动导入旧数据。
 - 管理后台 Chat 页面新增参数面板：支持设置 temperature、top_p、max_tokens 与 system prompt。

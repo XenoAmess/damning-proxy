@@ -28,6 +28,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -152,6 +153,56 @@ class ProxyApiTest {
         assertEquals(200, log.responseStatus);
         assertNotNull(log.requestBody);
         assertNotNull(log.responseBody);
+    }
+
+    @Test
+    void shouldProxyStreamingChatCompletions() throws InterruptedException {
+        String sseBody = "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"delta\":{\"role\":\"assistant\",\"content\":\"Hi\"}}]}\n\ndata: [DONE]\n\n";
+        wireMockServer.stubFor(post(urlEqualTo("/v1/chat/completions"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "text/event-stream")
+                .withChunkedDribbleDelay(5, 100)
+                .withBody(sseBody)));
+
+        createInstance("openai-stream", "http://localhost:18089/v1", "sk-test");
+
+        Map<String, Object> body = Map.of(
+            "model", "gpt-4",
+            "messages", java.util.List.of(Map.of("role", "user", "content", "Hello")),
+            "stream", true
+        );
+
+        String response = given()
+            .contentType(ContentType.JSON)
+            .header("Accept", "text/event-stream")
+            .body(body)
+            .when().post("/v1/proxy/openai-stream/chat/completions")
+            .then()
+            .statusCode(200)
+            .header("Content-Type", containsString("text/event-stream"))
+            .extract().body().asString();
+
+        assertTrue(response.contains("data: "));
+        assertTrue(response.contains("chatcmpl-1"));
+        assertTrue(response.contains("Hi"));
+
+        TrafficLog log = waitForRecentLog();
+        assertEquals("/v1/chat/completions", log.requestPath);
+        assertEquals(200, log.responseStatus);
+        assertTrue(log.streaming);
+        assertNotNull(log.responseBody);
+    }
+
+    private TrafficLog waitForRecentLog() throws InterruptedException {
+        for (int i = 0; i < 30; i++) {
+            TrafficLog log = logRepository.listRecent(1).get(0);
+            if (log.responseBody != null) {
+                return log;
+            }
+            Thread.sleep(100);
+        }
+        return logRepository.listRecent(1).get(0);
     }
 
     @Test

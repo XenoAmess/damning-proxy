@@ -7,6 +7,8 @@
 
 ## 2026-07-06
 
+- Added streaming proxy test `ProxyApiTest.shouldProxyStreamingChatCompletions`.
+- Fixed streaming proxy logging: a normal `[DONE]` termination now records status 200 and the aggregated response body, instead of prematurely recording an empty body or 499.
 - Markdown code blocks in Chat messages now have a hover "Copy" button.
 - Admin Chat session history moved from localStorage to IndexedDB; legacy data is automatically imported on first load.
 - Admin Chat page adds a parameter panel: configure temperature, top_p, max_tokens, and system prompt.
