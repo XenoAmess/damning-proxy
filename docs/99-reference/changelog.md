@@ -7,6 +7,7 @@
 
 ## 2026-07-06
 
+- 管理后台 Chat 会话历史从 localStorage 迁移到 IndexedDB，首次启动时自动导入旧数据。
 - 管理后台 Chat 页面新增参数面板：支持设置 temperature、top_p、max_tokens 与 system prompt。
 - 管理后台 Chat 消息新增「重发」与「重新生成」操作。
 - 管理后台流量日志支持按实例、状态、路径关键字、时间范围筛选，并支持分页。

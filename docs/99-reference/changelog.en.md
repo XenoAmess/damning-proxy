@@ -7,6 +7,7 @@
 
 ## 2026-07-06
 
+- Admin Chat session history moved from localStorage to IndexedDB; legacy data is automatically imported on first load.
 - Admin Chat page adds a parameter panel: configure temperature, top_p, max_tokens, and system prompt.
 - Admin Chat messages now support "Resend" and "Regenerate" actions.
 - Admin traffic logs support filtering by instance, status, path keyword, and time range, plus pagination.

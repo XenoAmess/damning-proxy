@@ -280,6 +280,7 @@ import html2canvas from 'html2canvas'
 import { formatTimestamp } from '../utils/format.js'
 import { copyToClipboard } from '../utils/clipboard.js'
 import { parseThink, sanitizeHtml } from '../utils/parse.js'
+import { getAllSessions, saveAllSessions, deleteSession as deleteSessionFromDB, clearAllSessions } from '../utils/chatStorage.js'
 
 const TYPEWRITER_DELAY = 16
 const TYPEWRITER_CHUNK = 2
@@ -289,6 +290,7 @@ const CONFIG_KEY = 'damning-proxy-chat-config'
 
 const sessions = ref([])
 const currentSessionId = ref('')
+const storageReady = ref(false)
 const instances = ref([])
 const profiles = ref([])
 const inputText = ref('')
@@ -439,36 +441,51 @@ function saveConfig() {
   sessionStorage.setItem(CONFIG_KEY, JSON.stringify(config.value))
 }
 
-function loadSessions() {
+async function loadSessions() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      const raw = JSON.parse(saved)
-      sessions.value = raw.slice(0, MAX_SESSIONS).map(s => ({
-        ...s,
-        messages: s.messages ? s.messages.slice(-MAX_MESSAGES_PER_SESSION) : [],
-      }))
+    let fromDB = await getAllSessions()
+    if (fromDB.length === 0) {
+      const legacy = localStorage.getItem(STORAGE_KEY)
+      if (legacy) {
+        const raw = JSON.parse(legacy)
+        fromDB = raw.slice(0, MAX_SESSIONS).map(s => ({
+          ...s,
+          messages: s.messages ? s.messages.slice(-MAX_MESSAGES_PER_SESSION) : [],
+        }))
+        await saveAllSessions(fromDB)
+        localStorage.removeItem(STORAGE_KEY)
+      }
     }
+    sessions.value = fromDB.slice(0, MAX_SESSIONS).map(s => ({
+      ...s,
+      messages: s.messages ? s.messages.slice(-MAX_MESSAGES_PER_SESSION) : [],
+    }))
   } catch (e) {
     sessions.value = []
-    ElMessage.warning('会话数据已损坏，已重置')
+    ElMessage.warning('会话数据加载失败，已重置')
   }
   if (sessions.value.length === 0) {
     createSession()
   } else if (!currentSessionId.value) {
     currentSessionId.value = sessions.value[0].id
   }
+  storageReady.value = true
 }
 
 const MAX_SESSIONS = 50
 const MAX_MESSAGES_PER_SESSION = 200
 
-function saveSessions() {
+async function saveSessions() {
+  if (!storageReady.value) return
   const pruned = sessions.value.slice(0, MAX_SESSIONS).map(s => ({
     ...s,
     messages: s.messages ? s.messages.slice(-MAX_MESSAGES_PER_SESSION) : [],
   }))
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(pruned))
+  try {
+    await saveAllSessions(pruned)
+  } catch (e) {
+    console.error('保存会话失败', e)
+  }
 }
 
 function createSession() {
