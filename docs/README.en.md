@@ -48,6 +48,7 @@ This knowledge base is the documentation hub for [damning-proxy (大明proxy)](.
 ### 99 Reference
 - [Changelog](99-reference/changelog.en.md)
 - [Improvement Checklist](99-reference/improvement-checklist.en.md)
+- [Roadmap](99-reference/roadmap.en.md)
 
 ---
 
