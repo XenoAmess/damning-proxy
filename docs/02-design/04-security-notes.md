@@ -1,3 +1,5 @@
+[English Version](04-security-notes.en.md)
+
 # 04 安全提示
 
 > 最后更新：2026-06-17  

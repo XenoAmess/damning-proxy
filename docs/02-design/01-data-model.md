@@ -1,3 +1,5 @@
+[English Version](01-data-model.en.md)
+
 # 01 数据模型
 
 > 最后更新：2026-06-21  

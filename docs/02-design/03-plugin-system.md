@@ -1,3 +1,5 @@
+[English Version](03-plugin-system.en.md)
+
 # 03 插件系统
 
 > 最后更新：2026-06-17  > 对应源码版本：当前工作区
