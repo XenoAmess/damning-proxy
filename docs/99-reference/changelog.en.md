@@ -2,8 +2,13 @@
 
 # Changelog
 
-> Last updated: 2026-07-06  
+> Last updated: 2026-07-07
 > Source version: current workspace
+
+## 2026-07-07
+
+- Log pruning is now batched: added backend `/api/logs/prune` endpoint supporting "keep last N" or "delete all"; admin traffic log page adds a "Bulk Cleanup" button with confirmation dialog.
+- Fixed auto-prune performance issue when the log table is large: `PanacheLogRepository.deleteOldest` now deletes in default 1000-row batches.
 
 ## 2026-07-06
 

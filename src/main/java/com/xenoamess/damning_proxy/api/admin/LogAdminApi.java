@@ -93,6 +93,33 @@ public class LogAdminApi {
         return Response.ok(Map.of("deleted", count)).build();
     }
 
+    @POST
+    @Path("/prune")
+    @Transactional
+    public Response prune(PruneRequest request) {
+        long total = logRepository.count();
+        if (request != null && Boolean.TRUE.equals(request.deleteAll)) {
+            long deleted = logRepository.deleteAll();
+            return Response.ok(Map.of("deleted", deleted, "remaining", total - deleted)).build();
+        }
+        long keep = request != null ? request.keepCount : 0;
+        if (keep < 0) {
+            keep = 0;
+        }
+        if (total <= keep) {
+            return Response.ok(Map.of("deleted", 0L, "remaining", total)).build();
+        }
+        long toDelete = total - keep;
+        logRepository.deleteOldest((int) Math.min(toDelete, Integer.MAX_VALUE));
+        long remaining = logRepository.count();
+        return Response.ok(Map.of("deleted", total - remaining, "remaining", remaining)).build();
+    }
+
+    public static class PruneRequest {
+        public Long keepCount;
+        public Boolean deleteAll;
+    }
+
     private TrafficLogFriendlyDto toFriendly(TrafficLog log) {
         TrafficLogFriendlyDto dto = new TrafficLogFriendlyDto();
         dto.id = log.id;

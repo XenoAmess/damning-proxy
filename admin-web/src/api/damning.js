@@ -165,3 +165,7 @@ export function deleteLog(id) {
 export function clearLogs() {
   return api.post('/logs/clear')
 }
+
+export function pruneLogs(keepCount, deleteAll = false) {
+  return api.post('/logs/prune', { keepCount, deleteAll })
+}

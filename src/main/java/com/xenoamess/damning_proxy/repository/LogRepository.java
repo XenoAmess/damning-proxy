@@ -35,4 +35,11 @@ public interface LogRepository {
     long deleteAll();
 
     void deleteOldest(int count);
+
+    default void deleteOldest(int count, int batchSize) {
+        deleteOldest(count);
+    }
+
+    long deleteByFilters(Long instanceId, Long profileId, String status, String path,
+                         LocalDateTime startTime, LocalDateTime endTime);
 }

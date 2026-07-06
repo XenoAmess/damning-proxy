@@ -2,6 +2,7 @@
   <div>
     <div class="toolbar">
       <el-button type="danger" @click="clear">清空日志</el-button>
+      <el-button type="warning" @click="openPruneDialog">批量清理</el-button>
     </div>
 
     <div class="log-filters">
@@ -29,6 +30,33 @@
       <el-button type="primary" @click="search">查询</el-button>
       <el-button @click="resetFilters">重置</el-button>
     </div>
+
+    <el-dialog v-model="pruneDialogVisible" title="批量清理日志" width="480px">
+      <div class="prune-form">
+        <p class="prune-hint">仅保留最近若干条日志，超过部分按请求时间从早到晚删除。</p>
+        <el-form label-position="top">
+          <el-form-item label="保留条数">
+            <el-input-number v-model="pruneKeepCount" :min="0" :step="1000" style="width: 160px" />
+          </el-form-item>
+          <el-form-item label="删除方式">
+            <el-radio-group v-model="pruneMode">
+              <el-radio-button label="oldest">只删最早的记录</el-radio-button>
+              <el-radio-button label="all">全部清空（忽略保留数）</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+        </el-form>
+        <p v-if="pruneMode === 'oldest'" class="prune-estimate">
+          将删除 {{ Math.max(0, pagination.total - pruneKeepCount) }} 条日志。
+        </p>
+        <p v-else class="prune-estimate">将删除全部 {{ pagination.total }} 条日志。</p>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="pruneDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="pruneLoading" @click="prune">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
 
     <el-empty v-if="!loading && logs.length === 0" description="暂无流量日志" />
 
@@ -402,7 +430,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { listInstances } from '../api/damning.js'
-import { listLogs, getLogFriendly, deleteLog, clearLogs } from '../api/damning.js'
+import { listLogs, getLogFriendly, deleteLog, clearLogs, pruneLogs } from '../api/damning.js'
 import { parseThink, formatBytes, sanitizeHtml } from '../utils/parse.js'
 
 const logs = ref([])
@@ -414,6 +442,11 @@ const cardRefs = ref({})
 const loadedFriendlyIds = ref(new Set())
 const router = useRouter()
 let observer = null
+
+const pruneDialogVisible = ref(false)
+const pruneLoading = ref(false)
+const pruneKeepCount = ref(10000)
+const pruneMode = ref('oldest')
 
 const instances = ref([])
 const pagination = ref({
@@ -693,6 +726,28 @@ async function clear() {
     if (e !== 'cancel' && e !== 'close') {
       ElMessage.error('清空失败')
     }
+  }
+}
+
+function openPruneDialog() {
+  pruneKeepCount.value = Math.max(10000, Math.floor(pagination.value.total / 2))
+  pruneMode.value = 'oldest'
+  pruneDialogVisible.value = true
+}
+
+async function prune() {
+  pruneLoading.value = true
+  try {
+    const keep = pruneMode.value === 'all' ? 0 : pruneKeepCount.value
+    await pruneLogs(keep, pruneMode.value === 'all')
+    ElMessage.success('批量清理完成')
+    pruneDialogVisible.value = false
+    pagination.value.offset = 0
+    await load()
+  } catch (e) {
+    ElMessage.error('批量清理失败')
+  } finally {
+    pruneLoading.value = false
   }
 }
 

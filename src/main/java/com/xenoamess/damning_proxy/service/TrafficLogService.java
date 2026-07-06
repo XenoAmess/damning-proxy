@@ -43,6 +43,9 @@ public class TrafficLogService {
     @ConfigProperty(name = "damning-proxy.log.max-count", defaultValue = "100000")
     long maxLogCount;
 
+    @ConfigProperty(name = "damning-proxy.log.prune-batch-size", defaultValue = "1000")
+    int pruneBatchSize;
+
     private final AtomicLong recordCounter = new AtomicLong(0);
     private static final long PRUNE_INTERVAL = 100;
 
@@ -199,7 +202,7 @@ public class TrafficLogService {
         long toDelete = total - maxLogCount;
         Log.infof("Pruning %d old traffic logs (total=%d, max=%d)", toDelete, total, maxLogCount);
         try {
-            logRepository.deleteOldest((int) Math.min(toDelete, Integer.MAX_VALUE));
+            logRepository.deleteOldest((int) Math.min(toDelete, Integer.MAX_VALUE), pruneBatchSize);
         } catch (Exception e) {
             Log.error("Failed to prune old logs", e);
         }

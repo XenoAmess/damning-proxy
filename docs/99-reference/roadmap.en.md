@@ -39,8 +39,8 @@ This document lists the next executable optimization and feature backlog for dam
 | 10 | Streaming proxy tests | Streaming is the most failure-prone path and currently untested | Done |
 | 11 | Configurable circuit breaker | Different upstreams need different failure thresholds and recovery times | Done |
 | 12 | Upstream connectivity in health check | Distinguish proxy failure from upstream API failure | Done |
-| 13 | Bulk deletion for log pruning | Currently slow when logs approach 100k entries |
-| 14 | Friendlier SSE error on upstream streaming failure | Client may currently see an abrupt stream termination |
+| 13 | Bulk deletion for log pruning | Currently slow when logs approach 100k entries | Done |
+| 14 | Friendlier SSE error on upstream streaming failure | Client may currently see an abrupt stream termination | TODO |
 
 ---
 

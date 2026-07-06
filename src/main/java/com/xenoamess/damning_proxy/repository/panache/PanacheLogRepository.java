@@ -87,10 +87,31 @@ public class PanacheLogRepository implements LogRepository {
 
     @Override
     public void deleteOldest(int count) {
-        List<TrafficLog> oldest = TrafficLog.findAll(Sort.ascending("requestTime")).page(0, count).list();
-        for (TrafficLog log : oldest) {
-            log.delete();
+        deleteOldest(count, 1000);
+    }
+
+    @Override
+    public void deleteOldest(int count, int batchSize) {
+        int effectiveBatchSize = Math.max(1, batchSize);
+        int remaining = count;
+        while (remaining > 0) {
+            int limit = Math.min(effectiveBatchSize, remaining);
+            List<TrafficLog> oldest = TrafficLog.findAll(Sort.ascending("requestTime")).page(0, limit).list();
+            if (oldest.isEmpty()) {
+                break;
+            }
+            for (TrafficLog log : oldest) {
+                log.delete();
+            }
+            remaining -= oldest.size();
         }
+    }
+
+    @Override
+    public long deleteByFilters(Long instanceId, Long profileId, String status, String path,
+                                LocalDateTime startTime, LocalDateTime endTime) {
+        FilterQuery fq = buildFilterQuery(instanceId, profileId, status, path, startTime, endTime);
+        return TrafficLog.delete(fq.query, fq.params);
     }
 
     private record FilterQuery(String query, Parameters params) {
