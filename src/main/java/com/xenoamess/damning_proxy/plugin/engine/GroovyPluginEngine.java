@@ -87,6 +87,16 @@ public class GroovyPluginEngine implements PluginEngine {
         }
     }
 
+    public String validate(Plugin plugin) {
+        String script = resolveScript(plugin);
+        try {
+            shell.parse(script);
+            return null;
+        } catch (Exception e) {
+            return "Groovy compile error: " + e.getMessage();
+        }
+    }
+
     public void evictCache(Plugin plugin) {
         String script = resolveScript(plugin);
         scriptClassCache.remove(cacheKey(plugin, script));

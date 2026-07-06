@@ -125,6 +125,27 @@ public class JavaScriptPluginEngine implements PluginEngine {
         });
     }
 
+    public String validate(Plugin plugin) {
+        String script = resolveScript(plugin);
+        ScriptEngine engine = engineCache.get();
+        try {
+            PluginContext dummy = new PluginContext();
+            dummy.setRequestBody(new java.util.LinkedHashMap<String, Object>() {{
+                put("messages", new java.util.ArrayList<>());
+            }});
+            dummy.setResponseBody(new java.util.LinkedHashMap<String, Object>());
+            engine.put("context", dummy);
+            engine.eval("(function(){\n" + script + "\n})();");
+            return null;
+        } catch (ScriptException e) {
+            return "JavaScript compile error: " + e.getMessage();
+        } catch (RuntimeException e) {
+            return "JavaScript validation error: " + e.getMessage();
+        } finally {
+            engineCache.remove();
+        }
+    }
+
     public void evictCache(Plugin plugin) {
         String script = resolveScript(plugin);
         scriptCache.remove(cacheKey(plugin, script));

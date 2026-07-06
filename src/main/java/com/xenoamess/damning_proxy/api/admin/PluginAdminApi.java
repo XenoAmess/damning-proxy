@@ -63,6 +63,10 @@ public class PluginAdminApi {
         Validation.validateSlug(form.slug);
         Plugin plugin = toEntity(form);
         plugin.sample = false;
+        String validationError = validatePlugin(plugin);
+        if (validationError != null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(validationError).build();
+        }
         pluginRepository.save(plugin);
         if (plugin.mode == Plugin.Mode.ZIP_PACKAGE && form.packageFile != null) {
             try {
@@ -86,6 +90,10 @@ public class PluginAdminApi {
                 Plugin plugin = toEntity(form);
                 plugin.id = id;
                 plugin.sample = false;
+                String validationError = validatePlugin(plugin);
+                if (validationError != null) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity(validationError).build();
+                }
                 if (plugin.mode == Plugin.Mode.ZIP_PACKAGE && form.packageFile != null) {
                     packageStorage.deletePackage(existing);
                     try {
@@ -141,6 +149,19 @@ public class PluginAdminApi {
                 engine.evictCache(plugin);
             }
         }
+    }
+
+    private String validatePlugin(Plugin plugin) {
+        if (plugin.mode == Plugin.Mode.ZIP_PACKAGE) {
+            // ZIP packages are validated when their main script is read during execution.
+            return null;
+        }
+        for (PluginEngine engine : engines) {
+            if (engine.supports(plugin.language)) {
+                return engine.validate(plugin);
+            }
+        }
+        return "No engine for language: " + plugin.language;
     }
 
     @GET

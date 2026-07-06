@@ -335,7 +335,9 @@ async function save() {
     visible.value = false
     await load()
   } catch (e) {
-    ElMessage.error(e.response?.data || '保存失败')
+    const msg = e.response?.data
+    const detail = typeof msg === 'string' ? msg : (msg?.message || JSON.stringify(msg))
+    ElMessage.error(detail || '保存失败')
   } finally {
     saving.value = false
   }

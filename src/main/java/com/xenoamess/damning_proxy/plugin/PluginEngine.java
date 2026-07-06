@@ -11,4 +11,12 @@ public interface PluginEngine {
     default void evictCache(Plugin plugin) {
         // no-op by default
     }
+
+    /**
+     * Validates the plugin script without executing it. Returns null if valid,
+     * or a human-readable error message if compilation fails.
+     */
+    default String validate(Plugin plugin) {
+        return null;
+    }
 }
