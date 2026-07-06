@@ -87,6 +87,11 @@ public class GroovyPluginEngine implements PluginEngine {
         }
     }
 
+    public void evictCache(Plugin plugin) {
+        String script = resolveScript(plugin);
+        scriptClassCache.remove(cacheKey(plugin, script));
+    }
+
     private String resolveScript(Plugin plugin) {
         if (plugin.mode == Plugin.Mode.ZIP_PACKAGE) {
             try {

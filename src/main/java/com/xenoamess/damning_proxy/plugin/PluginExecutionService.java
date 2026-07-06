@@ -40,7 +40,7 @@ public class PluginExecutionService {
             if (engine == null) {
                 context.log("No engine for language: " + plugin.language);
                 context.getFriendlyLogCollector().add(
-                    plugin.name, phase1.name(), context.getRequestBody(), context.getRequestBody(),
+                    plugin.id, plugin.name, phase1.name(), context.getRequestBody(), context.getRequestBody(),
                     true, "No engine for language: " + plugin.language
                 );
                 continue;
@@ -61,13 +61,13 @@ public class PluginExecutionService {
                     : context.getResponseBody();
                 previousAfterBody = deepCopy(afterBody);
                 context.getFriendlyLogCollector().add(
-                    plugin.name, phase1.name(), beforeBody, afterBody, false, null
+                    plugin.id, plugin.name, phase1.name(), beforeBody, afterBody, false, null
                 );
             } catch (Exception e) {
                 previousAfterBody = null;
                 context.log("Plugin error [" + plugin.name + "]: " + e.getMessage());
                 context.getFriendlyLogCollector().add(
-                    plugin.name, phase1.name(), beforeBody, beforeBody, true,
+                    plugin.id, plugin.name, phase1.name(), beforeBody, beforeBody, true,
                     "Plugin error [" + plugin.name + "]: " + e.getMessage()
                 );
             }

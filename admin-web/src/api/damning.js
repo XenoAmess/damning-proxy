@@ -70,6 +70,14 @@ export function deletePlugin(id) {
   return api.delete(`/plugins/${id}`)
 }
 
+export function getPlugin(id) {
+  return api.get(`/plugins/${id}`)
+}
+
+export function dryRunPlugin(id, data) {
+  return api.post(`/plugins/${id}/dry-run`, data)
+}
+
 export function exportPlugins(ids) {
   return api.post('/plugins/export', { ids }, {
     responseType: 'blob',

@@ -10,6 +10,8 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import { oneDark } from '@codemirror/theme-one-dark'
 import { javascript } from '@codemirror/lang-javascript'
 import { json } from '@codemirror/lang-json'
+import { StreamLanguage } from '@codemirror/language'
+import { groovy } from '@codemirror/legacy-modes/mode/groovy'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -32,7 +34,7 @@ const languageSupport = computed(() => {
     case 'JAVASCRIPT':
       return javascript()
     case 'GROOVY':
-      return javascript({ typescript: false })
+      return StreamLanguage.define(groovy)
     case 'JSON':
       return json()
     default:

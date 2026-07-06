@@ -7,4 +7,8 @@ public interface PluginEngine {
     boolean supports(Plugin.Language language);
 
     void execute(Plugin plugin, PluginContext context);
+
+    default void evictCache(Plugin plugin) {
+        // no-op by default
+    }
 }

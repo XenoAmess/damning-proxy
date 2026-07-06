@@ -2,6 +2,7 @@ package com.xenoamess.damning_proxy.api.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xenoamess.damning_proxy.entity.Plugin;
+import com.xenoamess.damning_proxy.plugin.PluginEngine;
 import com.xenoamess.damning_proxy.plugin.storage.PluginPackageStorage;
 import com.xenoamess.damning_proxy.plugin.storage.ZipBuilder;
 import com.xenoamess.damning_proxy.repository.PluginRepository;
@@ -38,6 +39,9 @@ public class PluginAdminApi {
 
     @Inject
     ObjectMapper objectMapper;
+
+    @Inject
+    jakarta.enterprise.inject.Instance<PluginEngine> engines;
 
     @GET
     public List<Plugin> list() {
@@ -97,6 +101,7 @@ public class PluginAdminApi {
                     plugin.packagePath = existing.packagePath;
                 }
                 pluginRepository.save(plugin);
+                evictPluginCache(existing);
                 return Response.ok(plugin).build();
             })
             .orElse(Response.status(Response.Status.NOT_FOUND).build());
@@ -127,6 +132,14 @@ public class PluginAdminApi {
             return Response.ok(entries).build();
         } catch (IOException e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+        }
+    }
+
+    private void evictPluginCache(Plugin plugin) {
+        for (PluginEngine engine : engines) {
+            if (engine.supports(plugin.language)) {
+                engine.evictCache(plugin);
+            }
         }
     }
 

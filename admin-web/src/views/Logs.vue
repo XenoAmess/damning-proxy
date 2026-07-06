@@ -190,6 +190,7 @@
                 class="pipeline-step">
                 <div class="step-header">
                   <span class="step-name">{{ s.name }}</span>
+                  <el-button size="small" text type="primary" @click.stop="debugSnapshot(s, 'REQUEST')">调试此插件</el-button>
                   <el-tag size="small" :type="s.error ? 'danger' : 'success'">
                     {{ s.error ? '异常' : '成功' }}
                   </el-tag>
@@ -219,6 +220,7 @@
                 class="pipeline-step">
                 <div class="step-header">
                   <span class="step-name">{{ s.name }}</span>
+                  <el-button size="small" text type="primary" @click.stop="debugSnapshot(s, 'RESPONSE')">调试此插件</el-button>
                   <el-tag size="small" :type="s.error ? 'danger' : 'success'">
                     {{ s.error ? '异常' : '成功' }}
                   </el-tag>
@@ -359,6 +361,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { listLogs, getLogFriendly, deleteLog, clearLogs } from '../api/damning.js'
 import { parseThink, formatBytes, sanitizeHtml } from '../utils/parse.js'
@@ -370,12 +373,19 @@ const activeTab = ref('summary')
 const current = ref(null)
 const cardRefs = ref({})
 const loadedFriendlyIds = ref(new Set())
+const router = useRouter()
 let observer = null
 
 const statusType = computed(() => {
   if (!current.value || !current.value.responseStatus) return 'info'
   return current.value.responseStatus >= 400 ? 'danger' : 'success'
 })
+
+function debugSnapshot(snapshot, phase) {
+  // Find plugin id by name from already loaded friendly logs if possible,
+  // otherwise let user navigate manually.
+  router.push(`/plugins/${snapshot.pluginId || 0}/debug?phase=${phase}&logId=${current.value.id}`)
+}
 
 async function load() {
   loading.value = true

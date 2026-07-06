@@ -2,6 +2,7 @@ package com.xenoamess.damning_proxy.dto;
 
 public class PluginExecutionSnapshot {
 
+    public Long pluginId;
     public String name;
     public String phase;
     public Object input;
@@ -12,7 +13,8 @@ public class PluginExecutionSnapshot {
     public PluginExecutionSnapshot() {
     }
 
-    public PluginExecutionSnapshot(String name, String phase, Object input, Object output, boolean error, String log) {
+    public PluginExecutionSnapshot(Long pluginId, String name, String phase, Object input, Object output, boolean error, String log) {
+        this.pluginId = pluginId;
         this.name = name;
         this.phase = phase;
         this.input = input;
