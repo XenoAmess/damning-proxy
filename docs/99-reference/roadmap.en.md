@@ -28,7 +28,7 @@ This document lists the next executable optimization and feature backlog for dam
 | 6 | Chat page controls for temperature / top_p / max_tokens / system message | Currently only messages can be sent; parameters are missing | Done |
 | 7 | Resend / regenerate in chat | Common LLM UI feature currently missing | Done |
 | 8 | Move chat session history from localStorage to IndexedDB or optional persistence | localStorage is small and stores plaintext; IndexedDB is more robust locally | Done |
-| 9 | One-click copy for markdown code blocks | Easier to copy code from logs / chat | TODO |
+| 9 | One-click copy for markdown code blocks | Easier to copy code from logs / chat | Done |
 
 ---
 

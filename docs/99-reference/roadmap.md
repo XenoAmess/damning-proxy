@@ -28,7 +28,7 @@
 | 6 | Chat 页面支持 temperature/top_p/max_tokens/system 消息编辑 | 现在只能发 messages，参数调不了 | 已完成 |
 | 7 | 对话支持重新发送/重新生成 | 常见 LLM UI 功能，现在没有 | 已完成 |
 | 8 | 会话历史从 localStorage 改成 IndexedDB 或可选持久化 | localStorage 容量小、明文存，本地用 IndexedDB 更稳 | 已完成 |
-| 9 | markdown 代码块加一键复制 | 看日志/对话时复制代码方便 | 待做 |
+| 9 | markdown 代码块加一键复制 | 看日志/对话时复制代码方便 | 已完成 |
 
 ---
 

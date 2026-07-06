@@ -145,7 +145,11 @@
             <div class="message-body">
               <div v-if="Array.isArray(msg.content)">
                 <template v-for="(part, pidx) in msg.content" :key="pidx">
-                  <div v-if="part.type === 'text'" class="text-part markdown-body" v-html="renderMarkdown(parseThink(part.text).text)"></div>
+                  <MarkdownRenderer
+                    v-if="part.type === 'text'"
+                    :content="parseThink(part.text).text"
+                    class="text-part markdown-body"
+                  />
                   <div v-else-if="part.type === 'image_url'" class="image-part">
                     <img :src="part.image_url.url" alt="uploaded" />
                   </div>
@@ -154,7 +158,11 @@
                   </div>
                 </template>
               </div>
-              <div v-else class="text-part markdown-body" v-html="renderMarkdown(parseThink(msg.content).text)"></div>
+              <MarkdownRenderer
+                v-else
+                :content="parseThink(msg.content).text"
+                class="text-part markdown-body"
+              />
 
               <div v-if="msg.reasoning || parseThink(msg.content).reasoning" class="reasoning-block">
                 <div class="reasoning-toggle" @click="msg._showReasoning = !msg._showReasoning">
@@ -281,6 +289,7 @@ import { formatTimestamp } from '../utils/format.js'
 import { copyToClipboard } from '../utils/clipboard.js'
 import { parseThink, sanitizeHtml } from '../utils/parse.js'
 import { getAllSessions, saveAllSessions, deleteSession as deleteSessionFromDB, clearAllSessions } from '../utils/chatStorage.js'
+import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 
 const TYPEWRITER_DELAY = 16
 const TYPEWRITER_CHUNK = 2

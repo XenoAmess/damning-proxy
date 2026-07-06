@@ -7,6 +7,7 @@
 
 ## 2026-07-06
 
+- Chat 消息中的 Markdown 代码块新增悬停「复制」按钮。
 - 管理后台 Chat 会话历史从 localStorage 迁移到 IndexedDB，首次启动时自动导入旧数据。
 - 管理后台 Chat 页面新增参数面板：支持设置 temperature、top_p、max_tokens 与 system prompt。
 - 管理后台 Chat 消息新增「重发」与「重新生成」操作。

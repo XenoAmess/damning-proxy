@@ -7,6 +7,7 @@
 
 ## 2026-07-06
 
+- Markdown code blocks in Chat messages now have a hover "Copy" button.
 - Admin Chat session history moved from localStorage to IndexedDB; legacy data is automatically imported on first load.
 - Admin Chat page adds a parameter panel: configure temperature, top_p, max_tokens, and system prompt.
 - Admin Chat messages now support "Resend" and "Regenerate" actions.
