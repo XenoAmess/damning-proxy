@@ -1,6 +1,7 @@
 package com.xenoamess.damning_proxy.proxy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xenoamess.damning_proxy.entity.ProxyProfile;
 import io.quarkus.logging.Log;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
@@ -51,7 +52,8 @@ public class UpstreamHttpClient {
     }
 
     public UpstreamResponse send(String method, String baseUrl, String path,
-                                 MultiMap headers, Object body, int timeoutMs) {
+                                  MultiMap headers, Object body, int timeoutMs,
+                                  ProxyProfile profile) {
         if (!circuitBreaker.allowRequest(baseUrl)) {
             throw new WebApplicationException("Circuit breaker open for upstream: " + baseUrl,
                 Response.Status.SERVICE_UNAVAILABLE);
@@ -114,7 +116,7 @@ public class UpstreamHttpClient {
 
             return result;
         } catch (java.util.concurrent.TimeoutException e) {
-            circuitBreaker.recordFailure(baseUrl);
+            circuitBreaker.recordFailure(baseUrl, profile);
             Log.errorf("Upstream request timed out after %d ms (request=%d bytes, url=%s %s)",
                 effectiveTimeoutMs,
                 bodyJson != null ? bodyJson.length() : -1,
@@ -124,7 +126,7 @@ public class UpstreamHttpClient {
                 (bodyJson != null ? bodyJson.length() : 0) + " bytes)",
                 Response.Status.GATEWAY_TIMEOUT);
         } catch (Exception e) {
-            circuitBreaker.recordFailure(baseUrl);
+            circuitBreaker.recordFailure(baseUrl, profile);
             Log.errorf(e, "Upstream request failed: %s %s", method, uri);
             throw new WebApplicationException("Upstream request failed: " + e.getMessage(), Response.Status.BAD_GATEWAY);
         }

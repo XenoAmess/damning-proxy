@@ -7,6 +7,7 @@
 
 ## 2026-07-06
 
+- `ProxyProfile` now has configurable circuit breaker fields: failure threshold and open timeout, exposed in the admin UI.
 - Added streaming proxy test `ProxyApiTest.shouldProxyStreamingChatCompletions`.
 - Fixed streaming proxy logging: a normal `[DONE]` termination now records status 200 and the aggregated response body, instead of prematurely recording an empty body or 499.
 - Markdown code blocks in Chat messages now have a hover "Copy" button.

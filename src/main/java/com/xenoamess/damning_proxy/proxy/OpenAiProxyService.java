@@ -62,6 +62,9 @@ public class OpenAiProxyService {
     UpstreamHttpClient upstreamHttpClient;
 
     @Inject
+    CircuitBreaker circuitBreaker;
+
+    @Inject
     TrafficLogService trafficLogService;
 
     @Inject
@@ -85,7 +88,8 @@ public class OpenAiProxyService {
         return proxyRequest(instanceSlug, null, "GET", "/v1/models", incomingHeaders,
             (profile, context) -> upstreamHttpClient.send(
                 "GET", profile.baseUrl, "/models",
-                toMultiMap(context.getRequestHeaders()), null, profile.timeoutMs
+                toMultiMap(context.getRequestHeaders()), null, profile.timeoutMs,
+                profile
             ));
     }
 
@@ -93,7 +97,8 @@ public class OpenAiProxyService {
         return proxyRequest(instanceSlug, requestBody, "POST", "/v1/chat/completions", incomingHeaders,
             (profile, context) -> upstreamHttpClient.send(
                 "POST", profile.baseUrl, "/chat/completions",
-                toMultiMap(context.getRequestHeaders()), context.getRequestBody(), profile.timeoutMs
+                toMultiMap(context.getRequestHeaders()), context.getRequestBody(), profile.timeoutMs,
+                profile
             ));
     }
 
@@ -139,6 +144,7 @@ public class OpenAiProxyService {
 
             pluginExecutionService.executeResponsePlugins(plugins, context);
 
+            circuitBreaker.recordSuccess(ctx.profile.baseUrl);
             trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
                 context.getResponseHeaders(), context.getResponseBody(),
                 System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
@@ -192,10 +198,24 @@ public class OpenAiProxyService {
 
     private Multi<String> doStreamChatCompletions(ProxyContext ctx, PluginContext context,
                                            List<Plugin> plugins, TrafficLog trafficLog, long start) {
-        Future<HttpClientResponse> upstreamFuture = upstreamHttpClient.sendStream(
-            "POST", ctx.profile.baseUrl, "/chat/completions",
-            toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs
-        );
+        Future<HttpClientResponse> upstreamFuture;
+        try {
+            if (!circuitBreaker.allowRequest(ctx.profile.baseUrl)) {
+                throw new WebApplicationException("Circuit breaker open for upstream: " + ctx.profile.baseUrl,
+                    Response.Status.SERVICE_UNAVAILABLE);
+            }
+            upstreamFuture = upstreamHttpClient.sendStream(
+                "POST", ctx.profile.baseUrl, "/chat/completions",
+                toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs
+            );
+        } catch (Exception e) {
+            return Multi.createFrom().emitter(emitter -> {
+                String msg = e.getMessage();
+                Log.error("Streaming upstream failed", e);
+                emitter.emit("data: " + toJson(Map.of("error", msg)) + "\n\n");
+                emitter.complete();
+            });
+        }
 
         return Multi.createFrom().emitter(emitter -> {
             StringBuilder responseBuffer = new StringBuilder();
@@ -271,6 +291,11 @@ public class OpenAiProxyService {
                         if (line.startsWith("data: ")) {
                             String data = line.substring(6).trim();
                             if ("[DONE]".equals(data)) {
+                                Object parsedBody = buildStreamingResponseBody(accumulatedChoices);
+                                context.setResponseBody(parsedBody);
+                                pluginExecutionService.executeResponsePlugins(plugins, context);
+                                circuitBreaker.recordSuccess(ctx.profile.baseUrl);
+                                recordOnce.run();
                                 emitter.complete();
                                 return;
                             }
@@ -294,6 +319,7 @@ public class OpenAiProxyService {
                     Object parsedBody = buildStreamingResponseBody(accumulatedChoices);
                     context.setResponseBody(parsedBody);
                     pluginExecutionService.executeResponsePlugins(plugins, context);
+                    circuitBreaker.recordSuccess(ctx.profile.baseUrl);
                     recordOnce.run();
                     emitter.complete();
                 });
@@ -302,6 +328,7 @@ public class OpenAiProxyService {
                     heartbeatHolder[0].cancel(false);
                 }
                 Log.error("Streaming upstream failed", err);
+                circuitBreaker.recordFailure(ctx.profile.baseUrl, ctx.profile);
                 recordError.accept(err.getMessage());
                 emitter.fail(err);
             });

@@ -1,5 +1,6 @@
 package com.xenoamess.damning_proxy.proxy;
 
+import com.xenoamess.damning_proxy.entity.ProxyProfile;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -9,8 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @ApplicationScoped
 public class CircuitBreaker {
 
-    private static final int FAILURE_THRESHOLD = 3;
-    private static final long OPEN_TIMEOUT_SECONDS = 30;
+    private static final int DEFAULT_FAILURE_THRESHOLD = 3;
+    private static final long DEFAULT_OPEN_TIMEOUT_SECONDS = 30;
 
     private enum State {
         CLOSED,
@@ -52,23 +53,29 @@ public class CircuitBreaker {
             }
         }
 
-        synchronized void recordFailure() {
+        synchronized void recordFailure(ProxyProfile profile) {
+            int threshold = profile != null && profile.circuitBreakerFailureThreshold != null
+                ? profile.circuitBreakerFailureThreshold
+                : DEFAULT_FAILURE_THRESHOLD;
+            long openSeconds = profile != null && profile.circuitBreakerOpenTimeoutSeconds != null
+                ? profile.circuitBreakerOpenTimeoutSeconds
+                : DEFAULT_OPEN_TIMEOUT_SECONDS;
             failureCount++;
             switch (state) {
                 case CLOSED:
-                    if (failureCount >= FAILURE_THRESHOLD) {
+                    if (failureCount >= threshold) {
                         state = State.OPEN;
-                        openUntil = Instant.now().plusSeconds(OPEN_TIMEOUT_SECONDS);
-                        Log.warnf("Circuit breaker: CLOSED -> OPEN after %d consecutive failures", failureCount);
+                        openUntil = Instant.now().plusSeconds(openSeconds);
+                        Log.warnf("Circuit breaker: CLOSED -> OPEN after %d consecutive failures (timeout=%ds)", failureCount, openSeconds);
                     }
                     break;
                 case HALF_OPEN:
                     state = State.OPEN;
-                    openUntil = Instant.now().plusSeconds(OPEN_TIMEOUT_SECONDS);
-                    Log.warnf("Circuit breaker: HALF_OPEN -> OPEN (probe failed)");
+                    openUntil = Instant.now().plusSeconds(openSeconds);
+                    Log.warnf("Circuit breaker: HALF_OPEN -> OPEN (probe failed, timeout=%ds)", openSeconds);
                     break;
                 case OPEN:
-                    openUntil = Instant.now().plusSeconds(OPEN_TIMEOUT_SECONDS);
+                    openUntil = Instant.now().plusSeconds(openSeconds);
                     break;
             }
         }
@@ -88,8 +95,12 @@ public class CircuitBreaker {
         }
     }
 
-    public void recordFailure(String baseUrl) {
+    public void recordFailure(String baseUrl, ProxyProfile profile) {
         CircuitState circuit = circuits.computeIfAbsent(baseUrl, k -> new CircuitState());
-        circuit.recordFailure();
+        circuit.recordFailure(profile);
+    }
+
+    public void recordFailure(String baseUrl) {
+        recordFailure(baseUrl, null);
     }
 }

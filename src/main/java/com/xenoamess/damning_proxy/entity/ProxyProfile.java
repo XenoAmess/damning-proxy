@@ -39,6 +39,12 @@ public class ProxyProfile extends PanacheEntityBase {
     @Column(name = "timeout_ms")
     public Integer timeoutMs = 600000;
 
+    @Column(name = "circuit_breaker_failure_threshold")
+    public Integer circuitBreakerFailureThreshold = 3;
+
+    @Column(name = "circuit_breaker_open_timeout_seconds")
+    public Integer circuitBreakerOpenTimeoutSeconds = 30;
+
     @Column(nullable = false)
     public boolean enabled = true;
 

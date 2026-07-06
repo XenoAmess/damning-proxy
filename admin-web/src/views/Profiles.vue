@@ -66,6 +66,12 @@
         <el-form-item label="超时(ms)">
           <el-input-number v-model="form.timeoutMs" :min="1000" :step="1000" />
         </el-form-item>
+        <el-form-item label="熔断失败阈值">
+          <el-input-number v-model="form.circuitBreakerFailureThreshold" :min="1" :step="1" />
+        </el-form-item>
+        <el-form-item label="熔断恢复时间(s)">
+          <el-input-number v-model="form.circuitBreakerOpenTimeoutSeconds" :min="1" :step="1" />
+        </el-form-item>
         <el-form-item label="启用">
           <el-switch v-model="form.enabled" />
         </el-form-item>
@@ -101,6 +107,8 @@ const form = ref({
   customBody: '',
   defaultModel: '',
   timeoutMs: 600000,
+  circuitBreakerFailureThreshold: 3,
+  circuitBreakerOpenTimeoutSeconds: 30,
   enabled: true,
 })
 
@@ -140,6 +148,8 @@ function openDialog(row) {
     customBody: '',
     defaultModel: '',
     timeoutMs: 600000,
+    circuitBreakerFailureThreshold: 3,
+    circuitBreakerOpenTimeoutSeconds: 30,
     enabled: true,
   }
   visible.value = true
