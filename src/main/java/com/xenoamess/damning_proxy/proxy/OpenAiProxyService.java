@@ -31,7 +31,7 @@ import jakarta.ws.rs.core.Response;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -402,12 +402,12 @@ public class OpenAiProxyService {
                 JsonNode delta = choice.get("delta");
                 if (delta == null) continue;
                 while (accumulatedChoices.size() <= i) {
-                    accumulatedChoices.add(new HashMap<>());
+                    accumulatedChoices.add(new LinkedHashMap<>());
                 }
                 @SuppressWarnings("unchecked")
                 Map<String, Object> accChoice = accumulatedChoices.get(i);
                 @SuppressWarnings("unchecked")
-                Map<String, Object> accDelta = (Map<String, Object>) accChoice.computeIfAbsent("delta", k -> new HashMap<>());
+                Map<String, Object> accDelta = (Map<String, Object>) accChoice.computeIfAbsent("delta", k -> new LinkedHashMap<>());
                 if (!accChoice.containsKey("index")) {
                     accChoice.put("index", i);
                 }
@@ -434,14 +434,14 @@ public class OpenAiProxyService {
                 for (JsonNode tc : value) {
                     int tcIndex = tc.has("index") ? tc.get("index").asInt() : 0;
                     while (accToolCalls.size() <= tcIndex) {
-                        accToolCalls.add(new HashMap<>());
+                        accToolCalls.add(new LinkedHashMap<>());
                     }
                     Map<String, Object> accTc = accToolCalls.get(tcIndex);
                     if (tc.has("id")) accTc.putIfAbsent("id", tc.get("id").asText());
                     if (tc.has("type")) accTc.put("type", tc.get("type").asText());
                     if (!accTc.containsKey("index")) accTc.put("index", tcIndex);
                     if (tc.has("function")) {
-                        Map<String, Object> accFn = (Map<String, Object>) accTc.computeIfAbsent("function", k -> new HashMap<>());
+                        Map<String, Object> accFn = (Map<String, Object>) accTc.computeIfAbsent("function", k -> new LinkedHashMap<>());
                         JsonNode fn = tc.get("function");
                         if (fn.has("name")) accFn.putIfAbsent("name", fn.get("name").asText());
                         if (fn.has("arguments")) {
@@ -580,7 +580,7 @@ public class OpenAiProxyService {
     }
 
     private java.util.Map<String, String> toMap(MultiMap headers) {
-        java.util.Map<String, String> result = new HashMap<>();
+        java.util.Map<String, String> result = new LinkedHashMap<>();
         if (headers != null) {
             headers.forEach(entry -> result.put(entry.getKey(), entry.getValue()));
         }
@@ -610,7 +610,7 @@ public class OpenAiProxyService {
     }
 
     private String sseError(String message, Integer statusCode) {
-        Map<String, Object> error = new HashMap<>();
+        Map<String, Object> error = new LinkedHashMap<>();
         error.put("message", message);
         if (statusCode != null) {
             error.put("code", statusCode);

@@ -14,7 +14,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -158,7 +158,7 @@ public class TrafficLogService {
             return null;
         }
         try {
-            Map<String, String> safe = new HashMap<>(headers);
+            Map<String, String> safe = new LinkedHashMap<>(headers);
             safe.replaceAll((k, v) -> "Authorization".equalsIgnoreCase(k) ? maskAuth(v) : v);
             String json = objectMapper.writeValueAsString(safe);
             return truncate(json, maxHeadersLength);

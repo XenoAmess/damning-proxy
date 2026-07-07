@@ -7,6 +7,7 @@
 
 ## 2026-07-07
 
+- Technical-debt cleanup: replaced remaining `HashMap` usage in the core proxy, health check, instance export, and log serialization modules with `LinkedHashMap`/`ConcurrentHashMap` for deterministic ordering and consistency with the project's thread-safety practices; verified that `@Transactional` and `ExecutorService` lifecycles are already properly managed.
 - Split admin Chat / Logs pages: `Chat.vue` and `Logs.vue` are now decomposed into multiple reusable child components, reducing page complexity and maintenance burden.
 - Added component directories `admin-web/src/components/chat/` and `admin-web/src/components/logs/`.
 - Refreshed outdated project documentation: architecture, proxy flow, API docs, logging, and troubleshooting docs are updated and kept in sync across Chinese and English versions.

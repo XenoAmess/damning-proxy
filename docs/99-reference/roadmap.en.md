@@ -61,7 +61,7 @@ This document lists the next executable optimization and feature backlog for dam
 |---|------|------|
 | 19 | Update outdated docs | Fix streaming 400 description, `tool_calls` status, changelog, etc. | Done |
 | 20 | Split Chat.vue / Logs.vue | Both are near 1000 lines; increasingly hard to maintain | Done |
-| 21 | Pay off checklist leftovers: HashMap cleanup, @Transactional, ExecutorService | Technical debt from improvement-checklist |
+| 21 | Pay off checklist leftovers: HashMap cleanup, @Transactional, ExecutorService | Technical debt from improvement-checklist | Done |
 
 ---
 

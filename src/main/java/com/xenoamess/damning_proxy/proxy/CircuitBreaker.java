@@ -7,6 +7,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.LinkedHashMap;
 
 @ApplicationScoped
 public class CircuitBreaker {
@@ -106,9 +107,9 @@ public class CircuitBreaker {
     }
 
     public Map<String, Map<String, Object>> getSnapshot() {
-        Map<String, Map<String, Object>> snapshot = new java.util.HashMap<>();
+        Map<String, Map<String, Object>> snapshot = new LinkedHashMap<>();
         circuits.forEach((baseUrl, state) -> {
-            Map<String, Object> info = new java.util.HashMap<>();
+            Map<String, Object> info = new LinkedHashMap<>();
             info.put("state", state.state.toString().toLowerCase());
             info.put("failureCount", state.failureCount);
             info.put("openUntil", state.openUntil != null ? state.openUntil.toString() : null);

@@ -7,6 +7,7 @@
 
 ## 2026-07-07
 
+- 技术债清理：将核心代理、健康检查、实例导出、日志序列化等模块中剩余的 `HashMap` 替换为 `LinkedHashMap`/`ConcurrentHashMap`，保证输出顺序确定并与项目线程安全实践一致；`@Transactional` 与 `ExecutorService` 生命周期已确认规范，无需额外调整。
 - 拆分管理后台 Chat / Logs 页面：将 `Chat.vue`、`Logs.vue` 拆分为多个可复用子组件，降低页面复杂度与维护成本。
 - 新增组件目录 `admin-web/src/components/chat/` 与 `admin-web/src/components/logs/`。
 - 刷新过期的项目文档：更新架构、代理流程、API 文档、日志与排障文档（中文与英文版本同步）。

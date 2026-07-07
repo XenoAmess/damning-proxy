@@ -10,7 +10,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Path("/v1/health")
@@ -32,7 +32,7 @@ public class HealthResource {
         } catch (Exception e) {
             Log.error("Health check: database connectivity failed", e);
         }
-        Map<String, Object> result = new HashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", dbOk ? "ok" : "degraded");
         result.put("database", dbOk ? "ok" : "error");
         result.put("circuitBreakers", circuitBreaker.getSnapshot());

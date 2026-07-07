@@ -11,7 +11,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -108,8 +108,8 @@ public class InstanceAdminApi {
 
         Set<Long> profileIds = instances.stream().map(i -> i.profileId).collect(Collectors.toSet());
         Set<Long> groupIds = instances.stream().map(i -> i.pluginGroupId).collect(Collectors.toSet());
-        Map<Long, String> profileSlugMap = new HashMap<>();
-        Map<Long, String> groupSlugMap = new HashMap<>();
+        Map<Long, String> profileSlugMap = new LinkedHashMap<>();
+        Map<Long, String> groupSlugMap = new LinkedHashMap<>();
         for (Long id : profileIds) {
             profileRepository.findById(id).ifPresent(p -> profileSlugMap.put(id, p.slug));
         }

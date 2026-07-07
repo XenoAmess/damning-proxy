@@ -61,7 +61,7 @@
 |---|------|------|
 | 19 | 更新过期文档 | streaming 400 描述、`tool_calls` 状态、changelog 等 | 已完成 |
 | 20 | 拆分 Chat.vue / Logs.vue | 两个文件都近千行，后续加功能越来越难维护 | 已完成 |
-| 21 | 把 HashMap 残留、@Transactional、ExecutorService 等 checklist 后期项收尾 | 技术债 |
+| 21 | 把 HashMap 残留、@Transactional、ExecutorService 等 checklist 后期项收尾 | 技术债 | 已完成 |
 
 ---
 
