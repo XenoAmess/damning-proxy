@@ -16,11 +16,11 @@
 
 ## P0 — 立即修复（运行时 bug / 数据正确性问题）
 
-| # | 类别 | 标题 | 问题与落地方式 |
-|---|------|------|----------------|
-| P0-1 | 核心代理 | 非流式上游错误返回 HTTP 500 | `OpenAiProxyService.proxyRequest()` 捕获上游 `WebApplicationException`（502/504）后，又包成 `RuntimeException` 抛出，被 `GlobalExceptionMapper` 转成 500。应直接透传原始 `WebApplicationException` 或重新构造对应状态码的异常。 |
-| P0-2 | 核心代理 | Profile 熔断字段保存失效 | 前端已支持填写 `circuitBreakerFailureThreshold` 和 `circuitBreakerOpenTimeoutSeconds`，但后端 `ProfileForm` 记录与 `ProfileAdminApi.toEntity()` 未包含这两个字段，导致值被静默丢弃。需要补全 DTO、转换逻辑、导出字段。 |
-| P0-3 | 测试 | 非流式上游 502/504 回归测试 | `ProxyApiTest` 已覆盖流式错误，但缺少非流式上游返回 502/504 的场景。用 WireMock 构造上游故障，断言代理返回正确状态码并记录日志。 |
+| # | 状态 | 类别 | 标题 | 问题与落地方式 |
+|---|------|------|------|----------------|
+| P0-1 | ✓ 2026-07-07 | 核心代理 | 非流式上游错误返回 HTTP 500 | `OpenAiProxyService.proxyRequest()` 捕获上游 `WebApplicationException`（502/504）后，又包成 `RuntimeException` 抛出，被 `GlobalExceptionMapper` 转成 500。已改为抛出 `WebApplicationException` 并透传状态码。 |
+| P0-2 | ✓ 2026-07-07 | 核心代理 | Profile 熔断字段保存失效 | 前端已支持填写 `circuitBreakerFailureThreshold` 和 `circuitBreakerOpenTimeoutSeconds`，但后端 `ProfileForm` 与 `PanacheProfileRepository.save()` 的字段复制未包含它们。已在 DTO、Export/Import 及 Repository 字段复制中补全。 |
+| P0-3 | ✓ 2026-07-07 | 测试 | 非流式上游 502/504 回归测试 | `ProxyApiTest` 已新增 `shouldReturn502WhenUpstreamConnectionRefused` 和 `shouldReturn504WhenUpstreamTimesOut`；`AdminApiTest` 新增 `shouldPersistCircuitBreakerFieldsOnProfileUpdate`。 |
 
 ---
 

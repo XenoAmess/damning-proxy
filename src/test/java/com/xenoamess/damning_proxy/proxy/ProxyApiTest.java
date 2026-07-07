@@ -233,6 +233,49 @@ class ProxyApiTest {
         assertTrue(log.streaming);
     }
 
+    @Test
+    void shouldReturn502WhenUpstreamConnectionRefused() {
+        createInstance("openai-refused", "http://localhost:18090/v1", "sk-test");
+
+        Map<String, Object> body = Map.of(
+            "model", "gpt-4",
+            "messages", java.util.List.of(Map.of("role", "user", "content", "Hello")),
+            "stream", false
+        );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(body)
+            .when().post("/v1/proxy/openai-refused/chat/completions")
+            .then()
+            .statusCode(502);
+    }
+
+    @Test
+    void shouldReturn504WhenUpstreamTimesOut() {
+        wireMockServer.stubFor(post(urlEqualTo("/v1/chat/completions"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withFixedDelay(5_000)
+                .withHeader("Content-Type", "application/json")
+                .withBody("{\"ok\":true}")));
+
+        createInstanceWithTimeout("openai-timeout", "http://localhost:18089/v1", "sk-test", 100);
+
+        Map<String, Object> body = Map.of(
+            "model", "gpt-4",
+            "messages", java.util.List.of(Map.of("role", "user", "content", "Hello")),
+            "stream", false
+        );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(body)
+            .when().post("/v1/proxy/openai-timeout/chat/completions")
+            .then()
+            .statusCode(504);
+    }
+
     private TrafficLog waitForLogByInstance(Long instanceId) throws InterruptedException {
         for (int i = 0; i < 100; i++) {
             entityManager.clear();
@@ -361,6 +404,15 @@ class ProxyApiTest {
     ProxyInstance createInstance(String slug, String baseUrl, String token) {
         ProxyProfile profile = new ProxyProfile(slug, slug, baseUrl);
         profile.bearerToken = token;
+        profileRepository.save(profile);
+        return createInstance(slug, profile.id, saveGroup(new PluginGroup()).id, true);
+    }
+
+    @Transactional
+    ProxyInstance createInstanceWithTimeout(String slug, String baseUrl, String token, int timeoutMs) {
+        ProxyProfile profile = new ProxyProfile(slug, slug, baseUrl);
+        profile.bearerToken = token;
+        profile.timeoutMs = timeoutMs;
         profileRepository.save(profile);
         return createInstance(slug, profile.id, saveGroup(new PluginGroup()).id, true);
     }

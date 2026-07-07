@@ -94,6 +94,8 @@ public class ProfileAdminApi {
                 p.customBody,
                 p.defaultModel,
                 p.timeoutMs,
+                p.circuitBreakerFailureThreshold,
+                p.circuitBreakerOpenTimeoutSeconds,
                 p.enabled))
             .collect(Collectors.toList());
         return Response.ok(exportProfiles).build();
@@ -125,6 +127,8 @@ public class ProfileAdminApi {
             profile.customBody = ep.customBody;
             profile.defaultModel = ep.defaultModel;
             profile.timeoutMs = ep.timeoutMs;
+            profile.circuitBreakerFailureThreshold = ep.circuitBreakerFailureThreshold != null ? ep.circuitBreakerFailureThreshold : profile.circuitBreakerFailureThreshold;
+            profile.circuitBreakerOpenTimeoutSeconds = ep.circuitBreakerOpenTimeoutSeconds != null ? ep.circuitBreakerOpenTimeoutSeconds : profile.circuitBreakerOpenTimeoutSeconds;
             profile.enabled = ep.enabled;
             profileRepository.save(profile);
             imported++;
@@ -141,21 +145,25 @@ public class ProfileAdminApi {
         profile.customHeaders = form.customHeaders;
         profile.customBody = form.customBody;
         profile.defaultModel = form.defaultModel;
-        profile.timeoutMs = form.timeoutMs;
+        profile.timeoutMs = form.timeoutMs != null ? form.timeoutMs : profile.timeoutMs;
+        profile.circuitBreakerFailureThreshold = form.circuitBreakerFailureThreshold != null ? form.circuitBreakerFailureThreshold : profile.circuitBreakerFailureThreshold;
+        profile.circuitBreakerOpenTimeoutSeconds = form.circuitBreakerOpenTimeoutSeconds != null ? form.circuitBreakerOpenTimeoutSeconds : profile.circuitBreakerOpenTimeoutSeconds;
         profile.enabled = form.enabled;
         return profile;
     }
 
     public record ProfileForm(String name, String slug, String baseUrl, String bearerToken,
                                String customHeaders, String customBody, String defaultModel,
-                               Integer timeoutMs, boolean enabled) {
+                               Integer timeoutMs, Integer circuitBreakerFailureThreshold,
+                               Integer circuitBreakerOpenTimeoutSeconds, boolean enabled) {
     }
 
     public record ExportRequest(List<Long> ids) {
     }
 
     public record ExportProfile(String name, String slug, String baseUrl, String bearerToken,
-                                String customHeaders, String customBody, String defaultModel, Integer timeoutMs, boolean enabled) {
+                                 String customHeaders, String customBody, String defaultModel, Integer timeoutMs,
+                                 Integer circuitBreakerFailureThreshold, Integer circuitBreakerOpenTimeoutSeconds, boolean enabled) {
     }
 
     public record ImportResult(int imported, int skipped) {

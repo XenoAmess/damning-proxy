@@ -16,11 +16,11 @@ This plan is derived from a review of the current codebase, documentation, recen
 
 ## P0 — Must Fix Immediately (Runtime bugs / data correctness)
 
-| # | Category | Title | Problem and Approach |
-|---|----------|-------|----------------------|
-| P0-1 | Core proxy | Non-streaming upstream errors return HTTP 500 | `OpenAiProxyService.proxyRequest()` catches the upstream `WebApplicationException` (502/504) and wraps it in a `RuntimeException`, which `GlobalExceptionMapper` converts to 500. Re-throw the original `WebApplicationException` or construct a new one with the upstream status. |
-| P0-2 | Core proxy | Profile circuit-breaker settings are dropped | The UI already supports `circuitBreakerFailureThreshold` and `circuitBreakerOpenTimeoutSeconds`, but the backend `ProfileForm` record and `ProfileAdminApi.toEntity()` do not include them, so the values are silently discarded. Add the fields to the DTO, conversion logic, and export. |
-| P0-3 | Testing | Regression test for non-streaming upstream 502/504 | `ProxyApiTest` covers streaming errors but not the non-streaming 502/504 path. Use WireMock to simulate upstream failures and assert the proxy returns the correct status and logs the error. |
+| # | Status | Category | Title | Problem and Approach |
+|---|--------|----------|-------|----------------------|
+| P0-1 | ✓ 2026-07-07 | Core proxy | Non-streaming upstream errors return HTTP 500 | `OpenAiProxyService.proxyRequest()` caught the upstream `WebApplicationException` (502/504) and wrapped it in a `RuntimeException`, which `GlobalExceptionMapper` converted to 500. Fixed to throw `WebApplicationException` with the original status. |
+| P0-2 | ✓ 2026-07-07 | Core proxy | Profile circuit-breaker settings are dropped | The UI already supported `circuitBreakerFailureThreshold` and `circuitBreakerOpenTimeoutSeconds`, but `ProfileForm` and `PanacheProfileRepository.save()` did not include them. Added the fields to the DTO, export/import, and repository field copy. |
+| P0-3 | ✓ 2026-07-07 | Testing | Regression test for non-streaming upstream 502/504 | Added `shouldReturn502WhenUpstreamConnectionRefused` and `shouldReturn504WhenUpstreamTimesOut` to `ProxyApiTest`; added `shouldPersistCircuitBreakerFieldsOnProfileUpdate` to `AdminApiTest`. |
 
 ---
 

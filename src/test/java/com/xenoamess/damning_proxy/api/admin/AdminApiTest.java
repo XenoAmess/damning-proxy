@@ -112,6 +112,42 @@ class AdminApiTest {
     }
 
     @Test
+    void shouldPersistCircuitBreakerFieldsOnProfileUpdate() {
+        ProxyProfile profile = new ProxyProfile("Cb", "cb", "http://localhost:1234");
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(profile)
+            .when().post("/api/profiles")
+            .then()
+            .statusCode(201);
+
+        Long id = profileRepository.findBySlug("cb").map(p -> p.id).orElseThrow();
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "name", "Cb",
+                "slug", "cb",
+                "baseUrl", "http://localhost:1234",
+                "timeoutMs", 600000,
+                "circuitBreakerFailureThreshold", 5,
+                "circuitBreakerOpenTimeoutSeconds", 60,
+                "enabled", true
+            ))
+            .when().put("/api/profiles/" + id)
+            .then()
+            .statusCode(200)
+            .body("circuitBreakerFailureThreshold", equalTo(5))
+            .body("circuitBreakerOpenTimeoutSeconds", equalTo(60));
+
+        entityManager.clear();
+        ProxyProfile updated = profileRepository.findById(id).orElseThrow();
+        assertEquals(Integer.valueOf(5), updated.circuitBreakerFailureThreshold);
+        assertEquals(Integer.valueOf(60), updated.circuitBreakerOpenTimeoutSeconds);
+    }
+
+    @Test
     void shouldCrudPlugins() {
         Plugin plugin = new Plugin();
         plugin.name = "TestPlugin";

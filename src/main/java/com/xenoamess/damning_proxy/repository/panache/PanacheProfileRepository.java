@@ -26,6 +26,8 @@ public class PanacheProfileRepository implements ProfileRepository {
                 to.customBody = from.customBody;
                 to.defaultModel = from.defaultModel;
                 to.timeoutMs = from.timeoutMs;
+                to.circuitBreakerFailureThreshold = from.circuitBreakerFailureThreshold;
+                to.circuitBreakerOpenTimeoutSeconds = from.circuitBreakerOpenTimeoutSeconds;
                 to.enabled = from.enabled;
             });
     }

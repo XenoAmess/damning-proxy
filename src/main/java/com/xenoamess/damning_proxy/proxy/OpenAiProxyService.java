@@ -177,7 +177,7 @@ public class OpenAiProxyService {
                 Map.of(), "Upstream request failed: " + e.getMessage(),
                 System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), e.getMessage());
             responseRecorded = true;
-            throw new RuntimeException(e);
+            throw new WebApplicationException(e.getMessage(), e, Response.status(status).build());
         } finally {
             if (!responseRecorded) {
                 trafficLogService.recordResponse(trafficLog, 504,
