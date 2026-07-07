@@ -54,7 +54,7 @@
 | P2-2 | 核心代理 | 流式响应按 chunk 跑插件 | 当前响应插件仅在流完全结束后执行。按 chunk 修改可实现实时内容过滤。 |
 | P2-3 | 插件系统 | Groovy/JS 插件沙箱 / 白名单 | 脚本拥有完整 JVM 访问权限，引入 ClassShutter 或安全策略限制文件/网络访问。 |
 | P2-4 | 插件系统 | 插件脚本版本历史 | 保存脚本快照，支持查看与回滚。 |
-| P2-5 | 管理后台 | Dashboard 图表页 | 基于 Micrometer 指标展示请求、错误、token 趋势。 |
+| P2-5 | ✓ 2026-07-07 | 管理后台 | Dashboard 图表页 | 基于后端聚合的日志指标展示请求、错误、token 趋势。已新增 `GET /api/metrics/{summary,time-series,top-instances,status-distribution}`，以及 admin-web `Dashboard.vue`（使用 ECharts）。 |
 | P2-6 | ✓ 2026-07-07 | 管理后台 | 日志过滤导出 CSV/JSON | 当前日志页仅支持清理。已增加 `GET /api/logs/export?format=json|csv`，支持所有过滤器参数，最多导出 10000 条；CSV 含表头，数据正确转义。 |
 | P2-7 | ✓ 2026-07-07 | 运维 | H2 热备份/恢复接口 | 提供 admin API 触发 `BACKUP` 和恢复。已新增 `POST /api/admin/database/backup`（H2 热备份到 `~/.damning-proxy/backups/`）和 `POST /api/admin/database/restore`（验证并暂存恢复文件，因 H2 文件锁需重启后生效）。 |
 | P2-8 | ✓ 2026-07-07 | 运维 | 限流响应头 | 返回 `RateLimit-Remaining`、`RateLimit-Reset` 等标准头。已添加 `RateLimitInfo` 记录和 `getRateLimitInfo()` 方法，所有代理端点响应均携带 `RateLimit-Limit`、`RateLimit-Remaining`、`RateLimit-Reset` 头。 |

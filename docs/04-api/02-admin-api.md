@@ -401,6 +401,23 @@ curl -X POST "http://localhost:12360/api/admin/database/restore?path=/home/xxx/.
 
 ---
 
+## 指标 /api/metrics
+
+`src/main/java/com/xenoamess/damning_proxy/api/admin/MetricsAdminApi.java:16`
+
+| Method | Path | 说明 |
+|---|---|---|
+| `GET` | `/api/metrics/summary?startTime=&endTime=` | 汇总指标（总请求、错误、平均延迟、token） |
+| `GET` | `/api/metrics/time-series?startTime=&endTime=&bucketMinutes=` | 按时间桶聚合的请求、错误、延迟、token |
+| `GET` | `/api/metrics/top-instances?startTime=&endTime=&limit=` | 请求量最高的实例 |
+| `GET` | `/api/metrics/status-distribution?startTime=&endTime=` | 成功/错误分布 |
+
+- 时间参数格式：`YYYY-MM-DDTHH:mm:ss`。
+- 省略时间参数时，默认查询最近 24 小时。
+- `bucketMinutes` 默认值 60，按小时聚合；跨天时按天聚合。
+
+---
+
 ## 状态码
 
 | 状态码 | 说明 |

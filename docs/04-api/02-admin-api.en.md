@@ -401,6 +401,23 @@ Response:
 
 ---
 
+## Metrics /api/metrics
+
+`src/main/java/com/xenoamess/damning_proxy/api/admin/MetricsAdminApi.java:16`
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/metrics/summary?startTime=&endTime=` | Summary metrics (total requests, errors, avg latency, tokens) |
+| `GET` | `/api/metrics/time-series?startTime=&endTime=&bucketMinutes=` | Requests/errors/latency/tokens aggregated by time bucket |
+| `GET` | `/api/metrics/top-instances?startTime=&endTime=&limit=` | Instances with the highest request counts |
+| `GET` | `/api/metrics/status-distribution?startTime=&endTime=` | Success/error distribution |
+
+- Time parameters format: `YYYY-MM-DDTHH:mm:ss`.
+- Defaults to the last 24 hours when omitted.
+- `bucketMinutes` defaults to 60 (hourly buckets); switches to daily buckets when spanning multiple days.
+
+---
+
 ## Status Codes
 
 | Status Code | Description |

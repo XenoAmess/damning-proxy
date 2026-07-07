@@ -174,6 +174,35 @@ export function pruneLogs(keepCount, deleteAll = false) {
   return api.post('/logs/prune', { keepCount, deleteAll })
 }
 
+export function exportLogs(params) {
+  const clean = {}
+  for (const [key, value] of Object.entries(params || {})) {
+    if (value !== undefined && value !== null && value !== '') {
+      clean[key] = value
+    }
+  }
+  return api.get('/logs/export', {
+    params: clean,
+    responseType: 'blob',
+  })
+}
+
+export function getMetricsSummary(params) {
+  return api.get('/metrics/summary', { params })
+}
+
+export function getMetricsTimeSeries(params) {
+  return api.get('/metrics/time-series', { params })
+}
+
+export function getMetricsTopInstances(params) {
+  return api.get('/metrics/top-instances', { params })
+}
+
+export function getMetricsStatusDistribution(params) {
+  return api.get('/metrics/status-distribution', { params })
+}
+
 export function getRateLimitSettings() {
   return api.get('/settings/rate-limit')
 }

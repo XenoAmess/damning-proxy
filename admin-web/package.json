@@ -26,11 +26,13 @@
     "axios": "^1.18.1",
     "codemirror": "^6.0.2",
     "dompurify": "^3.4.11",
+    "echarts": "^6.1.0",
     "element-plus": "^2.14.2",
     "html2canvas": "^1.4.1",
     "jszip": "^3.10.1",
     "marked": "^18.0.5",
     "vue": "^3.5.39",
+    "vue-echarts": "^8.0.1",
     "vue-router": "^5.1.0"
   },
   "devDependencies": {

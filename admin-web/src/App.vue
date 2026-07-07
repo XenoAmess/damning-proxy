@@ -3,6 +3,10 @@
     <el-aside width="200px" aria-label="导航菜单" role="navigation">
       <div class="logo" role="banner">damning-proxy</div>
       <el-menu :default-active="$route.path" router role="menubar">
+        <el-menu-item index="/dashboard" role="menuitem">
+          <el-icon><DataLine /></el-icon>
+          <span>Dashboard</span>
+        </el-menu-item>
         <el-menu-item index="/instances" role="menuitem">
           <el-icon><Monitor /></el-icon>
           <span>实例管理</span>
@@ -44,6 +48,7 @@
 <script setup>
 import {
   Monitor,
+  DataLine,
   Collection,
   MagicStick,
   Connection,

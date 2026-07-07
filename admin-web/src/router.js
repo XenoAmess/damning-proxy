@@ -7,6 +7,7 @@ const NotFound = {
 const routes = [
   { path: '/', redirect: '/instances' },
   { path: '/instances', component: () => import('./views/Instances.vue') },
+  { path: '/dashboard', component: () => import('./views/Dashboard.vue') },
   { path: '/plugin-groups', component: () => import('./views/PluginGroups.vue') },
   { path: '/plugins', component: () => import('./views/Plugins.vue') },
   { path: '/plugins/:id/edit', component: () => import('./views/PluginEditor.vue') },

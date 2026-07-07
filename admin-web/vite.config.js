@@ -21,6 +21,9 @@ export default defineConfig({
           if (id.includes('node_modules/codemirror') || id.includes('node_modules/@codemirror')) {
             return 'vendor-codemirror'
           }
+          if (id.includes('node_modules/echarts')) {
+            return 'vendor-echarts'
+          }
           if (id.includes('node_modules')) {
             return 'vendor-lib'
           }
