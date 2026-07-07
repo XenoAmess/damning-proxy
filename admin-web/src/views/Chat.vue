@@ -1,274 +1,65 @@
 <template>
   <div class="chat-layout">
-    <div class="session-sidebar">
-      <div class="sidebar-header">
-        <el-button type="primary" @click="createSession" style="width: 100%">
-          <el-icon><Plus /></el-icon> 新建会话
-        </el-button>
-      </div>
-      <el-menu :default-active="currentSessionId" class="session-menu">
-        <el-menu-item
-          v-for="session in sessions"
-          :key="session.id"
-          :index="session.id"
-          @click="switchSession(session.id)"
-        >
-          <div class="session-item">
-            <span class="session-title">{{ session.title || '新会话' }}</span>
-            <el-button
-              link
-              size="small"
-              type="danger"
-              class="delete-btn"
-              @click.stop="deleteSession(session.id)"
-            >
-              <el-icon><Delete /></el-icon>
-            </el-button>
-          </div>
-        </el-menu-item>
-      </el-menu>
-    </div>
-
+    <ChatSessionSidebar
+      :sessions="sessions"
+      :current-session-id="currentSessionId"
+      @create="createSession"
+      @switch="switchSession"
+      @delete="deleteSession"
+    />
     <div class="chat-main">
-      <div class="chat-toolbar">
-        <div class="toolbar-left">
-          <el-select-v2
-            v-model="config.instanceSlug"
-            :options="instanceOptions"
-            placeholder="选择实例"
-            style="width: 200px"
-            @change="onInstanceChange"
-          />
-          <el-select-v2
-            v-model="config.model"
-            :options="modelOptions"
-            placeholder="选择模型"
-            style="width: 180px; margin-left: 12px"
-            allow-create
-            filterable
-            clearable
-          />
-        </div>
-        <div class="toolbar-right">
-          <el-button link @click="showParams = !showParams">
-            <el-icon><Setting /></el-icon> 参数
-          </el-button>
-          <el-button style="margin-left: 12px" @click="clearCurrentHistory">清空当前</el-button>
-          <el-button style="margin-left: 12px" type="primary" :disabled="selectedMessages.length === 0" @click="generateImage">生成图片</el-button>
-          <el-checkbox v-model="selectMode" style="margin-left: 12px">选择模式</el-checkbox>
-        </div>
-      </div>
-
-      <div v-if="showParams" class="param-panel">
-        <div class="param-row">
-          <div class="param-item">
-            <label>Temperature</label>
-            <el-input-number v-model="config.temperature" :min="0" :max="2" :step="0.1" controls-position="right" style="width: 120px" />
-          </div>
-          <div class="param-item">
-            <label>Top P</label>
-            <el-input-number v-model="config.topP" :min="0" :max="1" :step="0.1" controls-position="right" style="width: 120px" />
-          </div>
-          <div class="param-item">
-            <label>Max Tokens</label>
-            <el-input-number v-model="config.maxTokens" :min="1" :max="32768" :step="1" controls-position="right" style="width: 130px" />
-          </div>
-        </div>
-        <div class="param-item" style="margin-top: 8px">
-          <label>System Prompt</label>
-          <el-input
-            v-model="config.systemPrompt"
-            type="textarea"
-            :rows="2"
-            placeholder="系统提示词（将作为第一条 system 消息发送）"
-          />
-        </div>
-      </div>
-
-      <div class="messages" ref="messagesRef">
-        <div v-if="currentMessages.length === 0" class="empty-state">
-          <el-empty description="选择实例并开始对话" />
-        </div>
-
-        <div
-          v-for="(msg, index) in currentMessages"
-          :key="index"
-          class="message"
-          :class="[msg.role, { selected: isSelected(index), selectable: selectMode }]"
-          @click="selectMode && toggleSelect(index)"
-        >
-          <el-checkbox
-            v-if="selectMode"
-            v-model="selectedIndices[index]"
-            class="select-checkbox"
-            size="large"
-            @click.stop
-          />
-          <div class="message-avatar">
-            <el-avatar :size="36" :icon="msg.role === 'user' ? User : ChatLineRound" />
-          </div>
-          <div class="message-content">
-            <div class="message-header">
-              <span class="role-name">{{ msg.role === 'user' ? '我' : '助手' }}</span>
-              <span class="message-time" v-if="msg.time">{{ formatTime(msg.time) }}</span>
-              <el-button
-                v-if="msg.role === 'user'"
-                link
-                size="small"
-                class="action-btn"
-                :icon="RefreshRight"
-                @click.stop="resend(index)"
-                title="重新发送"
-              >
-                重发
-              </el-button>
-              <el-button
-                v-else
-                link
-                size="small"
-                class="action-btn"
-                :icon="Refresh"
-                @click.stop="regenerate(index)"
-                title="重新生成"
-              >
-                重新生成
-              </el-button>
-              <el-button
-                link
-                size="small"
-                class="copy-btn"
-                :icon="CopyDocument"
-                @click.stop="copyMessage(msg)"
-                title="复制"
-              />
-            </div>
-            <div class="message-body">
-              <div v-if="Array.isArray(msg.content)">
-                <template v-for="(part, pidx) in msg.content" :key="pidx">
-                  <MarkdownRenderer
-                    v-if="part.type === 'text'"
-                    :content="parseThink(part.text).text"
-                    class="text-part markdown-body"
-                  />
-                  <div v-else-if="part.type === 'image_url'" class="image-part">
-                    <img :src="part.image_url.url" alt="uploaded" />
-                  </div>
-                  <div v-else-if="part.type === 'file'" class="file-part">
-                    <el-tag>📎 {{ part.file.name }}</el-tag>
-                  </div>
-                </template>
-              </div>
-              <MarkdownRenderer
-                v-else
-                :content="parseThink(msg.content).text"
-                class="text-part markdown-body"
-              />
-
-              <div v-if="msg.reasoning || parseThink(msg.content).reasoning" class="reasoning-block">
-                <div class="reasoning-toggle" @click="msg._showReasoning = !msg._showReasoning">
-                  <el-icon><ArrowDown v-if="msg._showReasoning" /><ArrowRight v-else /></el-icon>
-                  推理过程
-                </div>
-                <pre v-if="msg._showReasoning" class="reasoning-content">{{ msg.reasoning || parseThink(msg.content).reasoning }}</pre>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-show="false" class="image-export-container" ref="imageExportRef">
-          <div class="image-export-header">对话记录</div>
-          <div
-            v-for="(msg, index) in selectedMessages"
-            :key="index"
-            class="image-export-message"
-            :class="msg.role"
-          >
-            <div class="image-export-role">{{ msg.role === 'user' ? '我' : '助手' }}</div>
-            <div class="image-export-content">
-              <div v-if="Array.isArray(msg.content)">
-                <template v-for="(part, pidx) in msg.content" :key="pidx">
-                  <div v-if="part.type === 'text'" v-html="renderMarkdown(parseThink(part.text).text)"></div>
-                  <div v-else-if="part.type === 'image_url'" class="image-export-image">
-                    [图片]
-                  </div>
-                  <div v-else-if="part.type === 'file'" class="image-export-file">
-                    📎 {{ part.file.name }}
-                  </div>
-                </template>
-              </div>
-              <div v-else v-html="renderMarkdown(parseThink(msg.content).text)"></div>
-              <div v-if="msg.reasoning || parseThink(msg.content).reasoning" class="image-export-reasoning">
-                <div class="image-export-reasoning-title">推理过程</div>
-                <pre>{{ msg.reasoning || parseThink(msg.content).reasoning }}</pre>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="loading" class="message assistant">
-          <div class="message-avatar">
-            <el-avatar :size="36" :icon="ChatLineRound" />
-          </div>
-          <div class="message-content">
-            <el-text class="typing" size="small">思考中...</el-text>
-          </div>
-        </div>
-      </div>
-
-      <div class="input-area">
-        <div class="input-toolbar">
-          <el-upload
-            ref="uploadRef"
-            action="#"
-            :auto-upload="false"
-            :show-file-list="false"
-            :on-change="handleFileChange"
-            multiple
-            class="upload-inline"
-          >
-            <el-button :icon="Paperclip">附件 / 图片</el-button>
-          </el-upload>
-          <el-switch v-model="config.stream" active-text="流式输出" style="margin-left: 12px" />
-        </div>
-
-        <div v-if="pendingFiles.length > 0" class="file-preview-list">
-          <div v-for="(file, idx) in pendingFiles" :key="idx" class="file-preview"
-          >
-            <img v-if="file.type.startsWith('image/')" :src="file.dataUrl" class="preview-img" />
-            <el-tag v-else closable @close="removeFile(idx)">📎 {{ file.name }}</el-tag>
-            <div v-if="file.type.startsWith('image/')" class="preview-remove" @click="removeFile(idx)"
-            >×</div>
-          </div>
-        </div>
-
-        <div class="input-row">
-          <el-input
-            v-model="inputText"
-            type="textarea"
-            :rows="3"
-            placeholder="输入消息..."
-            resize="none"
-            @keydown.enter.exact.prevent="send"
-          />
-          <el-button
-            v-if="!loading"
-            type="primary"
-            :disabled="!canSend"
-            @click="send"
-            class="send-btn"
-          >
-            <el-icon><Promotion /></el-icon> 发送
-          </el-button>
-          <el-button
-            v-else
-            type="danger"
-            @click="stopStreaming"
-            class="send-btn"
-          >
-            <el-icon><Delete /></el-icon> 停止
-          </el-button>
-        </div>
-      </div>
+      <ChatToolbar
+        :instance-slug="config.instanceSlug"
+        :model="config.model"
+        :instance-options="instanceOptions"
+        :model-options="modelOptions"
+        :show-params="showParams"
+        :select-mode="selectMode"
+        :can-generate="selectedMessages.length > 0"
+        @update:instance-slug="updateInstanceSlug"
+        @update:model="updateModel"
+        @instance-change="onInstanceChange"
+        @toggle-params="showParams = !showParams"
+        @clear="clearCurrentHistory"
+        @generate-image="generateImage"
+        @update:select-mode="selectMode = $event"
+      />
+      <ChatParamPanel
+        v-if="showParams"
+        :temperature="config.temperature"
+        :top-p="config.topP"
+        :max-tokens="config.maxTokens"
+        :system-prompt="config.systemPrompt"
+        @update:temperature="updateTemperature"
+        @update:top-p="updateTopP"
+        @update:max-tokens="updateMaxTokens"
+        @update:system-prompt="updateSystemPrompt"
+      />
+      <ChatMessageList
+        ref="messagesRef"
+        :current-messages="currentMessages"
+        :selected-indices="selectedIndices"
+        :select-mode="selectMode"
+        :loading="loading"
+        :selected-messages="selectedMessages"
+        @toggle-select="onToggleSelect"
+        @resend="resend"
+        @regenerate="regenerate"
+        @copy="copyMessage"
+      />
+      <ChatInputArea
+        :input-text="inputText"
+        :pending-files="pendingFiles"
+        :stream="config.stream"
+        :loading="loading"
+        :can-send="canSend"
+        @update:input-text="inputText = $event"
+        @add-file="handleFileChange"
+        @remove-file="removeFile"
+        @update:stream="config.stream = $event"
+        @send="send"
+        @stop="stopStreaming"
+      />
     </div>
   </div>
 </template>
@@ -276,26 +67,24 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { marked } from 'marked'
-import {
-  Plus, Delete, Promotion, ArrowDown, ArrowRight,
-  User, ChatLineRound, CopyDocument, Paperclip, Setting,
-  RefreshRight, Refresh,
-} from '@element-plus/icons-vue'
+import { formatTimestamp } from '../utils/format.js'
+import { copyToClipboard } from '../utils/clipboard.js'
+import { getAllSessions, saveAllSessions, clearAllSessions } from '../utils/chatStorage.js'
 import { listInstances, listProfiles } from '../api/damning.js'
 import { chatCompletion, chatCompletionStream, createAbortController, listModels } from '../api/chat.js'
 import html2canvas from 'html2canvas'
-import { formatTimestamp } from '../utils/format.js'
-import { copyToClipboard } from '../utils/clipboard.js'
-import { parseThink, sanitizeHtml } from '../utils/parse.js'
-import { getAllSessions, saveAllSessions, deleteSession as deleteSessionFromDB, clearAllSessions } from '../utils/chatStorage.js'
-import MarkdownRenderer from '../components/MarkdownRenderer.vue'
+import ChatSessionSidebar from '../components/chat/ChatSessionSidebar.vue'
+import ChatToolbar from '../components/chat/ChatToolbar.vue'
+import ChatParamPanel from '../components/chat/ChatParamPanel.vue'
+import ChatMessageList from '../components/chat/ChatMessageList.vue'
+import ChatInputArea from '../components/chat/ChatInputArea.vue'
 
 const TYPEWRITER_DELAY = 16
 const TYPEWRITER_CHUNK = 2
-
 const STORAGE_KEY = 'damning-proxy-chat-sessions'
 const CONFIG_KEY = 'damning-proxy-chat-config'
+const MAX_SESSIONS = 50
+const MAX_MESSAGES_PER_SESSION = 200
 
 const sessions = ref([])
 const currentSessionId = ref('')
@@ -310,7 +99,6 @@ const messagesRef = ref(null)
 const uploadRef = ref(null)
 const typewriterTarget = ref(null)
 const typewriterBuffer = ref('')
-const imageExportRef = ref(null)
 const selectMode = ref(false)
 const selectedIndices = ref([])
 const showParams = ref(false)
@@ -343,19 +131,41 @@ watch(currentMessages, () => {
   selectedIndices.value = currentMessages.value.map(() => false)
 }, { immediate: true })
 
-function toggleSelect(index) {
-  selectedIndices.value[index] = !selectedIndices.value[index]
+function onToggleSelect(index, val) {
+  selectedIndices.value[index] = val
 }
 
-function isSelected(index) {
-  return !!selectedIndices.value[index]
+function updateInstanceSlug(val) {
+  config.value.instanceSlug = val
+}
+
+function updateModel(val) {
+  config.value.model = val
+}
+
+function updateTemperature(val) {
+  config.value.temperature = val
+}
+
+function updateTopP(val) {
+  config.value.topP = val
+}
+
+function updateMaxTokens(val) {
+  config.value.maxTokens = val
+}
+
+function updateSystemPrompt(val) {
+  config.value.systemPrompt = val
 }
 
 async function generateImage() {
   if (selectedMessages.value.length === 0) return
   await nextTick()
   try {
-    const canvas = await html2canvas(imageExportRef.value, {
+    const el = messagesRef.value?.imageExportRef?.$el
+    if (!el) return
+    const canvas = await html2canvas(el, {
       backgroundColor: '#ffffff',
       scale: 2,
       useCORS: true,
@@ -480,9 +290,6 @@ async function loadSessions() {
   }
   storageReady.value = true
 }
-
-const MAX_SESSIONS = 50
-const MAX_MESSAGES_PER_SESSION = 200
 
 async function saveSessions() {
   if (!storageReady.value) return
@@ -845,21 +652,11 @@ function updateSessionTitle(text) {
 
 function scrollToBottom() {
   nextTick(() => {
-    const el = messagesRef.value
+    const el = messagesRef.value?.messagesRef
     if (el) {
       el.scrollTop = el.scrollHeight
     }
   })
-}
-
-function formatTime(ts) {
-  const d = new Date(ts)
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
-}
-
-function renderMarkdown(text) {
-  if (typeof text !== 'string') return ''
-  return sanitizeHtml(marked.parse(text, { breaks: true, gfm: true }))
 }
 </script>
 
@@ -870,341 +667,10 @@ function renderMarkdown(text) {
   overflow: hidden;
 }
 
-.session-sidebar {
-  width: 220px;
-  border-right: 1px solid #e4e7ed;
-  display: flex;
-  flex-direction: column;
-  background: #f5f7fa;
-}
-
-.sidebar-header {
-  padding: 12px;
-  border-bottom: 1px solid #e4e7ed;
-}
-
-.session-menu {
-  flex: 1;
-  overflow-y: auto;
-  border-right: none;
-  background: transparent;
-}
-
-.session-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.session-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-}
-
-.delete-btn {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.session-menu .el-menu-item:hover .delete-btn {
-  opacity: 1;
-}
-
 .chat-main {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.chat-toolbar {
-  padding: 12px 16px;
-  border-bottom: 1px solid #e4e7ed;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.param-panel {
-  padding: 12px 16px;
-  border-bottom: 1px solid #e4e7ed;
-  background: #fff;
-}
-
-.param-row {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.param-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.param-item label {
-  font-size: 12px;
-  color: #606266;
-}
-
-.toolbar-left,
-.toolbar-right {
-  display: flex;
-  align-items: center;
-}
-
-.messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  background: #fafafa;
-}
-
-.empty-state {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.message {
-  display: flex;
-  margin-bottom: 20px;
-  max-width: 90%;
-}
-
-.message.user {
-  flex-direction: row-reverse;
-  margin-left: auto;
-}
-
-.message-avatar {
-  margin: 0 12px;
-  flex-shrink: 0;
-}
-
-.message-content {
-  background: #fff;
-  padding: 12px 16px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  max-width: calc(100% - 60px);
-  overflow-wrap: break-word;
-}
-
-.message.user .message-content {
-  background: #e6f7ff;
-}
-
-.message-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-  font-size: 13px;
-}
-
-.message.user .message-header {
-  flex-direction: row-reverse;
-}
-
-.copy-btn {
-  margin-left: auto;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-}
-
-.copy-btn:hover {
-  opacity: 1;
-}
-
-.message.user .copy-btn {
-  margin-left: 0;
-  margin-right: auto;
-}
-
-.action-btn {
-  opacity: 0.6;
-  transition: opacity 0.2s;
-  font-size: 12px;
-}
-
-.action-btn:hover {
-  opacity: 1;
-}
-
-.role-name {
-  font-weight: 600;
-  color: #303133;
-}
-
-.message-time {
-  color: #909399;
-  font-size: 12px;
-}
-
-.message-body {
-  line-height: 1.6;
-  color: #303133;
-}
-
-.text-part {
-  white-space: normal;
-}
-
-.text-part :deep(pre) {
-  background: #f5f7fa;
-  padding: 12px;
-  border-radius: 6px;
-  overflow-x: auto;
-}
-
-.text-part :deep(code) {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 0.9em;
-}
-
-.text-part :deep(p) {
-  margin: 0 0 8px;
-}
-
-.text-part :deep(p):last-child {
-  margin-bottom: 0;
-}
-
-.text-part :deep(ul), .text-part :deep(ol) {
-  margin: 0 0 8px 20px;
-  padding: 0;
-}
-
-.text-part :deep(li) {
-  margin-bottom: 4px;
-}
-
-.text-part :deep(table) {
-  border-collapse: collapse;
-  margin-bottom: 8px;
-}
-
-.text-part :deep(th), .text-part :deep(td) {
-  border: 1px solid #e4e7ed;
-  padding: 6px 10px;
-}
-
-.text-part :deep(blockquote) {
-  margin: 0 0 8px;
-  padding-left: 12px;
-  border-left: 4px solid #dcdfe6;
-  color: #606266;
-}
-
-.image-part img {
-  max-width: 240px;
-  max-height: 240px;
-  border-radius: 6px;
-  margin-top: 8px;
-}
-
-.file-part {
-  margin-top: 8px;
-}
-
-.reasoning-block {
-  margin-top: 10px;
-  padding: 8px 12px;
-  background: #f4f4f5;
-  border-radius: 6px;
-}
-
-.reasoning-toggle {
-  font-size: 13px;
-  color: #606266;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.reasoning-content {
-  margin-top: 8px;
-  font-size: 13px;
-  color: #606266;
-  white-space: pre-wrap;
-  background: #fff;
-  padding: 8px;
-  border-radius: 4px;
-}
-
-.typing {
-  color: #909399;
-}
-
-.input-area {
-  border-top: 1px solid #e4e7ed;
-  padding: 12px 16px;
-  background: #fff;
-}
-
-.input-toolbar {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.upload-inline {
-  display: inline-block;
-}
-
-.file-preview-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.file-preview {
-  position: relative;
-}
-
-.preview-img {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid #e4e7ed;
-}
-
-.preview-remove {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 18px;
-  height: 18px;
-  background: #f56c6c;
-  color: #fff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.input-row {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-}
-
-.input-row .el-textarea {
-  flex: 1;
-}
-
-.send-btn {
-  height: 74px;
 }
 </style>

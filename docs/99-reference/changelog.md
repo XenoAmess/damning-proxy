@@ -7,6 +7,9 @@
 
 ## 2026-07-07
 
+- 拆分管理后台 Chat / Logs 页面：将 `Chat.vue`、`Logs.vue` 拆分为多个可复用子组件，降低页面复杂度与维护成本。
+- 新增组件目录 `admin-web/src/components/chat/` 与 `admin-web/src/components/logs/`。
+- 刷新过期的项目文档：更新架构、代理流程、API 文档、日志与排障文档（中文与英文版本同步）。
 - 导入导出增加预览：新增 `ImportPreviewDialog` 组件，配置、实例、插件组、插件 JSON 导入前可预览新增/覆盖数量并二次确认。
 - 流量日志新增 token 用量统计：从上游响应 `usage` 字段自动提取 prompt_tokens / completion_tokens / total_tokens，并在日志详情与卡片中展示。
 - 新增单元测试 `TrafficLogServiceTest.shouldExtractTokenUsageFromResponse`。

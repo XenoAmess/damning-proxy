@@ -7,6 +7,9 @@
 
 ## 2026-07-07
 
+- Split admin Chat / Logs pages: `Chat.vue` and `Logs.vue` are now decomposed into multiple reusable child components, reducing page complexity and maintenance burden.
+- Added component directories `admin-web/src/components/chat/` and `admin-web/src/components/logs/`.
+- Refreshed outdated project documentation: architecture, proxy flow, API docs, logging, and troubleshooting docs are updated and kept in sync across Chinese and English versions.
 - Import/export now shows a preview before applying: added `ImportPreviewDialog` component; JSON imports for profiles, instances, plugin groups, and plugins display a preview of new vs. overwritten entries before confirming.
 - Traffic logs now capture token usage: prompt_tokens / completion_tokens / total_tokens are automatically extracted from the upstream `usage` field and shown in the log detail and card.
 - Added unit test `TrafficLogServiceTest.shouldExtractTokenUsageFromResponse`.
