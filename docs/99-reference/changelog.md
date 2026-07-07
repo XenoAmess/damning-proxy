@@ -7,6 +7,8 @@
 
 ## 2026-07-07
 
+- 流式上游失败时返回友好的 SSE 错误：后台对上游连接失败、HTTP 错误状态码等场景统一发送 `event: error` 事件，前端解析后提示具体错误信息，不再静默断流。
+- 新增流式代理错误场景测试 `ProxyApiTest.shouldReturnSseErrorOnUpstreamStreamingFailure`。
 - 日志清理改批量删除：后台新增 `/api/logs/prune` 接口，支持保留最近 N 条或全部清空；前台「流量日志」页面新增「批量清理」按钮与确认对话框。
 - 修复后台日志自动清理在高日志量场景下一次删除过多条目导致的性能问题，`PanacheLogRepository.deleteOldest` 默认按 1000 条批次循环删除。
 

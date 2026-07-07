@@ -209,10 +209,13 @@ public class OpenAiProxyService {
                 toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs
             );
         } catch (Exception e) {
+            String msg = e.getMessage();
+            int status = e instanceof WebApplicationException wae ? wae.getResponse().getStatus() : 502;
+            trafficLogService.recordResponse(trafficLog, status,
+                Map.of(), msg, System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), msg);
             return Multi.createFrom().emitter(emitter -> {
-                String msg = e.getMessage();
                 Log.error("Streaming upstream failed", e);
-                emitter.emit("data: " + toJson(Map.of("error", msg)) + "\n\n");
+                emitter.emit(sseError(msg, status));
                 emitter.complete();
             });
         }
@@ -238,11 +241,11 @@ public class OpenAiProxyService {
                 }
             };
 
-            java.util.function.Consumer<String> recordError = (message) -> {
+            java.util.function.BiConsumer<Integer, String> recordError = (status, message) -> {
                 if (logged.compareAndSet(false, true)) {
                     executorService.execute(() -> {
                         try {
-                            trafficLogService.recordResponse(trafficLog, 502,
+                            trafficLogService.recordResponse(trafficLog, status,
                                 Map.of(), message, System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), message);
                         } catch (Exception e) {
                             Log.errorf(e, "Failed to record streaming error for log #%d", trafficLog.id);
@@ -275,9 +278,40 @@ public class OpenAiProxyService {
                 }
             });
 
+            Runnable finishWithError = () -> {
+                if (heartbeatHolder[0] != null) {
+                    heartbeatHolder[0].cancel(false);
+                }
+            };
+
             upstreamFuture.onSuccess(response -> {
                 context.setResponseStatus(response.statusCode());
                 context.getResponseHeaders().putAll(toMap(response.headers()));
+                if (response.statusCode() >= 400) {
+                    StringBuilder errorBody = new StringBuilder();
+                    response.handler(buffer -> errorBody.append(buffer.toString()));
+                    response.exceptionHandler(err -> {
+                        finishWithError.run();
+                        Log.error("Streaming upstream response failed", err);
+                        circuitBreaker.recordFailure(ctx.profile.baseUrl, ctx.profile);
+                        String msg = "Upstream response error: " + err.getMessage();
+                        recordError.accept(response.statusCode(), msg);
+                        emitter.emit(sseError(msg, null));
+                        emitter.complete();
+                    });
+                    response.endHandler(v -> {
+                        finishWithError.run();
+                        String body = errorBody.toString();
+                        context.setResponseBody(parseJson(body));
+                        circuitBreaker.recordFailure(ctx.profile.baseUrl, ctx.profile);
+                        String msg = "Upstream returned " + response.statusCode()
+                            + (body.isBlank() ? "" : ": " + body);
+                        recordError.accept(response.statusCode(), msg);
+                        emitter.emit(sseError(msg, response.statusCode()));
+                        emitter.complete();
+                    });
+                    return;
+                }
                 response.handler(buffer -> {
                     lastActivity.set(System.currentTimeMillis());
                     String chunk = buffer.toString();
@@ -305,9 +339,7 @@ public class OpenAiProxyService {
                     }
                 });
                 response.endHandler(v -> {
-                    if (heartbeatHolder[0] != null) {
-                        heartbeatHolder[0].cancel(false);
-                    }
+                    finishWithError.run();
                     String remaining = sseBuffer.toString().trim();
                     if (remaining.startsWith("data: ")) {
                         String data = remaining.substring(6).trim();
@@ -324,13 +356,13 @@ public class OpenAiProxyService {
                     emitter.complete();
                 });
             }).onFailure(err -> {
-                if (heartbeatHolder[0] != null) {
-                    heartbeatHolder[0].cancel(false);
-                }
+                finishWithError.run();
                 Log.error("Streaming upstream failed", err);
                 circuitBreaker.recordFailure(ctx.profile.baseUrl, ctx.profile);
-                recordError.accept(err.getMessage());
-                emitter.fail(err);
+                String msg = err.getMessage();
+                recordError.accept(502, msg);
+                emitter.emit(sseError(msg, null));
+                emitter.complete();
             });
         });
     }
@@ -557,5 +589,14 @@ public class OpenAiProxyService {
         } catch (IOException e) {
             throw new WebApplicationException("Failed to serialize request body", e);
         }
+    }
+
+    private String sseError(String message, Integer statusCode) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("message", message);
+        if (statusCode != null) {
+            error.put("code", statusCode);
+        }
+        return "event: error\ndata: " + toJson(Map.of("error", error)) + "\n\n";
     }
 }

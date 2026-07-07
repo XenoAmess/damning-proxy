@@ -7,6 +7,8 @@
 
 ## 2026-07-07
 
+- Streaming upstream failures now return a friendly SSE error: the backend emits an `event: error` event for connection failures, HTTP error status codes, etc.; the frontend parses it and surfaces the message instead of silently terminating the stream.
+- Added streaming proxy error test `ProxyApiTest.shouldReturnSseErrorOnUpstreamStreamingFailure`.
 - Log pruning is now batched: added backend `/api/logs/prune` endpoint supporting "keep last N" or "delete all"; admin traffic log page adds a "Bulk Cleanup" button with confirmation dialog.
 - Fixed auto-prune performance issue when the log table is large: `PanacheLogRepository.deleteOldest` now deletes in default 1000-row batches.
 

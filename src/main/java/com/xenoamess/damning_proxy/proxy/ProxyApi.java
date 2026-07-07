@@ -88,7 +88,7 @@ public class ProxyApi {
         return proxyService.chatCompletions(instanceSlug, requestBody, headers);
     }
 
-    private static class SseStreamingOutput implements StreamingOutput {
+    private class SseStreamingOutput implements StreamingOutput {
         private final Multi<String> sseMulti;
 
         SseStreamingOutput(Multi<String> sseMulti) {
@@ -108,8 +108,16 @@ public class ProxyApi {
                     }
                 },
                 err -> {
-                    Log.error("SSE stream error", err);
-                    done.countDown();
+                    try {
+                        String event = "event: error\n" +
+                            "data: " + objectMapper.writeValueAsString(Map.of("error", Map.of("message", err.getMessage()))) + "\n\n";
+                        output.write(event.getBytes(StandardCharsets.UTF_8));
+                        output.flush();
+                    } catch (Exception writeErr) {
+                        Log.debug("Failed to write SSE error event", writeErr);
+                    } finally {
+                        done.countDown();
+                    }
                 },
                 done::countDown
             );

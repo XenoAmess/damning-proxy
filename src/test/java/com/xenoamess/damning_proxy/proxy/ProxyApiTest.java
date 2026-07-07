@@ -14,6 +14,7 @@ import com.xenoamess.damning_proxy.repository.ProfileRepository;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +54,9 @@ class ProxyApiTest {
 
     @Inject
     ObjectMapper objectMapper;
+
+    @Inject
+    EntityManager entityManager;
 
     @BeforeEach
     @Transactional
@@ -165,7 +169,7 @@ class ProxyApiTest {
                 .withChunkedDribbleDelay(5, 100)
                 .withBody(sseBody)));
 
-        createInstance("openai-stream", "http://localhost:18089/v1", "sk-test");
+        ProxyInstance instance = createInstance("openai-stream", "http://localhost:18089/v1", "sk-test");
 
         Map<String, Object> body = Map.of(
             "model", "gpt-4",
@@ -187,22 +191,70 @@ class ProxyApiTest {
         assertTrue(response.contains("chatcmpl-1"));
         assertTrue(response.contains("Hi"));
 
-        TrafficLog log = waitForRecentLog();
+        TrafficLog log = waitForLogByInstance(instance.id);
         assertEquals("/v1/chat/completions", log.requestPath);
         assertEquals(200, log.responseStatus);
         assertTrue(log.streaming);
         assertNotNull(log.responseBody);
     }
 
-    private TrafficLog waitForRecentLog() throws InterruptedException {
-        for (int i = 0; i < 30; i++) {
-            TrafficLog log = logRepository.listRecent(1).get(0);
-            if (log.responseBody != null) {
-                return log;
+    @Test
+    void shouldReturnSseErrorOnUpstreamStreamingFailure() throws InterruptedException {
+        wireMockServer.stubFor(post(urlEqualTo("/v1/chat/completions"))
+            .willReturn(aResponse()
+                .withStatus(500)
+                .withHeader("Content-Type", "application/json")
+                .withBody("{\"error\":{\"message\":\"Internal Server Error\"}}")));
+
+        ProxyInstance instance = createInstance("openai-stream-err", "http://localhost:18089/v1", "sk-test");
+
+        Map<String, Object> body = Map.of(
+            "model", "gpt-4",
+            "messages", java.util.List.of(Map.of("role", "user", "content", "Hello")),
+            "stream", true
+        );
+
+        String response = given()
+            .contentType(ContentType.JSON)
+            .header("Accept", "text/event-stream")
+            .body(body)
+            .when().post("/v1/proxy/openai-stream-err/chat/completions")
+            .then()
+            .statusCode(200)
+            .header("Content-Type", containsString("text/event-stream"))
+            .extract().body().asString();
+
+        assertTrue(response.contains("event: error"), response);
+        assertTrue(response.contains("Internal Server Error"), response);
+
+        TrafficLog log = waitForLogByInstance(instance.id);
+        assertEquals("/v1/chat/completions", log.requestPath);
+        assertEquals(500, log.responseStatus);
+        assertTrue(log.streaming);
+    }
+
+    private TrafficLog waitForLogByInstance(Long instanceId) throws InterruptedException {
+        for (int i = 0; i < 100; i++) {
+            entityManager.clear();
+            TrafficLog latest = null;
+            for (TrafficLog log : logRepository.findByInstanceId(instanceId, 10)) {
+                if (log.responseBody != null && (latest == null || log.id > latest.id)) {
+                    latest = log;
+                }
+            }
+            if (latest != null) {
+                return latest;
             }
             Thread.sleep(100);
         }
-        return logRepository.listRecent(1).get(0);
+        entityManager.clear();
+        TrafficLog latest = null;
+        for (TrafficLog log : logRepository.findByInstanceId(instanceId, 10)) {
+            if (latest == null || log.id > latest.id) {
+                latest = log;
+            }
+        }
+        return latest;
     }
 
     @Test
