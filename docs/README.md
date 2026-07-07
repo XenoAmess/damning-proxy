@@ -48,6 +48,7 @@
 ### 99 参考资料
 - [变更日志](99-reference/changelog.md) | [English](99-reference/changelog.en.md)
 - [优化与改进清单](99-reference/improvement-checklist.md) | [English](99-reference/improvement-checklist.en.md)
+- [优化与落地计划](99-reference/improvement-plan.md) | [English](99-reference/improvement-plan.en.md)
 - [项目路线图](99-reference/roadmap.md) | [English](99-reference/roadmap.en.md)
 
 ---
