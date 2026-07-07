@@ -72,6 +72,22 @@ damning-proxy.plugin.sandbox.denied-packages=java.sql
 
 ---
 
+## Revision History and Rollback
+
+Every time a single-script plugin is saved, the current script content is automatically saved as a revision. Open the plugin editor and look at the **Revision History** panel to:
+
+- **Preview**: load the historical script into the editor for review
+- **Rollback**: restore the plugin script to the selected revision (the current script is snapshotted before rollback, so the rollback itself can be undone)
+
+Revisions are cleaned up when the plugin is deleted.
+
+Backend endpoints:
+
+- `GET /api/plugins/{id}/revisions` — list revisions for a plugin
+- `POST /api/plugins/{id}/revisions/{revisionId}/rollback` — roll back to a specific revision
+
+---
+
 ## JavaScript Plugin Examples
 
 ### Rewrite the request model name

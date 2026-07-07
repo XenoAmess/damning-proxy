@@ -72,6 +72,22 @@ damning-proxy.plugin.sandbox.denied-packages=java.sql
 
 ---
 
+## 版本历史与回滚
+
+每次保存单脚本插件时，系统会自动把当前脚本内容保存为一条历史版本记录。进入「插件编辑器」→「版本历史」可以：
+
+- **预览**：把历史脚本加载到编辑器中查看
+- **回滚**：把插件脚本恢复为选中的历史版本（回滚前会先快照当前脚本，因此可以再次回滚）
+
+版本历史跟随插件删除而清理。
+
+后端接口：
+
+- `GET /api/plugins/{id}/revisions` — 查询插件的版本列表
+- `POST /api/plugins/{id}/revisions/{revisionId}/rollback` — 回滚到指定版本
+
+---
+
 ## JavaScript 插件示例
 
 ### 修改请求模型名

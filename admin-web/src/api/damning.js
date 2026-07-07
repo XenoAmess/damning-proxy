@@ -74,6 +74,14 @@ export function getPlugin(id) {
   return api.get(`/plugins/${id}`)
 }
 
+export function listPluginRevisions(id) {
+  return api.get(`/plugins/${id}/revisions`)
+}
+
+export function rollbackPlugin(id, revisionId) {
+  return api.post(`/plugins/${id}/revisions/${revisionId}/rollback`)
+}
+
 export function dryRunPlugin(id, data) {
   return api.post(`/plugins/${id}/dry-run`, data)
 }

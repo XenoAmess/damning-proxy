@@ -2,10 +2,12 @@ package com.xenoamess.damning_proxy.api.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xenoamess.damning_proxy.entity.Plugin;
+import com.xenoamess.damning_proxy.entity.PluginScriptRevision;
 import com.xenoamess.damning_proxy.plugin.PluginEngine;
 import com.xenoamess.damning_proxy.plugin.storage.PluginPackageStorage;
 import com.xenoamess.damning_proxy.plugin.storage.ZipBuilder;
 import com.xenoamess.damning_proxy.repository.PluginRepository;
+import com.xenoamess.damning_proxy.repository.PluginScriptRevisionRepository;
 import com.xenoamess.damning_proxy.util.Validation;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -34,6 +36,9 @@ public class PluginAdminApi {
 
     @Inject
     PluginRepository pluginRepository;
+
+    @Inject
+    PluginScriptRevisionRepository revisionRepository;
 
     @Inject
     PluginPackageStorage packageStorage;
@@ -115,6 +120,10 @@ public class PluginAdminApi {
                 } else {
                     plugin.packagePath = existing.packagePath;
                 }
+                // Snapshot the current script before overwriting it.
+                if (existing.script != null && !existing.script.isBlank()) {
+                    revisionRepository.save(new PluginScriptRevision(id, existing.script));
+                }
                 pluginRepository.save(plugin);
                 evictPluginCache(existing);
                 return Response.ok(plugin).build();
@@ -131,6 +140,7 @@ public class PluginAdminApi {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
         packageStorage.deletePackage(plugin);
+        revisionRepository.deleteByPluginId(id);
         boolean deleted = pluginRepository.deleteById(id);
         return deleted ? Response.noContent().build() : Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -148,6 +158,38 @@ public class PluginAdminApi {
         } catch (IOException e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
         }
+    }
+
+    @GET
+    @Path("/{id}/revisions")
+    public Response listRevisions(@PathParam("id") Long id) {
+        Plugin plugin = pluginRepository.findById(id).orElse(null);
+        if (plugin == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        return Response.ok(revisionRepository.findByPluginId(id)).build();
+    }
+
+    @POST
+    @Path("/{id}/revisions/{revisionId}/rollback")
+    @Transactional
+    public Response rollback(@PathParam("id") Long id, @PathParam("revisionId") Long revisionId) {
+        Plugin plugin = pluginRepository.findById(id).orElse(null);
+        if (plugin == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        PluginScriptRevision revision = revisionRepository.findById(revisionId).orElse(null);
+        if (revision == null || !id.equals(revision.pluginId)) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        // Snapshot the current script before rolling back, so users can undo the rollback.
+        if (plugin.script != null && !plugin.script.isBlank()) {
+            revisionRepository.save(new PluginScriptRevision(id, plugin.script));
+        }
+        plugin.script = revision.script;
+        pluginRepository.save(plugin);
+        evictPluginCache(plugin);
+        return Response.ok(plugin).build();
     }
 
     private void evictPluginCache(Plugin plugin) {

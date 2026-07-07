@@ -10,6 +10,7 @@ import com.xenoamess.damning_proxy.repository.InstanceRepository;
 import com.xenoamess.damning_proxy.repository.LogRepository;
 import com.xenoamess.damning_proxy.repository.PluginGroupRepository;
 import com.xenoamess.damning_proxy.repository.PluginRepository;
+import com.xenoamess.damning_proxy.repository.PluginScriptRevisionRepository;
 import com.xenoamess.damning_proxy.repository.ProfileRepository;
 import com.xenoamess.damning_proxy.plugin.storage.ZipBuilder;
 import io.quarkus.test.junit.QuarkusTest;
@@ -37,6 +38,9 @@ class AdminApiTest {
 
     @Inject
     PluginRepository pluginRepository;
+
+    @Inject
+    PluginScriptRevisionRepository revisionRepository;
 
     @Inject
     LogRepository logRepository;
@@ -205,6 +209,70 @@ class AdminApiTest {
             .statusCode(204);
 
         assertTrue(pluginRepository.listAll().isEmpty());
+    }
+
+    @Test
+    void shouldTrackPluginRevisionHistory() {
+        Plugin plugin = new Plugin();
+        plugin.name = "RevisionPlugin";
+        plugin.language = Plugin.Language.GROOVY;
+        plugin.script = "context.stop()";
+
+        Long id = given()
+            .multiPart("name", plugin.name)
+            .multiPart("slug", "revision-plugin")
+            .multiPart("language", plugin.language.name())
+            .multiPart("executionPhase", Plugin.ExecutionPhase.REQUEST.name())
+            .multiPart("mode", Plugin.Mode.SINGLE_SCRIPT.name())
+            .multiPart("script", plugin.script)
+            .multiPart("enabled", "true")
+            .when().post("/api/plugins")
+            .then()
+            .statusCode(201)
+            .extract().jsonPath().getLong("id");
+
+        // First update should create a revision capturing the original script.
+        given()
+            .multiPart("name", "RevisionPlugin")
+            .multiPart("slug", "revision-plugin")
+            .multiPart("language", Plugin.Language.GROOVY.name())
+            .multiPart("executionPhase", Plugin.ExecutionPhase.REQUEST.name())
+            .multiPart("mode", Plugin.Mode.SINGLE_SCRIPT.name())
+            .multiPart("script", "context.log('updated')")
+            .multiPart("enabled", "true")
+            .when().put("/api/plugins/" + id)
+            .then()
+            .statusCode(200);
+
+        given()
+            .when().get("/api/plugins/" + id + "/revisions")
+            .then()
+            .statusCode(200)
+            .body("size()", equalTo(1))
+            .body("[0].script", equalTo(plugin.script));
+
+        Long revisionId = revisionRepository.findByPluginId(id).get(0).id;
+
+        // Rollback should restore the original script.
+        given()
+            .when().post("/api/plugins/" + id + "/revisions/" + revisionId + "/rollback")
+            .then()
+            .statusCode(200)
+            .body("script", equalTo(plugin.script));
+
+        // Rollback itself is also snapshotted, so we now have two revisions.
+        given()
+            .when().get("/api/plugins/" + id + "/revisions")
+            .then()
+            .statusCode(200)
+            .body("size()", equalTo(2));
+
+        given()
+            .when().delete("/api/plugins/" + id)
+            .then()
+            .statusCode(204);
+
+        assertTrue(revisionRepository.findByPluginId(id).isEmpty());
     }
 
     @Test

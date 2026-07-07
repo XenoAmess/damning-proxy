@@ -214,6 +214,28 @@ Headers: {{ formatJson(result.responseHeaders) }}</pre>
           </div>
           <div v-else class="placeholder">点击“运行调试”查看结果</div>
         </div>
+        <div v-if="plugin.id && plugin.mode === 'SINGLE_SCRIPT'" class="panel revisions-panel">
+          <div class="panel-header">
+            <span>版本历史</span>
+            <el-button size="small" text @click="loadRevisions"> 刷新 </el-button>
+          </div>
+          <div v-if="revisionsLoading" class="text-muted">加载中...</div>
+          <div v-else-if="!revisions.length" class="text-muted">暂无历史版本</div>
+          <div v-else class="revision-list">
+            <div v-for="rev in revisions" :key="rev.id" class="revision-item">
+              <div class="revision-meta">
+                <span class="revision-id">#{{ rev.id }}</span>
+                <span class="revision-time">{{ formatTime(rev.createdAt) }}</span>
+              </div>
+              <div class="revision-actions">
+                <el-button size="small" text @click="previewRevision(rev)"> 预览 </el-button>
+                <el-button size="small" type="primary" text @click="rollback(rev)">
+                  回滚
+                </el-button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -230,6 +252,8 @@ import {
   updatePlugin,
   dryRunPlugin,
   listInstances,
+  listPluginRevisions,
+  rollbackPlugin,
   getLogFriendly,
 } from '../api/damning.js'
 import { formatBytes } from '../utils/parse.js'
@@ -273,6 +297,8 @@ const instances = ref([])
 const result = ref(null)
 const packageFile = ref(null)
 const packageEntries = ref([])
+const revisions = ref([])
+const revisionsLoading = ref(false)
 
 const editorHeight = ref(window.innerHeight - 120)
 const panelHeight = ref(220)
@@ -286,6 +312,7 @@ onMounted(async () => {
   updateHeights()
   window.addEventListener('resize', updateHeights)
   await Promise.all([loadPlugin(), loadInstances()])
+  loadRevisions()
   const queryPhase = route.query.phase
   if (queryPhase === 'REQUEST' || queryPhase === 'RESPONSE') {
     phase.value = queryPhase
@@ -461,6 +488,42 @@ async function loadFromLog() {
   }
 }
 
+async function loadRevisions() {
+  if (!pluginId.value) return
+  revisionsLoading.value = true
+  try {
+    const res = await listPluginRevisions(pluginId.value)
+    revisions.value = res.data || []
+  } catch (e) {
+    revisions.value = []
+  } finally {
+    revisionsLoading.value = false
+  }
+}
+
+function previewRevision(rev) {
+  script.value = rev.script || ''
+  ElMessage.info('已加载历史版本到编辑器，点击保存后生效')
+}
+
+async function rollback(rev) {
+  if (!pluginId.value) return
+  try {
+    await rollbackPlugin(pluginId.value, rev.id)
+    await loadPlugin()
+    await loadRevisions()
+    ElMessage.success('回滚成功')
+  } catch (e) {
+    ElMessage.error('回滚失败')
+  }
+}
+
+function formatTime(value) {
+  if (!value) return ''
+  const d = new Date(value)
+  return isNaN(d.getTime()) ? value : d.toLocaleString()
+}
+
 function formatJson(value) {
   if (value === undefined || value === null) return ''
   try {
@@ -632,6 +695,51 @@ pre {
   justify-content: center;
   height: 100%;
   color: #909399;
+}
+
+.revisions-panel {
+  flex: 0.6;
+  min-height: 120px;
+}
+
+.revision-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.revision-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  background: #fafafa;
+}
+
+.revision-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.revision-id {
+  color: #606266;
+  font-weight: 500;
+}
+
+.revision-time {
+  color: #909399;
+  font-size: 12px;
+}
+
+.revision-actions {
+  display: flex;
+  gap: 4px;
 }
 
 .text-muted {
