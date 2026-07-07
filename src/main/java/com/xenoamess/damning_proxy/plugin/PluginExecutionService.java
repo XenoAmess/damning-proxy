@@ -25,6 +25,10 @@ public class PluginExecutionService {
         executePlugins(plugins, context, Plugin.ExecutionPhase.RESPONSE, Plugin.ExecutionPhase.BOTH);
     }
 
+    public void executeStreamChunkPlugins(List<Plugin> plugins, PluginContext context) {
+        executePlugins(plugins, context, Plugin.ExecutionPhase.STREAM_CHUNK, Plugin.ExecutionPhase.STREAM_CHUNK);
+    }
+
     private void executePlugins(List<Plugin> plugins, PluginContext context,
                                 Plugin.ExecutionPhase phase1, Plugin.ExecutionPhase phase2) {
         Object previousAfterBody = null;

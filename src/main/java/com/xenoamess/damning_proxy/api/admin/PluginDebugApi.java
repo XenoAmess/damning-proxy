@@ -58,6 +58,8 @@ public class PluginDebugApi {
         try {
             if (request.phase == Plugin.ExecutionPhase.REQUEST) {
                 pluginExecutionService.executeRequestPlugins(plugins, context);
+            } else if (request.phase == Plugin.ExecutionPhase.STREAM_CHUNK) {
+                pluginExecutionService.executeStreamChunkPlugins(plugins, context);
             } else {
                 pluginExecutionService.executeResponsePlugins(plugins, context);
             }

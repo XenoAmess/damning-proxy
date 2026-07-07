@@ -361,6 +361,182 @@ public class UpstreamHttpClient {
         return contentType != null && contentType.contains(MediaType.SERVER_SENT_EVENTS);
     }
 
+    public BinaryResponse sendBinary(String method, String baseUrl, String path,
+                                       MultiMap headers, Object body, int timeoutMs,
+                                       ProxyProfile profile) {
+        return sendBytes(method, baseUrl, path, headers, serializeBody(body), MediaType.APPLICATION_JSON, timeoutMs, profile, true);
+    }
+
+    public UpstreamResponse sendMultipart(String method, String baseUrl, String path,
+                                           MultiMap headers, MultipartData multipart, int timeoutMs,
+                                           ProxyProfile profile) {
+        BinaryResponse raw = sendBytes(method, baseUrl, path, headers, multipart.body, multipart.contentType, timeoutMs, profile, false);
+        UpstreamResponse response = new UpstreamResponse();
+        response.statusCode = raw.statusCode;
+        response.statusMessage = raw.statusMessage;
+        response.headers = raw.headers;
+        response.body = raw.body != null ? new String(raw.body, java.nio.charset.StandardCharsets.UTF_8) : null;
+        response.streaming = false;
+        return response;
+    }
+
+    public record MultipartData(byte[] body, String contentType) {
+    }
+
+    private BinaryResponse sendBytes(String method, String baseUrl, String path,
+                                      MultiMap headers, byte[] body, String contentType,
+                                      int timeoutMs, ProxyProfile profile, boolean preserveBinary) {
+        if (!circuitBreaker.allowRequest(baseUrl)) {
+            throw new WebApplicationException("Circuit breaker open for upstream: " + baseUrl,
+                Response.Status.SERVICE_UNAVAILABLE);
+        }
+
+        URI uri = buildUri(baseUrl, path);
+        Log.debugf("Upstream binary request: %s %s", (Object) method, uri);
+
+        int effectiveTimeoutMs = clampTimeoutMs(timeoutMs);
+        long startNs = System.nanoTime();
+
+        WebApplicationException lastException = null;
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+            if (attempt > 0) {
+                long delay = retryDelayMs(attempt - 1);
+        Log.debugf("Retrying upstream binary request after %d ms (attempt %d/%d): %s %s",
+            Long.valueOf(delay),
+            Integer.valueOf(attempt),
+            Integer.valueOf(maxRetries),
+            method,
+            uri);
+                try {
+                    Thread.sleep(delay);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+
+            try {
+                BinaryResponse result = sendBytesOnce(method, baseUrl, path, headers, body, contentType, effectiveTimeoutMs, preserveBinary);
+                if (result.statusCode >= 400 && retryableStatusCodes.contains(result.statusCode) && attempt < maxRetries) {
+                    lastException = new WebApplicationException(
+                        "Upstream returned " + result.statusCode,
+                        Response.Status.fromStatusCode(result.statusCode));
+                    continue;
+                }
+                if (result.statusCode < 400) {
+                    circuitBreaker.recordSuccess(baseUrl);
+                }
+                recordUpstreamMetrics(baseUrl, result.statusCode, startNs);
+                return result;
+            } catch (TimeoutException e) {
+                if (retryOnTimeout && attempt < maxRetries) {
+                    lastException = new WebApplicationException(
+                        "Upstream request timed out after " + (effectiveTimeoutMs / 1000) + " s",
+                        Response.Status.GATEWAY_TIMEOUT);
+                    continue;
+                }
+                circuitBreaker.recordFailure(baseUrl, profile);
+                recordUpstreamMetrics(baseUrl, Response.Status.GATEWAY_TIMEOUT.getStatusCode(), startNs);
+                throw new WebApplicationException(
+                    "Upstream request timed out after " + (effectiveTimeoutMs / 1000) + " s",
+                    Response.Status.GATEWAY_TIMEOUT);
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (isRetryableError(cause) && attempt < maxRetries) {
+                    lastException = new WebApplicationException(
+                        "Upstream request failed: " + cause.getMessage(),
+                        Response.Status.BAD_GATEWAY);
+                    continue;
+                }
+                circuitBreaker.recordFailure(baseUrl, profile);
+                recordUpstreamMetrics(baseUrl, Response.Status.BAD_GATEWAY.getStatusCode(), startNs);
+                throw new WebApplicationException(
+                    "Upstream request failed: " + cause.getMessage(), Response.Status.BAD_GATEWAY);
+            } catch (Exception e) {
+                circuitBreaker.recordFailure(baseUrl, profile);
+                recordUpstreamMetrics(baseUrl, Response.Status.BAD_GATEWAY.getStatusCode(), startNs);
+                Log.errorf(e, "Upstream binary request failed: %s %s", method, uri);
+                throw new WebApplicationException("Upstream request failed: " + e.getMessage(), Response.Status.BAD_GATEWAY);
+            }
+        }
+
+        if (lastException != null) {
+            circuitBreaker.recordFailure(baseUrl, profile);
+            recordUpstreamMetrics(baseUrl, lastException.getResponse().getStatus(), startNs);
+            throw lastException;
+        }
+        circuitBreaker.recordFailure(baseUrl, profile);
+        recordUpstreamMetrics(baseUrl, Response.Status.BAD_GATEWAY.getStatusCode(), startNs);
+        throw new WebApplicationException("Upstream request failed: max retries exceeded", Response.Status.BAD_GATEWAY);
+    }
+
+    private BinaryResponse sendBytesOnce(String method, String baseUrl, String path,
+                                          MultiMap headers, byte[] body, String contentType,
+                                          int effectiveTimeoutMs, boolean preserveBinary) throws Exception {
+        URI uri = buildUri(baseUrl, path);
+
+        io.vertx.ext.web.client.HttpRequest<Buffer> request = webClient.request(
+                io.vertx.core.http.HttpMethod.valueOf(method),
+                resolvePort(uri),
+                uri.getHost(),
+                uri.getPath() + (uri.getQuery() != null ? "?" + uri.getQuery() : ""))
+            .ssl(isSsl(uri))
+            .timeout(effectiveTimeoutMs);
+
+        if (headers != null) {
+            headers.forEach(entry -> {
+                if (!entry.getKey().equalsIgnoreCase("Host")) {
+                    request.putHeader(entry.getKey(), entry.getValue());
+                }
+            });
+        }
+
+        if (body != null) {
+            request.putHeader(HttpHeaders.CONTENT_TYPE.toString(), contentType);
+        }
+
+        io.vertx.ext.web.client.HttpResponse<Buffer> response =
+            (body != null
+                ? request.sendBuffer(Buffer.buffer(body))
+                : request.send())
+            .toCompletionStage().toCompletableFuture()
+            .get(effectiveTimeoutMs, TimeUnit.MILLISECONDS);
+
+        Buffer bodyBuffer = response.body();
+
+        BinaryResponse result = new BinaryResponse();
+        result.statusCode = response.statusCode();
+        result.statusMessage = response.statusMessage();
+        result.headers = toMultiMap(response.headers());
+        result.body = bodyBuffer != null ? bodyBuffer.getBytes() : null;
+
+        Log.debugf("Upstream binary response: status=%d, contentLength=%s, bodyBytes=%d",
+            Integer.valueOf(result.statusCode),
+            result.headers.get(HttpHeaders.CONTENT_LENGTH),
+            result.body != null ? Integer.valueOf(result.body.length) : Integer.valueOf(0));
+
+        return result;
+    }
+
+    private byte[] serializeBody(Object body) {
+        if (body == null) {
+            return null;
+        }
+        try {
+            String json = (body instanceof String) ? (String) body : objectMapper.writeValueAsString(body);
+            return json.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize request body", e);
+        }
+    }
+
+    public static class BinaryResponse {
+        public int statusCode;
+        public String statusMessage;
+        public MultiMap headers;
+        public byte[] body;
+    }
+
     public static class UpstreamResponse {
         public int statusCode;
         public String statusMessage;

@@ -54,6 +54,7 @@
             <el-radio-group v-model="plugin.executionPhase">
               <el-radio-button label="REQUEST" />
               <el-radio-button label="RESPONSE" />
+              <el-radio-button label="STREAM_CHUNK" />
               <el-radio-button label="BOTH" />
             </el-radio-group>
           </el-form-item>
@@ -116,6 +117,7 @@
               <el-radio-group v-model="phase">
                 <el-radio-button label="REQUEST" />
                 <el-radio-button label="RESPONSE" />
+                <el-radio-button label="STREAM_CHUNK" />
               </el-radio-group>
             </el-form-item>
             <el-form-item label="数据来源">

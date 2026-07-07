@@ -34,7 +34,10 @@
 
 - `REQUEST`：只在请求阶段执行
 - `RESPONSE`：只在响应阶段执行
+- `STREAM_CHUNK`：只在流式（SSE）响应的每个 chunk 上执行，可实时修改或过滤单个 chunk
 - `BOTH`：请求和响应阶段都执行
+
+`STREAM_CHUNK` 阶段插件在每次收到 SSE 数据块时运行。如果插件调用 `context.returnResponse(...)`，则该 chunk 不会发送给客户端（常用于内容过滤）；如果修改 `context.getResponseBody()`，则发送修改后的 chunk。
 
 ---
 
@@ -173,7 +176,7 @@ if (body && body.model) {
 
 - 插件脚本按内容哈希缓存，保存修改后下一次请求会自动重新编译并生效，无需重启服务。
 - 插件拥有完整 JVM 权限，不要运行来源不明的脚本。
-- 响应阶段插件在流式请求中操作的是累积后的完整响应体。
+- 响应阶段插件在流式请求中操作的是累积后的完整响应体；如需实时处理每个 SSE chunk，请使用 `STREAM_CHUNK` 阶段。
 - 如果插件抛出异常，不会中断流水线，但会记录到 friendly snapshot 中。
 
 ---

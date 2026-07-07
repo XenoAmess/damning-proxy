@@ -15,8 +15,11 @@ import jakarta.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+
+import org.jboss.resteasy.reactive.multipart.FileUpload;
 
 @Path("/v1/proxy/{instanceSlug}")
 public class ProxyApi {
@@ -135,6 +138,86 @@ public class ProxyApi {
         }
         return withRateLimitHeaders(proxyService.imageGenerations(instanceSlug, requestBody, headers),
             rateLimiter.getRateLimitInfo(instanceSlug));
+    }
+
+    @POST
+    @Path("/audio/speech")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Blocking
+    public Response audioSpeech(@PathParam("instanceSlug") String instanceSlug, Map<String, Object> requestBody,
+                                @Context HttpHeaders headers) {
+        if (!rateLimiter.tryAcquire(instanceSlug)) {
+            return buildRateLimitedResponse(instanceSlug);
+        }
+        RateLimiter.RateLimitInfo info = rateLimiter.getRateLimitInfo(instanceSlug);
+        return withRateLimitHeaders(proxyService.audioSpeech(instanceSlug, requestBody, headers), info);
+    }
+
+    @POST
+    @Path("/audio/transcriptions")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Blocking
+    public Response audioTranscriptions(@PathParam("instanceSlug") String instanceSlug,
+                                        @FormParam("file") FileUpload file,
+                                        @FormParam("model") String model,
+                                        @FormParam("language") String language,
+                                        @FormParam("prompt") String prompt,
+                                        @FormParam("response_format") String responseFormat,
+                                        @FormParam("temperature") String temperature,
+                                        @Context HttpHeaders headers) {
+        if (!rateLimiter.tryAcquire(instanceSlug)) {
+            return buildRateLimitedResponse(instanceSlug);
+        }
+        RateLimiter.RateLimitInfo info = rateLimiter.getRateLimitInfo(instanceSlug);
+        UpstreamHttpClient.MultipartData multipart = buildMultipart(file, model, language, prompt, responseFormat, temperature);
+        return withRateLimitHeaders(proxyService.audioTranscriptions(instanceSlug, multipart, headers), info);
+    }
+
+    @POST
+    @Path("/audio/translations")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Blocking
+    public Response audioTranslations(@PathParam("instanceSlug") String instanceSlug,
+                                      @FormParam("file") FileUpload file,
+                                      @FormParam("model") String model,
+                                      @FormParam("prompt") String prompt,
+                                      @FormParam("response_format") String responseFormat,
+                                      @FormParam("temperature") String temperature,
+                                      @Context HttpHeaders headers) {
+        if (!rateLimiter.tryAcquire(instanceSlug)) {
+            return buildRateLimitedResponse(instanceSlug);
+        }
+        RateLimiter.RateLimitInfo info = rateLimiter.getRateLimitInfo(instanceSlug);
+        UpstreamHttpClient.MultipartData multipart = buildMultipart(file, model, null, prompt, responseFormat, temperature);
+        return withRateLimitHeaders(proxyService.audioTranslations(instanceSlug, multipart, headers), info);
+    }
+
+    private UpstreamHttpClient.MultipartData buildMultipart(FileUpload file, String model, String language,
+                                                            String prompt, String responseFormat, String temperature) {
+        if (file == null || !Files.exists(file.uploadedFile())) {
+            throw new WebApplicationException("Audio file is required", Response.Status.BAD_REQUEST);
+        }
+        try {
+            byte[] data = Files.readAllBytes(file.uploadedFile());
+            MultipartBuilder builder = new MultipartBuilder()
+                .file("file", file.fileName(), file.contentType(), data)
+                .field("model", model);
+            if (language != null) {
+                builder.field("language", language);
+            }
+            if (prompt != null) {
+                builder.field("prompt", prompt);
+            }
+            if (responseFormat != null) {
+                builder.field("response_format", responseFormat);
+            }
+            if (temperature != null) {
+                builder.field("temperature", temperature);
+            }
+            return new UpstreamHttpClient.MultipartData(builder.build(), builder.contentType());
+        } catch (IOException e) {
+            throw new WebApplicationException("Failed to read uploaded audio file", e, Response.Status.BAD_REQUEST);
+        }
     }
 
     private class SseStreamingOutput implements StreamingOutput {

@@ -48,18 +48,18 @@ This plan is derived from a review of the current codebase, documentation, recen
 
 ## P2 — Backlog / On-Demand
 
-| # | Category | Title | Description |
-|---|----------|-------|-------------|
-| P2-1 | Core proxy | Add `/audio/*` proxy endpoints | Support Whisper / TTS models to complete OpenAI protocol coverage. |
-| P2-2 | Core proxy | Run response plugins per SSE chunk | Response plugins currently run only after the full stream is accumulated. Per-chunk modification would enable live filtering. |
-| P2-3 | Plugin system | Groovy/JS plugin sandbox / allow-list | Scripts have full JVM access. Introduce a ClassShutter or security policy to restrict file/network access. |
-| P2-4 | Plugin system | Plugin script revision history | Save script snapshots and support rollback. |
+| # | Status | Category | Title | Description |
+|---|--------|----------|-------|-------------|
+| P2-1 | ✓ 2026-07-07 | Core proxy | Add `/audio/*` proxy endpoints | Support Whisper / TTS models to complete OpenAI protocol coverage. Added `POST /v1/proxy/{instance}/audio/speech` (JSON input, binary audio output), `/audio/transcriptions`, and `/audio/translations` (multipart file upload); `UpstreamHttpClient` gained `sendBinary()` and `sendMultipart()` methods. |
+| P2-2 | ✓ 2026-07-07 | Core proxy | Run response plugins per SSE chunk | Response plugins previously ran only after the full stream was accumulated. Added `STREAM_CHUNK` execution phase; `OpenAiProxyService` now runs `STREAM_CHUNK` plugins on each SSE chunk of streaming chat completions, supporting real-time modification or filtering. |
+| P2-3 | — | Plugin system | Groovy/JS plugin sandbox / allow-list | Scripts have full JVM access. Introduce a ClassShutter or security policy to restrict file/network access. |
+| P2-4 | — | Plugin system | Plugin script revision history | Save script snapshots and support rollback. |
 | P2-5 | ✓ 2026-07-07 | Admin UI | Dashboard chart page | Visualize request, error, and token trends based on backend aggregated log metrics. Added `GET /api/metrics/{summary,time-series,top-instances,status-distribution}` and admin-web `Dashboard.vue` using ECharts. |
 | P2-6 | ✓ 2026-07-07 | Admin UI | Filtered log export CSV/JSON | The logs page only supported pruning. Added `GET /api/logs/export?format=json|csv` with all filter parameters, up to 10,000 records; CSV includes headers and proper escaping. |
 | P2-7 | ✓ 2026-07-07 | Operations | H2 hot backup / restore endpoint | Provide an admin API to trigger `BACKUP` and restore. Added `POST /api/admin/database/backup` (H2 hot backup to `~/.damning-proxy/backups/`) and `POST /api/admin/database/restore` (validate and stage restore file; requires restart due to H2 file lock). |
 | P2-8 | ✓ 2026-07-07 | Operations | Rate-limit response headers | Return standard headers such as `RateLimit-Remaining` and `RateLimit-Reset`. Added `RateLimitInfo` record and `getRateLimitInfo()` method; all proxy endpoint responses now carry `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset` headers. |
 | P2-9 | ✓ 2026-07-07 | Code quality | Document `skip.frontend.build` property | Verified the property works at `pom.xml:186`; corrected the skip-frontend command in the build guide to `-Dskip.frontend.build=true`. |
-| P2-10 | Code quality | Native image reflection configuration | Plugin engines and script caches rely on reflection; add `reflect-config.json` and verify native build. |
+| P2-10 | — | Code quality | Native image reflection configuration | Plugin engines and script caches rely on reflection; add `reflect-config.json` and verify native build. |
 
 ---
 

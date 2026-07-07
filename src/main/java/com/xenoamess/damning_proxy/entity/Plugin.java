@@ -72,6 +72,7 @@ public class Plugin extends PanacheEntityBase {
     public enum ExecutionPhase {
         REQUEST,
         RESPONSE,
+        STREAM_CHUNK,
         BOTH
     }
 }

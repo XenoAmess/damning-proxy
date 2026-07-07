@@ -103,4 +103,9 @@ public class PluginContext {
     public boolean isReturned() {
         return returned;
     }
+
+    public void resetChunkState() {
+        this.stopped = false;
+        this.returned = false;
+    }
 }

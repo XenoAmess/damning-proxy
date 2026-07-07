@@ -120,6 +120,137 @@ public class OpenAiProxyService {
             ));
     }
 
+    public Response audioSpeech(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        return proxyAudioBinary(instanceSlug, requestBody, "POST", "/v1/audio/speech", "/audio/speech", incomingHeaders);
+    }
+
+    public Response audioTranscriptions(String instanceSlug, UpstreamHttpClient.MultipartData multipart,
+                                        jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        return proxyMultipart(instanceSlug, multipart, "POST", "/v1/audio/transcriptions", "/audio/transcriptions", incomingHeaders);
+    }
+
+    public Response audioTranslations(String instanceSlug, UpstreamHttpClient.MultipartData multipart,
+                                      jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        return proxyMultipart(instanceSlug, multipart, "POST", "/v1/audio/translations", "/audio/translations", incomingHeaders);
+    }
+
+    private Response proxyAudioBinary(String instanceSlug, Object requestBody, String method,
+                                      String requestPath, String upstreamPath,
+                                      jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        ProxyContext ctx = resolveInstance(instanceSlug);
+        List<Plugin> plugins = loadPlugins(ctx.group);
+        PluginContext context = createRequestContext(ctx.profile, requestBody, incomingHeaders);
+
+        long start = System.currentTimeMillis();
+        TrafficLog trafficLog = trafficLogService.recordRequest(
+            ctx.instance.id, ctx.instance.slug, ctx.profile.id, requestPath, method,
+            context.getRequestHeaders(), requestBody,
+            ctx.profile.baseUrl, ctx.profile.timeoutMs, false
+        );
+
+        pluginExecutionService.executeRequestPlugins(plugins, context);
+
+        if (context.isReturned()) {
+            trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
+                context.getResponseHeaders(), context.getResponseBody(),
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
+            return Response.status(context.getResponseStatus())
+                .entity(context.getResponseBody())
+                .build();
+        }
+
+        try {
+            UpstreamHttpClient.BinaryResponse upstream = upstreamHttpClient.sendBinary(
+                method, ctx.profile.baseUrl, upstreamPath,
+                toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs,
+                ctx.profile
+            );
+
+            context.setResponseStatus(upstream.statusCode);
+            context.getResponseHeaders().putAll(toMap(upstream.headers));
+            context.setResponseBody(parseJson(upstream.body != null ? new String(upstream.body, java.nio.charset.StandardCharsets.UTF_8) : null));
+
+            pluginExecutionService.executeResponsePlugins(plugins, context);
+
+            circuitBreaker.recordSuccess(ctx.profile.baseUrl);
+            trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
+                context.getResponseHeaders(), context.getResponseBody(),
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
+
+            String contentType = upstream.headers.get("Content-Type");
+            Response.ResponseBuilder builder = Response.status(upstream.statusCode);
+            if (contentType != null) {
+                builder.type(contentType);
+            }
+            builder.header("Content-Disposition", "attachment; filename=\"audio\"");
+            builder.entity(upstream.body);
+            return builder.build();
+        } catch (Exception e) {
+            int status = (e instanceof jakarta.ws.rs.WebApplicationException wae) ? wae.getResponse().getStatus() : 502;
+            trafficLogService.recordResponse(trafficLog, status,
+                Map.of(), "Upstream request failed: " + e.getMessage(),
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), e.getMessage());
+            throw new WebApplicationException(e.getMessage(), e, Response.status(status).build());
+        }
+    }
+
+    private Response proxyMultipart(String instanceSlug, UpstreamHttpClient.MultipartData multipart, String method,
+                                    String requestPath, String upstreamPath,
+                                    jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        ProxyContext ctx = resolveInstance(instanceSlug);
+        List<Plugin> plugins = loadPlugins(ctx.group);
+
+        Object requestBody = Map.of("requestPath", requestPath);
+        PluginContext context = createRequestContext(ctx.profile, requestBody, incomingHeaders);
+
+        long start = System.currentTimeMillis();
+        TrafficLog trafficLog = trafficLogService.recordRequest(
+            ctx.instance.id, ctx.instance.slug, ctx.profile.id, requestPath, method,
+            context.getRequestHeaders(), requestBody,
+            ctx.profile.baseUrl, ctx.profile.timeoutMs, false
+        );
+
+        pluginExecutionService.executeRequestPlugins(plugins, context);
+
+        if (context.isReturned()) {
+            trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
+                context.getResponseHeaders(), context.getResponseBody(),
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
+            return Response.status(context.getResponseStatus())
+                .entity(context.getResponseBody())
+                .build();
+        }
+
+        try {
+            UpstreamHttpClient.UpstreamResponse upstream = upstreamHttpClient.sendMultipart(
+                method, ctx.profile.baseUrl, upstreamPath,
+                toMultiMap(context.getRequestHeaders()), multipart, ctx.profile.timeoutMs,
+                ctx.profile
+            );
+
+            context.setResponseStatus(upstream.statusCode);
+            context.getResponseHeaders().putAll(toMap(upstream.headers));
+            context.setResponseBody(parseJson(upstream.body));
+
+            pluginExecutionService.executeResponsePlugins(plugins, context);
+
+            circuitBreaker.recordSuccess(ctx.profile.baseUrl);
+            trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
+                context.getResponseHeaders(), context.getResponseBody(),
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
+
+            return Response.status(context.getResponseStatus())
+                .entity(context.getResponseBody())
+                .build();
+        } catch (Exception e) {
+            int status = (e instanceof jakarta.ws.rs.WebApplicationException wae) ? wae.getResponse().getStatus() : 502;
+            trafficLogService.recordResponse(trafficLog, status,
+                Map.of(), "Upstream request failed: " + e.getMessage(),
+                System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), e.getMessage());
+            throw new WebApplicationException(e.getMessage(), e, Response.status(status).build());
+        }
+    }
+
     @FunctionalInterface
     private interface UpstreamCall {
         UpstreamHttpClient.UpstreamResponse execute(ProxyProfile profile, PluginContext context);
@@ -354,8 +485,7 @@ public class OpenAiProxyService {
                                 emitter.complete();
                                 return;
                             }
-                            emitter.emit("data: " + data + "\n\n");
-                            accumulateStreamDelta(data, accumulatedChoices);
+                            processStreamChunk(data, context, plugins, emitter::emit, accumulatedChoices);
                         }
                     }
                 });
@@ -365,8 +495,7 @@ public class OpenAiProxyService {
                     if (remaining.startsWith("data: ")) {
                         String data = remaining.substring(6).trim();
                         if (!"[DONE]".equals(data)) {
-                            emitter.emit("data: " + data + "\n\n");
-                            accumulateStreamDelta(data, accumulatedChoices);
+                            processStreamChunk(data, context, plugins, emitter::emit, accumulatedChoices);
                         }
                     }
                     Object parsedBody = buildStreamingResponseBody(accumulatedChoices);
@@ -393,6 +522,30 @@ public class OpenAiProxyService {
             return Map.of("choices", List.of(Map.of("delta", Map.of())));
         }
         return Map.of("choices", (Object) accumulatedChoices);
+    }
+
+    private void processStreamChunk(String data, PluginContext context, List<Plugin> plugins,
+                                    java.util.function.Consumer<String> emit,
+                                    List<Map<String, Object>> accumulatedChoices) {
+        Object chunkBody = parseJson(data);
+        context.resetChunkState();
+        context.setResponseBody(chunkBody);
+        pluginExecutionService.executeStreamChunkPlugins(plugins, context);
+        if (!context.isReturned()) {
+            String modifiedData = chunkToSseData(context.getResponseBody());
+            emit.accept("data: " + modifiedData + "\n\n");
+            accumulateStreamDelta(modifiedData, accumulatedChoices);
+        }
+    }
+
+    private String chunkToSseData(Object chunkBody) {
+        if (chunkBody == null) {
+            return "";
+        }
+        if (chunkBody instanceof String s) {
+            return s;
+        }
+        return toJson(chunkBody);
     }
 
     private void accumulateStreamDelta(String data, List<Map<String, Object>> accumulatedChoices) {

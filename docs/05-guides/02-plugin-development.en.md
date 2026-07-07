@@ -34,7 +34,10 @@ When creating a plugin, select the execution phase:
 
 - `REQUEST`: executes only during the request phase
 - `RESPONSE`: executes only during the response phase
+- `STREAM_CHUNK`: executes on each SSE chunk of a streaming response; can modify or filter individual chunks in real time
 - `BOTH`: executes during both request and response phases
+
+`STREAM_CHUNK` plugins run every time an SSE chunk is received. If the plugin calls `context.returnResponse(...)`, that chunk is not sent to the client (commonly used for content filtering); if `context.getResponseBody()` is modified, the modified chunk is sent.
 
 ---
 
@@ -173,7 +176,7 @@ Execution order: `orderIndex` ascending → `priority` ascending → `id` ascend
 
 - Plugin scripts are cached by content hash; after saving changes, the next request automatically recompiles and uses the new script. No service restart is required.
 - Plugins have full JVM permissions; do not run scripts from untrusted sources.
-- Response-phase plugins operate on the accumulated complete response body for streaming requests.
+- Response-phase plugins operate on the accumulated complete response body for streaming requests; use the `STREAM_CHUNK` phase to process each SSE chunk in real time.
 - If a plugin throws an exception, the pipeline is not interrupted, but the error is recorded in the friendly snapshot.
 
 ---

@@ -27,7 +27,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 class PluginIntegrationTest {
@@ -107,6 +110,51 @@ class PluginIntegrationTest {
             .then()
             .statusCode(200)
             .body("model", equalTo("modified"));
+    }
+
+    @Test
+    void shouldApplyStreamChunkPhasePlugin() {
+        String sseBody = "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"delta\":{\"content\":\"A\"}}]}\n\n" +
+            "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"delta\":{\"content\":\"B\"}}]}\n\n" +
+            "data: [DONE]\n\n";
+        wireMockServer.stubFor(post(urlEqualTo("/v1/chat/completions"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "text/event-stream")
+                .withChunkedDribbleDelay(5, 100)
+                .withBody(sseBody)));
+
+        ProxyProfile profile = saveProfile("openai", "http://localhost:18089/v1", "sk-test");
+        Plugin plugin = savePlugin("chunk-modifier",
+            "const body = context.getResponseBody(); " +
+                "if (body.choices && body.choices[0] && body.choices[0].delta && body.choices[0].delta.content === 'A') { " +
+                "  body.choices[0].delta.content = 'X'; context.setResponseBody(body); " +
+                "} else if (body.choices && body.choices[0] && body.choices[0].delta && body.choices[0].delta.content === 'B') { " +
+                "  context.returnResponse(200, {}, {}); " +
+                "}",
+            Plugin.ExecutionPhase.STREAM_CHUNK);
+        PluginGroup group = saveGroupWithPlugin("group-chunk", plugin);
+        saveInstance("instance-chunk", profile.id, group.id);
+
+        Map<String, Object> body = Map.of(
+            "model", "gpt-4",
+            "messages", List.of(Map.of("role", "user", "content", "Hello")),
+            "stream", true
+        );
+
+        String response = given()
+            .contentType(ContentType.JSON)
+            .header("Accept", "text/event-stream")
+            .body(body)
+            .when().post("/v1/proxy/instance-chunk/chat/completions")
+            .then()
+            .statusCode(200)
+            .header("Content-Type", containsString("text/event-stream"))
+            .extract().body().asString();
+
+        assertTrue(response.contains("X"), response);
+        assertFalse(response.contains("\"content\":\"A\""), response);
+        assertFalse(response.contains("\"content\":\"B\""), response);
     }
 
     @Transactional
