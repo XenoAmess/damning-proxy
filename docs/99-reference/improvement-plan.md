@@ -37,7 +37,7 @@
 | P1-7 | ✓ 2026-07-07 | 管理后台 | 前端接入 ESLint / Prettier / 类型检查 | `admin-web/package.json` 缺少 lint、format、type-check 脚本。已新增 ESLint 9 + `eslint-plugin-vue` + `eslint-config-prettier`、Prettier、`vue-tsc` + `tsconfig.json`；统一格式化全部源码并修复 prop 修改等真实问题；CI 已纳入 lint、type-check、format-check。 |
 | P1-8 | 测试 | 为 `RateLimiter`、`CircuitBreaker`、`UpstreamHttpClient` 补单测 | 这些核心韧性组件仅通过 `ProxyApiTest` 间接测试。补充纯单元测试，模拟时间和失败场景。 |
 | P1-9 | 测试 | 插件真实代理端到端测试 | 缺少验证“请求阶段插件改写上游请求 / 响应阶段插件改写返回体”的测试。用 WireMock + 真实插件做端到端验证。 |
-| P1-10 | 文档 | 修正插件缓存过时说明 | `docs/05-guides/02-plugin-development.md` 仍写“修改后需重启服务生效”，实际更新已会失效缓存。 |
+| P1-10 | ✓ 2026-07-07 | 文档 | 修正插件缓存过时说明 | `docs/05-guides/02-plugin-development.md` 仍写“修改后需重启服务生效”。实际插件脚本按内容哈希缓存，且 `PluginAdminApi` 在更新插件时会调用 `evictCache`；已更新为中英文说明，明确保存后下次请求自动生效。 |
 | P1-11 | 运维 | 提供 Dockerfile 与 docker-compose | 文档仅有手工片段，应提供可版本控制的 `Dockerfile` 和 `docker-compose.yml`，并挂载 H2 数据卷。 |
 | P1-12 | 运维 | 接入 Prometheus / Micrometer 指标 | 监控文档仍写未集成。增加 `quarkus-micrometer`，暴露请求量、错误、延迟、token 用量、熔断状态等指标。 |
 | P1-13 | 代码质量 | 按日志保留天数清理 | 当前仅按数量保留。增加 `damning-proxy.log.max-age-days` 配置，按时间窗口清理。 |

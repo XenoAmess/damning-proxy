@@ -2,7 +2,7 @@
 
 # 02 Plugin Development Guide
 
-> Last updated: 2026-06-17  
+> Last updated: 2026-07-07  
 > Source version: current workspace
 
 ## Plugin Basics
@@ -171,7 +171,7 @@ Execution order: `orderIndex` ascending → `priority` ascending → `id` ascend
 
 ## Notes
 
-- Plugin scripts are cached by content; restart the service for changes to take effect.
+- Plugin scripts are cached by content hash; after saving changes, the next request automatically recompiles and uses the new script. No service restart is required.
 - Plugins have full JVM permissions; do not run scripts from untrusted sources.
 - Response-phase plugins operate on the accumulated complete response body for streaming requests.
 - If a plugin throws an exception, the pipeline is not interrupted, but the error is recorded in the friendly snapshot.
