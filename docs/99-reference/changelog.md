@@ -7,6 +7,8 @@
 
 ## 2026-07-07
 
+- 流量日志新增 token 用量统计：从上游响应 `usage` 字段自动提取 prompt_tokens / completion_tokens / total_tokens，并在日志详情与卡片中展示。
+- 新增单元测试 `TrafficLogServiceTest.shouldExtractTokenUsageFromResponse`。
 - 新增代理端点：`/v1/proxy/{instanceSlug}/embeddings` 与 `/v1/proxy/{instanceSlug}/images/generations`，兼容 OpenAI embeddings 与 images/generations 接口。
 - 新增对应代理测试 `ProxyApiTest.shouldProxyEmbeddings` 与 `ProxyApiTest.shouldProxyImageGenerations`。
 - 流式上游失败时返回友好的 SSE 错误：后台对上游连接失败、HTTP 错误状态码等场景统一发送 `event: error` 事件，前端解析后提示具体错误信息，不再静默断流。

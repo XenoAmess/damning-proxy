@@ -68,6 +68,15 @@ public class TrafficLog extends PanacheEntityBase {
     @Column(name = "error_message", length = 2000)
     public String errorMessage;
 
+    @Column(name = "prompt_tokens")
+    public Integer promptTokens;
+
+    @Column(name = "completion_tokens")
+    public Integer completionTokens;
+
+    @Column(name = "total_tokens")
+    public Integer totalTokens;
+
     @Column(name = "response_time")
     public LocalDateTime responseTime;
 

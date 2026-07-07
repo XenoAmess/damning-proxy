@@ -1,7 +1,9 @@
 package com.xenoamess.damning_proxy.service;
 
+import com.xenoamess.damning_proxy.entity.ProxyInstance;
 import com.xenoamess.damning_proxy.entity.ProxyProfile;
 import com.xenoamess.damning_proxy.entity.TrafficLog;
+import com.xenoamess.damning_proxy.repository.InstanceRepository;
 import com.xenoamess.damning_proxy.repository.LogRepository;
 import com.xenoamess.damning_proxy.repository.ProfileRepository;
 import io.quarkus.test.junit.QuarkusTest;
@@ -10,6 +12,8 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,10 +30,14 @@ class TrafficLogServiceTest {
     @Inject
     ProfileRepository profileRepository;
 
+    @Inject
+    InstanceRepository instanceRepository;
+
     @BeforeEach
     @Transactional
     void setUp() {
         logRepository.deleteAll();
+        instanceRepository.listAll().forEach(i -> instanceRepository.deleteById(i.id));
         profileRepository.listAll().forEach(p -> profileRepository.deleteById(p.id));
     }
 
@@ -61,6 +69,33 @@ class TrafficLogServiceTest {
     }
 
     @Test
+    void shouldExtractTokenUsageFromResponse() {
+        ProxyInstance instance = createInstance("extract-usage", "http://localhost:18089/v1", "sk-test");
+        TrafficLog log = trafficLogService.recordRequest(
+            instance.id, instance.slug, instance.profileId,
+            "/v1/chat/completions", "POST",
+            Map.of("Authorization", "Bearer sk-test"),
+            Map.of("model", "gpt-4", "messages", java.util.List.of()),
+            "http://localhost:18089/v1", 30000, false
+        );
+
+        Map<String, Object> responseBody = new HashMap<>();
+        responseBody.put("id", "chatcmpl-1");
+        Map<String, Object> usage = new HashMap<>();
+        usage.put("prompt_tokens", 10);
+        usage.put("completion_tokens", 20);
+        usage.put("total_tokens", 30);
+        responseBody.put("usage", usage);
+
+        trafficLogService.recordResponse(log, 200, Map.of(), responseBody, 100, List.of(), List.of());
+
+        TrafficLog updated = logRepository.findById(log.id).orElseThrow();
+        assertEquals(10, updated.promptTokens);
+        assertEquals(20, updated.completionTokens);
+        assertEquals(30, updated.totalTokens);
+    }
+
+    @Test
     void shouldTruncateLargeBody() {
         StringBuilder large = new StringBuilder();
         for (int i = 0; i < 20000; i++) {
@@ -78,5 +113,20 @@ class TrafficLogServiceTest {
         assertEquals(input.length(), log.requestBody.length(),
             "default config disables truncation, body length should be preserved");
         assertFalse(log.requestBody.endsWith("...[truncated]"));
+    }
+
+    @Transactional
+    ProxyInstance createInstance(String slug, String baseUrl, String token) {
+        ProxyProfile profile = new ProxyProfile(slug, slug, baseUrl);
+        profile.bearerToken = token;
+        profileRepository.save(profile);
+        ProxyInstance instance = new ProxyInstance();
+        instance.name = slug;
+        instance.slug = slug;
+        instance.profileId = profile.id;
+        instance.pluginGroupId = -1L;
+        instance.enabled = true;
+        instanceRepository.save(instance);
+        return instance;
     }
 }

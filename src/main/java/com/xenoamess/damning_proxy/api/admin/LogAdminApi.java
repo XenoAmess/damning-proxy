@@ -140,6 +140,9 @@ public class LogAdminApi {
         dto.timeoutMs = log.timeoutMs;
         dto.streaming = log.streaming;
         dto.errorMessage = log.errorMessage;
+        dto.promptTokens = log.promptTokens;
+        dto.completionTokens = log.completionTokens;
+        dto.totalTokens = log.totalTokens;
         dto.rawRequestHeaders = log.requestHeaders;
         dto.rawResponseHeaders = log.responseHeaders;
         dto.rawPluginLogs = log.pluginLogs;

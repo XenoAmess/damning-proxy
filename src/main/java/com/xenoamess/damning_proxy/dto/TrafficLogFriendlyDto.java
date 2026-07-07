@@ -27,6 +27,10 @@ public class TrafficLogFriendlyDto {
     public Boolean streaming;
     public String errorMessage;
 
+    public Integer promptTokens;
+    public Integer completionTokens;
+    public Integer totalTokens;
+
     public String userPrompt;
     public String modelOutput;
     public String model;

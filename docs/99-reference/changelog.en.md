@@ -7,6 +7,8 @@
 
 ## 2026-07-07
 
+- Traffic logs now capture token usage: prompt_tokens / completion_tokens / total_tokens are automatically extracted from the upstream `usage` field and shown in the log detail and card.
+- Added unit test `TrafficLogServiceTest.shouldExtractTokenUsageFromResponse`.
 - Added proxy endpoints: `/v1/proxy/{instanceSlug}/embeddings` and `/v1/proxy/{instanceSlug}/images/generations`, compatible with OpenAI embeddings and images/generations APIs.
 - Added corresponding proxy tests `ProxyApiTest.shouldProxyEmbeddings` and `ProxyApiTest.shouldProxyImageGenerations`.
 - Streaming upstream failures now return a friendly SSE error: the backend emits an `event: error` event for connection failures, HTTP error status codes, etc.; the frontend parses it and surfaces the message instead of silently terminating the stream.

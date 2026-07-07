@@ -86,6 +86,7 @@
           </div>
           <div class="log-time">
             <span v-if="log.durationMs">{{ log.durationMs }}ms · </span>
+            <span v-if="log.totalTokens !== undefined && log.totalTokens !== null">{{ log.totalTokens }} tokens · </span>
             <span v-if="log.requestBodyLength">{{ formatBytes(log.requestBodyLength) }} · </span>
             {{ formatTime(log.requestTime) }}
           </div>
@@ -374,6 +375,15 @@
                 <div class="meta-label">响应状态码</div>
                 <div class="meta-value">
                   <el-tag size="small" :type="statusType">{{ current.responseStatus || '-' }}</el-tag>
+                </div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Token 用量</div>
+                <div class="meta-value">
+                  <template v-if="current.totalTokens !== null && current.totalTokens !== undefined">
+                    prompt {{ current.promptTokens || 0 }} / completion {{ current.completionTokens || 0 }} / total {{ current.totalTokens }}
+                  </template>
+                  <span v-else>-</span>
                 </div>
               </div>
               <div class="meta-item">

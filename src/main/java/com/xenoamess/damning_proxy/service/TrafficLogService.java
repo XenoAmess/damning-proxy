@@ -98,10 +98,39 @@ public class TrafficLogService {
         existing.pluginLogs = serializePluginLogs(pluginLogs);
         existing.friendlyPluginSnapshots = serializeFriendlySnapshots(friendlySnapshots);
         existing.errorMessage = errorMessage;
+        extractTokenUsage(existing, responseBody);
         logRepository.save(existing);
 
         if (recordCounter.incrementAndGet() % PRUNE_INTERVAL == 0) {
             pruneOldLogs();
+        }
+    }
+
+    private void extractTokenUsage(TrafficLog log, Object responseBody) {
+        if (!(responseBody instanceof Map)) {
+            return;
+        }
+        Object usage = ((Map<?, ?>) responseBody).get("usage");
+        if (!(usage instanceof Map)) {
+            return;
+        }
+        Map<?, ?> u = (Map<?, ?>) usage;
+        log.promptTokens = asInteger(u.get("prompt_tokens"));
+        log.completionTokens = asInteger(u.get("completion_tokens"));
+        log.totalTokens = asInteger(u.get("total_tokens"));
+    }
+
+    private Integer asInteger(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number n) {
+            return n.intValue();
+        }
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
