@@ -1,44 +1,58 @@
 <template>
   <div
-    :ref="el => setCardRef(log.id, el)"
+    :ref="(el) => setCardRef(log.id, el)"
     :data-id="log.id"
     class="log-card"
     :class="{ error: log.responseStatus >= 400 }"
   >
     <div class="log-card-header">
       <div class="log-meta">
-        <el-tag size="small" type="info">#{{ log.id }}</el-tag>
+        <el-tag size="small" type="info"> #{{ log.id }} </el-tag>
         <el-tag v-if="log.instanceSlug" size="small" type="warning" class="instance-tag">
           {{ log.instanceSlug }}
         </el-tag>
         <span class="log-path">{{ log.requestMethod }} {{ log.requestPath }}</span>
-        <el-tag
-          size="small"
-          :type="log.responseStatus >= 400 ? 'danger' : 'success'"
-        >
+        <el-tag size="small" :type="log.responseStatus >= 400 ? 'danger' : 'success'">
           {{ log.responseStatus || '-' }}
         </el-tag>
-        <el-tag v-if="log.streaming" size="small" type="primary">流式</el-tag>
+        <el-tag v-if="log.streaming" size="small" type="primary"> 流式 </el-tag>
       </div>
       <div class="log-time">
         <span v-if="log.durationMs">{{ log.durationMs }}ms · </span>
-        <span v-if="log.totalTokens !== undefined && log.totalTokens !== null">{{ log.totalTokens }} tokens · </span>
+        <span v-if="log.totalTokens !== undefined && log.totalTokens !== null"
+          >{{ log.totalTokens }} tokens ·
+        </span>
         <span v-if="log.requestBodyLength">{{ formatBytes(log.requestBodyLength) }} · </span>
         {{ formatTime(log.requestTime) }}
       </div>
     </div>
 
-    <div class="log-card-body" @click="emit('open', log.id)" @keydown.enter="emit('open', log.id)" @keydown.space.prevent="emit('open', log.id)" tabindex="0" role="button" :aria-label="'日志 #' + log.id + ' ' + log.requestMethod + ' ' + log.requestPath">
+    <div
+      class="log-card-body"
+      tabindex="0"
+      role="button"
+      :aria-label="'日志 #' + log.id + ' ' + log.requestMethod + ' ' + log.requestPath"
+      @click="emit('open', log.id)"
+      @keydown.enter="emit('open', log.id)"
+      @keydown.space.prevent="emit('open', log.id)"
+    >
       <template v-if="isChatLike(log)">
         <div class="summary-section">
           <div class="summary-label">📝 用户输入</div>
-          <div class="summary-text">{{ log._friendly?.userPrompt || '-' }}</div>
+          <div class="summary-text">
+            {{ log._friendly?.userPrompt || '-' }}
+          </div>
         </div>
         <div class="summary-section">
           <div class="summary-label">🤖 模型输出</div>
-          <div class="summary-text">{{ log._friendly?.modelOutput || '-' }}</div>
+          <div class="summary-text">
+            {{ log._friendly?.modelOutput || '-' }}
+          </div>
         </div>
-        <div v-if="(log._friendly?.requestMessages?.length || 0) > 2" class="summary-section summary-meta">
+        <div
+          v-if="(log._friendly?.requestMessages?.length || 0) > 2"
+          class="summary-section summary-meta"
+        >
           <div class="summary-label">💬 对话历史</div>
           <div class="summary-text">
             共 {{ log._friendly.requestMessages.length }} 条消息 · 点击「详情」查看完整对话
@@ -82,10 +96,8 @@
     </div>
 
     <div class="log-card-footer">
-      <el-button size="small" type="primary" @click.stop="emit('open', log.id)">
-        详情
-      </el-button>
-      <el-button size="small" type="danger" @click.stop="emit('remove', log.id)">删除</el-button>
+      <el-button size="small" type="primary" @click.stop="emit('open', log.id)"> 详情 </el-button>
+      <el-button size="small" type="danger" @click.stop="emit('remove', log.id)"> 删除 </el-button>
     </div>
   </div>
 </template>

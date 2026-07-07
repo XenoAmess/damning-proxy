@@ -6,7 +6,7 @@
         :options="instanceOptions"
         placeholder="选择实例"
         style="width: 200px"
-        @update:model-value="emit('update:instanceSlug', $event); emit('instance-change')"
+        @update:model-value="onInstanceChange"
       />
       <el-select-v2
         :model-value="model"
@@ -23,9 +23,22 @@
       <el-button link @click="emit('toggle-params')">
         <el-icon><Setting /></el-icon> 参数
       </el-button>
-      <el-button style="margin-left: 12px" @click="emit('clear')">清空当前</el-button>
-      <el-button style="margin-left: 12px" type="primary" :disabled="!canGenerate" @click="emit('generate-image')">生成图片</el-button>
-      <el-checkbox :model-value="selectMode" style="margin-left: 12px" @update:model-value="emit('update:selectMode', $event)">选择模式</el-checkbox>
+      <el-button style="margin-left: 12px" @click="emit('clear')"> 清空当前 </el-button>
+      <el-button
+        style="margin-left: 12px"
+        type="primary"
+        :disabled="!canGenerate"
+        @click="emit('generate-image')"
+      >
+        生成图片
+      </el-button>
+      <el-checkbox
+        :model-value="selectMode"
+        style="margin-left: 12px"
+        @update:model-value="emit('update:selectMode', $event)"
+      >
+        选择模式
+      </el-checkbox>
     </div>
   </div>
 </template>
@@ -43,7 +56,20 @@ const props = defineProps({
   canGenerate: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['update:instanceSlug', 'update:model', 'instance-change', 'toggle-params', 'clear', 'generate-image', 'update:selectMode'])
+const emit = defineEmits([
+  'update:instanceSlug',
+  'update:model',
+  'instance-change',
+  'toggle-params',
+  'clear',
+  'generate-image',
+  'update:selectMode',
+])
+
+function onInstanceChange(value) {
+  emit('update:instanceSlug', value)
+  emit('instance-change')
+}
 </script>
 
 <style scoped>

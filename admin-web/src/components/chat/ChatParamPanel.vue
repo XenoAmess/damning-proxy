@@ -3,15 +3,39 @@
     <div class="param-row">
       <div class="param-item">
         <label>Temperature</label>
-        <el-input-number :model-value="temperature" :min="0" :max="2" :step="0.1" controls-position="right" style="width: 120px" @update:model-value="emit('update:temperature', $event)" />
+        <el-input-number
+          :model-value="temperature"
+          :min="0"
+          :max="2"
+          :step="0.1"
+          controls-position="right"
+          style="width: 120px"
+          @update:model-value="emit('update:temperature', $event)"
+        />
       </div>
       <div class="param-item">
         <label>Top P</label>
-        <el-input-number :model-value="topP" :min="0" :max="1" :step="0.1" controls-position="right" style="width: 120px" @update:model-value="emit('update:topP', $event)" />
+        <el-input-number
+          :model-value="topP"
+          :min="0"
+          :max="1"
+          :step="0.1"
+          controls-position="right"
+          style="width: 120px"
+          @update:model-value="emit('update:topP', $event)"
+        />
       </div>
       <div class="param-item">
         <label>Max Tokens</label>
-        <el-input-number :model-value="maxTokens" :min="1" :max="32768" :step="1" controls-position="right" style="width: 130px" @update:model-value="emit('update:maxTokens', $event)" />
+        <el-input-number
+          :model-value="maxTokens"
+          :min="1"
+          :max="32768"
+          :step="1"
+          controls-position="right"
+          style="width: 130px"
+          @update:model-value="emit('update:maxTokens', $event)"
+        />
       </div>
     </div>
     <div class="param-item" style="margin-top: 8px">
@@ -35,7 +59,12 @@ const props = defineProps({
   systemPrompt: { type: String, default: '' },
 })
 
-const emit = defineEmits(['update:temperature', 'update:topP', 'update:maxTokens', 'update:systemPrompt'])
+const emit = defineEmits([
+  'update:temperature',
+  'update:topP',
+  'update:maxTokens',
+  'update:systemPrompt',
+])
 </script>
 
 <style scoped>

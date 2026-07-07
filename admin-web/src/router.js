@@ -1,6 +1,8 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
-const NotFound = { template: '<div style="text-align:center;padding:60px 20px"><h2>404</h2><p>页面不存在</p></div>' }
+const NotFound = {
+  template: '<div style="text-align:center;padding:60px 20px"><h2>404</h2><p>页面不存在</p></div>',
+}
 
 const routes = [
   { path: '/', redirect: '/instances' },

@@ -1,8 +1,8 @@
 <template>
   <div>
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增实例</el-button>
-      <el-button @click="exportInstances">导出实例</el-button>
+      <el-button type="primary" @click="openDialog()"> 新增实例 </el-button>
+      <el-button @click="exportInstances"> 导出实例 </el-button>
       <el-upload
         action="#"
         :auto-upload="false"
@@ -15,7 +15,7 @@
       </el-upload>
     </div>
     <ImportPreviewDialog ref="previewDialog" />
-    <el-table :data="instances" v-loading="loading" @selection-change="handleSelectionChange">
+    <el-table v-loading="loading" :data="instances" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="name" label="名称" />
@@ -33,25 +33,22 @@
       <el-table-column prop="defaultModel" label="默认模型" />
       <el-table-column prop="enabled" label="启用" width="80">
         <template #default="{ row }">
-          <el-tag :type="row.enabled ? 'success' : 'info'">{{ row.enabled ? '是' : '否' }}</el-tag>
+          <el-tag :type="row.enabled ? 'success' : 'info'">
+            {{ row.enabled ? '是' : '否' }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="OpenAI URL">
         <template #default="{ row }">
-          <el-button
-            size="small"
-            link
-            type="primary"
-            @click="copyOpenAiUrl(row.slug)"
-          >
+          <el-button size="small" link type="primary" @click="copyOpenAiUrl(row.slug)">
             {{ openAiUrl(row.slug) }}
           </el-button>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="150">
         <template #default="{ row }">
-          <el-button size="small" @click="openDialog(row)">编辑</el-button>
-          <el-button size="small" type="danger" @click="remove(row.id)">删除</el-button>
+          <el-button size="small" @click="openDialog(row)"> 编辑 </el-button>
+          <el-button size="small" type="danger" @click="remove(row.id)"> 删除 </el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -88,8 +85,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="visible = false">取消</el-button>
-        <el-button type="primary" @click="save" :loading="saving">保存</el-button>
+        <el-button @click="visible = false"> 取消 </el-button>
+        <el-button type="primary" :loading="saving" @click="save"> 保存 </el-button>
       </template>
     </el-dialog>
   </div>
@@ -130,21 +127,25 @@ const form = ref({
   enabled: true,
 })
 
-const profileOptions = computed(() => profiles.value.map(p => ({ value: p.id, label: `${p.name} (${p.slug})` })))
-const groupOptions = computed(() => groups.value.map(g => ({ value: g.id, label: `${g.name} (${g.slug})` })))
+const profileOptions = computed(() =>
+  profiles.value.map((p) => ({ value: p.id, label: `${p.name} (${p.slug})` }))
+)
+const groupOptions = computed(() =>
+  groups.value.map((g) => ({ value: g.id, label: `${g.name} (${g.slug})` }))
+)
 
 function profileName(id) {
-  const p = profiles.value.find(x => x.id === id)
+  const p = profiles.value.find((x) => x.id === id)
   return p ? `${p.name} (${p.slug})` : id
 }
 
 function groupName(id) {
-  const g = groups.value.find(x => x.id === id)
+  const g = groups.value.find((x) => x.id === id)
   return g ? `${g.name} (${g.slug})` : id
 }
 
 function handleSelectionChange(rows) {
-  selectedIds.value = rows.map(r => r.id)
+  selectedIds.value = rows.map((r) => r.id)
 }
 
 function openAiUrl(slug) {
@@ -179,14 +180,16 @@ async function load() {
 }
 
 function openDialog(row) {
-  form.value = row ? { ...row } : {
-    name: '',
-    slug: '',
-    profileId: null,
-    pluginGroupId: null,
-    defaultModel: '',
-    enabled: true,
-  }
+  form.value = row
+    ? { ...row }
+    : {
+        name: '',
+        slug: '',
+        profileId: null,
+        pluginGroupId: null,
+        defaultModel: '',
+        enabled: true,
+      }
   visible.value = true
 }
 
@@ -240,13 +243,18 @@ async function handleImport(file) {
       ElMessage.error('文件格式错误：应为实例数组')
       return
     }
-    const items = list.map(item => ({
+    const items = list.map((item) => ({
       ...item,
-      _existingId: instances.value.find(i => i.slug === item.slug)?.id || null,
+      _existingId: instances.value.find((i) => i.slug === item.slug)?.id || null,
     }))
     const confirmed = await previewDialog.value.open({ title: '导入实例预览', items })
     if (!confirmed) return
-    const res = await importInstances(confirmed.map(i => { delete i._existingId; return i }))
+    const res = await importInstances(
+      confirmed.map((i) => {
+        delete i._existingId
+        return i
+      })
+    )
     ElMessage.success(`导入成功：新增 ${res.data.imported} 个，跳过 ${res.data.skipped} 个`)
     previewDialog.value.done()
     await load()

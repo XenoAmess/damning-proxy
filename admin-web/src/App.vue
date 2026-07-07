@@ -42,7 +42,15 @@
 </template>
 
 <script setup>
-import { Monitor, Collection, MagicStick, Connection, Document, ChatDotRound, Setting } from '@element-plus/icons-vue'
+import {
+  Monitor,
+  Collection,
+  MagicStick,
+  Connection,
+  Document,
+  ChatDotRound,
+  Setting,
+} from '@element-plus/icons-vue'
 </script>
 
 <style scoped>

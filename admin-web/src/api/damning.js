@@ -56,13 +56,13 @@ export function listPlugins() {
 
 export function createPlugin(data) {
   return api.post('/plugins', data, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
 
 export function updatePlugin(id, data) {
   return api.put(`/plugins/${id}`, data, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
 
@@ -79,16 +79,20 @@ export function dryRunPlugin(id, data) {
 }
 
 export function exportPlugins(ids) {
-  return api.post('/plugins/export', { ids }, {
-    responseType: 'blob',
-    headers: { Accept: 'application/zip' }
-  })
+  return api.post(
+    '/plugins/export',
+    { ids },
+    {
+      responseType: 'blob',
+      headers: { Accept: 'application/zip' },
+    }
+  )
 }
 
 export function importPlugins(data) {
   const isZip = data instanceof Blob && data.type === 'application/zip'
   return api.post('/plugins/import', data, {
-    headers: { 'Content-Type': isZip ? 'application/zip' : 'application/json' }
+    headers: { 'Content-Type': isZip ? 'application/zip' : 'application/json' },
   })
 }
 
@@ -177,4 +181,3 @@ export function getRateLimitSettings() {
 export function updateRateLimitSettings(data) {
   return api.put('/settings/rate-limit', data)
 }
-

@@ -1,7 +1,7 @@
 <template>
   <div>
-    <h2 style="margin-top: 0; margin-bottom: 20px;">全局限流设置</h2>
-    <el-form :model="form" label-width="180px" v-loading="loading" style="max-width: 560px;">
+    <h2 style="margin-top: 0; margin-bottom: 20px">全局限流设置</h2>
+    <el-form v-loading="loading" :model="form" label-width="180px" style="max-width: 560px">
       <el-form-item label="窗口内最大请求数" required>
         <el-input-number v-model="form.maxRequestsPerWindow" :min="1" :max="1000000" :step="10" />
       </el-form-item>
@@ -9,7 +9,7 @@
         <el-input-number v-model="form.windowSeconds" :min="1" :max="86400" :step="1" />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" @click="save" :loading="saving">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="save"> 保存 </el-button>
       </el-form-item>
     </el-form>
   </div>

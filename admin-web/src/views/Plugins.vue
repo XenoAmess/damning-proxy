@@ -1,8 +1,8 @@
 <template>
   <div>
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增插件</el-button>
-      <el-button @click="exportPlugins">导出插件</el-button>
+      <el-button type="primary" @click="openDialog()"> 新增插件 </el-button>
+      <el-button @click="exportPlugins"> 导出插件 </el-button>
       <el-upload
         action="#"
         :auto-upload="false"
@@ -15,7 +15,7 @@
       </el-upload>
     </div>
     <ImportPreviewDialog ref="previewDialog" />
-    <el-table :data="plugins" v-loading="loading" @selection-change="handleSelectionChange">
+    <el-table v-loading="loading" :data="plugins" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="name" label="名称" min-width="140" />
@@ -29,35 +29,49 @@
       <el-table-column prop="executionPhase" label="执行阶段" width="110" />
       <el-table-column prop="enabled" label="启用" width="80">
         <template #default="{ row }">
-          <el-tag :type="row.enabled ? 'success' : 'info'">{{ row.enabled ? '是' : '否' }}</el-tag>
+          <el-tag :type="row.enabled ? 'success' : 'info'">
+            {{ row.enabled ? '是' : '否' }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="220">
         <template #default="{ row }">
-          <el-button size="small" @click="openDialog(row, false)">查看</el-button>
-          <el-button size="small" type="primary" @click="copyPlugin(row)">复制</el-button>
-          <el-button v-if="!isSample(row)" size="small" @click="editPlugin(row)">编辑</el-button>
-          <el-button size="small" type="success" @click="editPlugin(row)">调试</el-button>
-          <el-button v-if="!isSample(row)" size="small" type="danger" @click="remove(row.id)">删除</el-button>
+          <el-button size="small" @click="openDialog(row, false)"> 查看 </el-button>
+          <el-button size="small" type="primary" @click="copyPlugin(row)"> 复制 </el-button>
+          <el-button v-if="!isSample(row)" size="small" @click="editPlugin(row)"> 编辑 </el-button>
+          <el-button size="small" type="success" @click="editPlugin(row)"> 调试 </el-button>
+          <el-button v-if="!isSample(row)" size="small" type="danger" @click="remove(row.id)">
+            删除
+          </el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="visible" :title="dialogTitle" width="760px" top="5vh" :close-on-click-modal="false">
+    <el-dialog
+      v-model="visible"
+      :title="dialogTitle"
+      width="760px"
+      top="5vh"
+      :close-on-click-modal="false"
+    >
       <el-form :model="form" label-width="120px">
         <el-form-item label="名称" required>
           <el-input v-model="form.name" :disabled="readOnly" />
         </el-form-item>
         <el-form-item label="标识" required>
-          <el-input v-model="form.slug" :disabled="readOnly || !!form.id" placeholder="唯一标识，如 my-plugin" />
+          <el-input
+            v-model="form.slug"
+            :disabled="readOnly || !!form.id"
+            placeholder="唯一标识，如 my-plugin"
+          />
         </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="form.description" type="textarea" :rows="2" :disabled="readOnly" />
         </el-form-item>
         <el-form-item label="模式" required>
           <el-radio-group v-model="form.mode" :disabled="readOnly || !!form.id">
-            <el-radio-button label="SINGLE_SCRIPT">单脚本</el-radio-button>
-            <el-radio-button label="ZIP_PACKAGE">ZIP包</el-radio-button>
+            <el-radio-button label="SINGLE_SCRIPT"> 单脚本 </el-radio-button>
+            <el-radio-button label="ZIP_PACKAGE"> ZIP包 </el-radio-button>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="语言" required>
@@ -76,8 +90,12 @@
 
         <template v-if="form.mode === 'SINGLE_SCRIPT'">
           <el-form-item label="脚本" required>
-            <CodeEditor v-model="form.script" :language="form.language" :read-only="readOnly"
-              placeholder="// context 对象提供 request/response 访问" />
+            <CodeEditor
+              v-model="form.script"
+              :language="form.language"
+              :read-only="readOnly"
+              placeholder="// context 对象提供 request/response 访问"
+            />
           </el-form-item>
         </template>
 
@@ -91,9 +109,11 @@
                 :on-change="handlePackageSelect"
                 accept=".zip"
               >
-                <el-button type="primary">{{ packageFile ? '重新选择' : '选择 ZIP' }}</el-button>
+                <el-button type="primary">
+                  {{ packageFile ? '重新选择' : '选择 ZIP' }}
+                </el-button>
               </el-upload>
-              <el-button @click="loadTemplate">使用模板</el-button>
+              <el-button @click="loadTemplate"> 使用模板 </el-button>
             </div>
             <div v-if="packageFile" class="package-info">
               已选择: {{ packageFile.name }} ({{ formatBytes(packageFile.size) }})
@@ -101,11 +121,9 @@
             <div v-else-if="form.id && form.packagePath" class="package-info">
               当前包: {{ form.packagePath }}
             </div>
-            <div v-else class="package-info text-muted">
-              未选择 ZIP 包
-            </div>
+            <div v-else class="package-info text-muted">未选择 ZIP 包</div>
           </el-form-item>
-          <el-form-item label="包内文件" v-if="packageEntries.length > 0">
+          <el-form-item v-if="packageEntries.length > 0" label="包内文件">
             <el-table :data="packageEntries" size="small" height="200" border>
               <el-table-column prop="name" label="路径" show-overflow-tooltip />
               <el-table-column prop="size" label="大小" width="100" />
@@ -118,8 +136,10 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="visible = false">取消</el-button>
-        <el-button v-if="!readOnly" type="primary" @click="save" :loading="saving">保存</el-button>
+        <el-button @click="visible = false"> 取消 </el-button>
+        <el-button v-if="!readOnly" type="primary" :loading="saving" @click="save">
+          保存
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -214,7 +234,7 @@ function openDialog(row, editable = true) {
 async function loadPackageEntries(pluginId) {
   try {
     const res = await axios.get(`/api/plugins/${pluginId}/entries`)
-    packageEntries.value = res.data.map(e => ({ name: e, size: '-' }))
+    packageEntries.value = res.data.map((e) => ({ name: e, size: '-' }))
   } catch (e) {
     packageEntries.value = []
     ElMessage.warning('加载包内文件列表失败')
@@ -226,7 +246,7 @@ function isSample(row) {
 }
 
 function handleSelectionChange(rows) {
-  selectedIds.value = rows.map(r => r.id)
+  selectedIds.value = rows.map((r) => r.id)
 }
 
 function editPlugin(row) {
@@ -285,7 +305,10 @@ async function readPackageEntries(file) {
     packageEntries.value = []
     zip.forEach((relativePath, zipEntry) => {
       if (!zipEntry.dir) {
-        packageEntries.value.push({ name: relativePath, size: formatBytes(zipEntry._data.uncompressedSize || 0) })
+        packageEntries.value.push({
+          name: relativePath,
+          size: formatBytes(zipEntry._data.uncompressedSize || 0),
+        })
       }
     })
   } catch (e) {
@@ -295,11 +318,18 @@ async function readPackageEntries(file) {
 
 async function loadTemplate() {
   try {
-    const res = await axios.get(`/api/plugins/template?language=${form.value.language}&mode=ZIP_PACKAGE`, {
-      responseType: 'blob'
-    })
+    const res = await axios.get(
+      `/api/plugins/template?language=${form.value.language}&mode=ZIP_PACKAGE`,
+      {
+        responseType: 'blob',
+      }
+    )
     const blob = res.data
-    const file = new File([blob], `plugin-template-${form.value.language.toLowerCase()}-zip_package.zip`, { type: 'application/zip' })
+    const file = new File(
+      [blob],
+      `plugin-template-${form.value.language.toLowerCase()}-zip_package.zip`,
+      { type: 'application/zip' }
+    )
     packageFile.value = file
     await readPackageEntries(file)
     ElMessage.success('模板已加载')
@@ -339,9 +369,8 @@ async function save() {
     await load()
   } catch (e) {
     const msg = e.response?.data
-    const detail = typeof msg === 'string'
-      ? msg
-      : (msg?.message || msg?.error?.message || JSON.stringify(msg))
+    const detail =
+      typeof msg === 'string' ? msg : msg?.message || msg?.error?.message || JSON.stringify(msg)
     ElMessage.error(detail || '保存失败')
   } finally {
     saving.value = false
@@ -396,13 +425,18 @@ async function handleImport(file) {
       ElMessage.error('文件格式错误：应为插件数组')
       return
     }
-    const items = list.map(item => ({
+    const items = list.map((item) => ({
       ...item,
-      _existingId: plugins.value.find(p => p.slug === item.slug)?.id || null,
+      _existingId: plugins.value.find((p) => p.slug === item.slug)?.id || null,
     }))
     const confirmed = await previewDialog.value.open({ title: '导入插件预览', items })
     if (!confirmed) return
-    res = await importPlugins(confirmed.map(i => { delete i._existingId; return i }))
+    res = await importPlugins(
+      confirmed.map((i) => {
+        delete i._existingId
+        return i
+      })
+    )
     ElMessage.success(`导入成功：新增 ${res.data.imported} 个，跳过 ${res.data.skipped} 个`)
     previewDialog.value.done()
     await load()

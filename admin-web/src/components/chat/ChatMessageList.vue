@@ -1,5 +1,5 @@
 <template>
-  <div class="messages" ref="messagesRef">
+  <div ref="messagesRef" class="messages">
     <div v-if="currentMessages.length === 0" class="empty-state">
       <el-empty description="选择实例并开始对话" />
     </div>
@@ -24,7 +24,7 @@
         <el-avatar :size="36" :icon="ChatLineRound" />
       </div>
       <div class="message-content">
-        <el-text class="typing" size="small">思考中...</el-text>
+        <el-text class="typing" size="small"> 思考中... </el-text>
       </div>
     </div>
   </div>

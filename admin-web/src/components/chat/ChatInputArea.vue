@@ -1,4 +1,3 @@
-
 <template>
   <div class="input-area">
     <div class="input-toolbar">
@@ -11,18 +10,27 @@
         multiple
         class="upload-inline"
       >
-        <el-button :icon="Paperclip">附件 / 图片</el-button>
+        <el-button :icon="Paperclip"> 附件 / 图片 </el-button>
       </el-upload>
-      <el-switch :model-value="stream" active-text="流式输出" style="margin-left: 12px" @update:model-value="emit('update:stream', $event)" />
+      <el-switch
+        :model-value="stream"
+        active-text="流式输出"
+        style="margin-left: 12px"
+        @update:model-value="emit('update:stream', $event)"
+      />
     </div>
 
     <div v-if="pendingFiles.length > 0" class="file-preview-list">
-      <div v-for="(file, idx) in pendingFiles" :key="idx" class="file-preview"
-      >
+      <div v-for="(file, idx) in pendingFiles" :key="idx" class="file-preview">
         <img v-if="file.type.startsWith('image/')" :src="file.dataUrl" class="preview-img" />
-        <el-tag v-else closable @close="emit('remove-file', idx)">📎 {{ file.name }}</el-tag>
-        <div v-if="file.type.startsWith('image/')" class="preview-remove" @click="emit('remove-file', idx)"
-        >×</div>
+        <el-tag v-else closable @close="emit('remove-file', idx)"> 📎 {{ file.name }} </el-tag>
+        <div
+          v-if="file.type.startsWith('image/')"
+          class="preview-remove"
+          @click="emit('remove-file', idx)"
+        >
+          ×
+        </div>
       </div>
     </div>
 
@@ -40,17 +48,12 @@
         v-if="!loading"
         type="primary"
         :disabled="!canSend"
-        @click="emit('send')"
         class="send-btn"
+        @click="emit('send')"
       >
         <el-icon><Promotion /></el-icon> 发送
       </el-button>
-      <el-button
-        v-else
-        type="danger"
-        @click="emit('stop')"
-        class="send-btn"
-      >
+      <el-button v-else type="danger" class="send-btn" @click="emit('stop')">
         <el-icon><Delete /></el-icon> 停止
       </el-button>
     </div>
@@ -69,7 +72,14 @@ const props = defineProps({
   canSend: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['update:inputText', 'add-file', 'remove-file', 'update:stream', 'send', 'stop'])
+const emit = defineEmits([
+  'update:inputText',
+  'add-file',
+  'remove-file',
+  'update:stream',
+  'send',
+  'stop',
+])
 
 const uploadRef = ref(null)
 

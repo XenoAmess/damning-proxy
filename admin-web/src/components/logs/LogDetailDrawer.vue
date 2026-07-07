@@ -1,19 +1,32 @@
-
 <template>
-  <el-drawer :model-value="visible" title="流量详情" size="70%" @update:model-value="emit('update:visible', $event)">
+  <el-drawer
+    :model-value="visible"
+    title="流量详情"
+    size="70%"
+    @update:model-value="emit('update:visible', $event)"
+  >
     <div v-if="!current" class="drawer-loading">
-      <el-text type="info">加载中...</el-text>
+      <el-text type="info"> 加载中... </el-text>
     </div>
     <template v-else>
       <div class="detail-hero">
-        <div class="detail-title">
-          {{ current.requestMethod }} {{ current.requestPath }}
-        </div>
+        <div class="detail-title">{{ current.requestMethod }} {{ current.requestPath }}</div>
         <div class="detail-subtitle">
-          实例 <el-tag type="warning">{{ current.instanceSlug || current.instanceId || '-' }}</el-tag>
-          · 配置 <el-tag type="warning">{{ current.profileId || '-' }}</el-tag>
-          · 状态 <el-tag :type="statusType">{{ current.responseStatus || '-' }}</el-tag>
-          <span v-if="current.durationMs !== null && current.durationMs !== undefined"> · 耗时 {{ current.durationMs }}ms</span>
+          实例
+          <el-tag type="warning">
+            {{ current.instanceSlug || current.instanceId || '-' }}
+          </el-tag>
+          · 配置
+          <el-tag type="warning">
+            {{ current.profileId || '-' }}
+          </el-tag>
+          · 状态
+          <el-tag :type="statusType">
+            {{ current.responseStatus || '-' }}
+          </el-tag>
+          <span v-if="current.durationMs !== null && current.durationMs !== undefined">
+            · 耗时 {{ current.durationMs }}ms</span
+          >
           <span v-if="current.model"> · 模型 {{ current.model }}</span>
           <span v-if="current.streaming"> · 流式</span>
         </div>
@@ -35,63 +48,101 @@
       <el-tabs :model-value="activeTab" @update:model-value="emit('update:activeTab', $event)">
         <el-tab-pane v-if="isChatLike(current)" label="对话摘要" name="summary">
           <div class="chat-flow">
-             <template v-for="(msg, idx) in (current.requestMessages || [])" :key="'req-' + idx">
+            <template v-for="(msg, idx) in current.requestMessages || []" :key="'req-' + idx">
               <div :class="['chat-bubble', bubbleClass(msg.role)]">
                 <div class="chat-role">
                   <span class="chat-role-label">{{ roleLabel(msg.role) }}</span>
-                  <el-tag v-if="msg.name" size="small" type="info" class="chat-role-name">{{ msg.name }}</el-tag>
+                  <el-tag v-if="msg.name" size="small" type="info" class="chat-role-name">
+                    {{ msg.name }}
+                  </el-tag>
                 </div>
-                <div v-if="msg.reasoningContent" class="chat-text reasoning">{{ msg.reasoningContent }}</div>
+                <div v-if="msg.reasoningContent" class="chat-text reasoning">
+                  {{ msg.reasoningContent }}
+                </div>
                 <div v-if="msg.role === 'tool' && msg.content" class="chat-tool-calls">
                   <div class="tool-call-item tool-result-item">
                     📋 <strong>工具结果</strong>
-                    <span v-if="msg.toolResultCallId" class="tool-call-id">{{ msg.toolResultCallId }}</span>
+                    <span v-if="msg.toolResultCallId" class="tool-call-id">{{
+                      msg.toolResultCallId
+                    }}</span>
                     <pre class="tool-call-args">{{ tryFormatJson(msg.content) }}</pre>
                   </div>
                 </div>
-                <div v-else-if="msg.content" class="chat-text markdown-body" v-html="renderModelOutput(msg.content)"></div>
-                <pre v-else-if="!msg.toolCallIds?.length && !msg.reasoningContent && msg.role !== 'tool'" class="chat-text muted">（无文本内容）</pre>
+                <div
+                  v-else-if="msg.content"
+                  class="chat-text markdown-body"
+                  v-html="renderModelOutput(msg.content)"
+                />
+                <pre
+                  v-else-if="
+                    !msg.toolCallIds?.length && !msg.reasoningContent && msg.role !== 'tool'
+                  "
+                  class="chat-text muted"
+                >
+（无文本内容）</pre>
                 <div v-if="msg.toolCallIds && msg.toolCallIds.length" class="chat-tool-calls">
                   <div v-for="(id, i) in msg.toolCallIds" :key="id" class="tool-call-item">
                     🔧 <strong>{{ msg.toolCallFunctions?.[i] || '工具调用' }}</strong>
                     <span class="tool-call-id">{{ id }}</span>
-                    <pre v-if="msg.toolCallArguments?.[i]" class="tool-call-args">{{ tryFormatJson(msg.toolCallArguments[i]) }}</pre>
+                    <pre v-if="msg.toolCallArguments?.[i]" class="tool-call-args">{{
+                      tryFormatJson(msg.toolCallArguments[i])
+                    }}</pre>
                   </div>
                 </div>
               </div>
             </template>
-            <template v-for="(msg, idx) in (current.responseMessages || [])" :key="'res-' + idx">
+            <template v-for="(msg, idx) in current.responseMessages || []" :key="'res-' + idx">
               <div :class="['chat-bubble', bubbleClass(msg.role || 'assistant')]">
                 <div class="chat-role">
                   <span class="chat-role-label">{{ roleLabel(msg.role || 'assistant') }}</span>
-                  <el-tag v-if="msg.name" size="small" type="info" class="chat-role-name">{{ msg.name }}</el-tag>
+                  <el-tag v-if="msg.name" size="small" type="info" class="chat-role-name">
+                    {{ msg.name }}
+                  </el-tag>
                 </div>
-                <pre v-if="msg.reasoningContent" class="chat-text reasoning">{{ msg.reasoningContent }}</pre>
-                <div v-if="msg.content" class="chat-text markdown-body" v-html="renderModelOutput(msg.content)"></div>
-                <pre v-else-if="!msg.reasoningContent && !msg.toolCallIds?.length" class="chat-text muted">（无文本内容）</pre>
+                <pre v-if="msg.reasoningContent" class="chat-text reasoning">{{
+                  msg.reasoningContent
+                }}</pre>
+                <div
+                  v-if="msg.content"
+                  class="chat-text markdown-body"
+                  v-html="renderModelOutput(msg.content)"
+                />
+                <pre
+                  v-else-if="!msg.reasoningContent && !msg.toolCallIds?.length"
+                  class="chat-text muted"
+                >
+（无文本内容）</pre>
                 <div v-if="msg.toolCallIds && msg.toolCallIds.length" class="chat-tool-calls">
                   <div v-for="(id, i) in msg.toolCallIds" :key="id" class="tool-call-item">
                     🔧 <strong>{{ msg.toolCallFunctions?.[i] || '工具调用' }}</strong>
                     <span class="tool-call-id">{{ id }}</span>
-                    <pre v-if="msg.toolCallArguments?.[i]" class="tool-call-args">{{ tryFormatJson(msg.toolCallArguments[i]) }}</pre>
+                    <pre v-if="msg.toolCallArguments?.[i]" class="tool-call-args">{{
+                      tryFormatJson(msg.toolCallArguments[i])
+                    }}</pre>
                   </div>
                 </div>
               </div>
             </template>
-            <el-empty v-if="!current.requestMessages?.length && !current.responseMessages?.length"
-              description="没有可显示的消息" />
+            <el-empty
+              v-if="!current.requestMessages?.length && !current.responseMessages?.length"
+              description="没有可显示的消息"
+            />
           </div>
         </el-tab-pane>
 
         <el-tab-pane label="请求插件" name="requestPipeline">
           <div v-if="current.requestPipeline?.length" class="pipeline-detail">
-            <div
-              v-for="(s, idx) in current.requestPipeline"
-              :key="idx"
-              class="pipeline-step">
+            <div v-for="(s, idx) in current.requestPipeline" :key="idx" class="pipeline-step">
               <div class="step-header">
                 <span class="step-name">{{ s.name }}</span>
-                <el-button size="small" text type="primary" @click.stop="emit('debug', s, 'REQUEST')">调试此插件</el-button>
+                <el-button
+                  size="small"
+                  text
+                  type="primary"
+                  @click.stop="emit('debug', s, 'REQUEST')"
+                >
+                  调试此插件
+                </el-button>
                 <el-tag size="small" :type="s.error ? 'danger' : 'success'">
                   {{ s.error ? '异常' : '成功' }}
                 </el-tag>
@@ -115,13 +166,17 @@
 
         <el-tab-pane label="响应插件" name="responsePipeline">
           <div v-if="current.responsePipeline?.length" class="pipeline-detail">
-            <div
-              v-for="(s, idx) in current.responsePipeline"
-              :key="idx"
-              class="pipeline-step">
+            <div v-for="(s, idx) in current.responsePipeline" :key="idx" class="pipeline-step">
               <div class="step-header">
                 <span class="step-name">{{ s.name }}</span>
-                <el-button size="small" text type="primary" @click.stop="emit('debug', s, 'RESPONSE')">调试此插件</el-button>
+                <el-button
+                  size="small"
+                  text
+                  type="primary"
+                  @click.stop="emit('debug', s, 'RESPONSE')"
+                >
+                  调试此插件
+                </el-button>
                 <el-tag size="small" :type="s.error ? 'danger' : 'success'">
                   {{ s.error ? '异常' : '成功' }}
                 </el-tag>
@@ -144,7 +199,10 @@
         </el-tab-pane>
 
         <el-tab-pane label="原始请求" name="rawRequest">
-          <el-empty v-if="!current.rawRequestHeaders && !current.requestBody" description="无原始请求内容" />
+          <el-empty
+            v-if="!current.rawRequestHeaders && !current.requestBody"
+            description="无原始请求内容"
+          />
           <div v-if="current.rawRequestHeaders" class="detail-section">
             <div class="detail-section-title">请求头</div>
             <pre>{{ formatJsonHeader(current.rawRequestHeaders) }}</pre>
@@ -155,12 +213,17 @@
           </div>
           <div class="detail-section">
             <div class="detail-section-title">请求大小</div>
-            <div class="meta-value">{{ formatBytes(current.requestBodyLength) }}</div>
+            <div class="meta-value">
+              {{ formatBytes(current.requestBodyLength) }}
+            </div>
           </div>
         </el-tab-pane>
 
         <el-tab-pane label="原始响应" name="rawResponse">
-          <el-empty v-if="!current.rawResponseHeaders && !current.responseBody" description="无原始响应内容" />
+          <el-empty
+            v-if="!current.rawResponseHeaders && !current.responseBody"
+            description="无原始响应内容"
+          />
           <div v-if="current.rawResponseHeaders" class="detail-section">
             <div class="detail-section-title">响应头</div>
             <pre>{{ formatJsonHeader(current.rawResponseHeaders) }}</pre>
@@ -171,7 +234,9 @@
           </div>
           <div class="detail-section">
             <div class="detail-section-title">响应大小</div>
-            <div class="meta-value">{{ formatBytes(current.responseBodyLength) }}</div>
+            <div class="meta-value">
+              {{ formatBytes(current.responseBodyLength) }}
+            </div>
           </div>
         </el-tab-pane>
 
@@ -191,74 +256,113 @@
             </div>
             <div class="meta-item">
               <div class="meta-label">请求方法</div>
-              <div class="meta-value">{{ current.requestMethod }}</div>
+              <div class="meta-value">
+                {{ current.requestMethod }}
+              </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">请求路径</div>
-              <div class="meta-value">{{ current.requestPath }}</div>
+              <div class="meta-value">
+                {{ current.requestPath }}
+              </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">实例</div>
-              <div class="meta-value">{{ current.instanceSlug || current.instanceId || '-' }}</div>
+              <div class="meta-value">
+                {{ current.instanceSlug || current.instanceId || '-' }}
+              </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">上游配置 ID</div>
-              <div class="meta-value">{{ current.profileId || '-' }}</div>
+              <div class="meta-value">
+                {{ current.profileId || '-' }}
+              </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">响应状态码</div>
               <div class="meta-value">
-                <el-tag size="small" :type="statusType">{{ current.responseStatus || '-' }}</el-tag>
+                <el-tag size="small" :type="statusType">
+                  {{ current.responseStatus || '-' }}
+                </el-tag>
               </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">Token 用量</div>
               <div class="meta-value">
                 <template v-if="current.totalTokens !== null && current.totalTokens !== undefined">
-                  prompt {{ current.promptTokens || 0 }} / completion {{ current.completionTokens || 0 }} / total {{ current.totalTokens }}
+                  prompt {{ current.promptTokens || 0 }} / completion
+                  {{ current.completionTokens || 0 }} / total {{ current.totalTokens }}
                 </template>
                 <span v-else>-</span>
               </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">耗时</div>
-              <div class="meta-value">{{ current.durationMs !== null && current.durationMs !== undefined ? current.durationMs + 'ms' : '-' }}</div>
+              <div class="meta-value">
+                {{
+                  current.durationMs !== null && current.durationMs !== undefined
+                    ? current.durationMs + 'ms'
+                    : '-'
+                }}
+              </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">请求时间</div>
-              <div class="meta-value">{{ formatFullTime(current.requestTime) }}</div>
+              <div class="meta-value">
+                {{ formatFullTime(current.requestTime) }}
+              </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">响应时间</div>
-              <div class="meta-value">{{ formatFullTime(current.responseTime) }}</div>
+              <div class="meta-value">
+                {{ formatFullTime(current.responseTime) }}
+              </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">模型</div>
-              <div class="meta-value">{{ current.model || '-' }}</div>
+              <div class="meta-value">
+                {{ current.model || '-' }}
+              </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">上游地址</div>
-              <div class="meta-value">{{ current.upstreamBaseUrl || '-' }}</div>
+              <div class="meta-value">
+                {{ current.upstreamBaseUrl || '-' }}
+              </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">超时时间</div>
-              <div class="meta-value">{{ current.timeoutMs !== null && current.timeoutMs !== undefined ? current.timeoutMs + 'ms' : '-' }}</div>
+              <div class="meta-value">
+                {{
+                  current.timeoutMs !== null && current.timeoutMs !== undefined
+                    ? current.timeoutMs + 'ms'
+                    : '-'
+                }}
+              </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">是否流式</div>
-              <div class="meta-value">{{ current.streaming ? '是' : '否' }}</div>
+              <div class="meta-value">
+                {{ current.streaming ? '是' : '否' }}
+              </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">请求大小</div>
-              <div class="meta-value">{{ formatBytes(current.requestBodyLength) }}</div>
+              <div class="meta-value">
+                {{ formatBytes(current.requestBodyLength) }}
+              </div>
             </div>
             <div class="meta-item">
               <div class="meta-label">响应大小</div>
-              <div class="meta-value">{{ formatBytes(current.responseBodyLength) }}</div>
+              <div class="meta-value">
+                {{ formatBytes(current.responseBodyLength) }}
+              </div>
             </div>
             <div v-if="current.errorMessage" class="meta-item meta-item-full">
               <div class="meta-label">错误信息</div>
-              <div class="meta-value error-text">{{ current.errorMessage }}</div>
+              <div class="meta-value error-text">
+                {{ current.errorMessage }}
+              </div>
             </div>
           </div>
         </el-tab-pane>
@@ -291,7 +395,7 @@ const ROLE_LABELS = {
   user: '用户',
   assistant: '模型',
   tool: '工具',
-  function: '函数'
+  function: '函数',
 }
 
 function isChatLike(log) {
@@ -324,7 +428,9 @@ function renderModelOutput(text) {
   const parsed = parseThink(text)
   let html = sanitizeHtml(marked.parse(parsed.text, { breaks: true, gfm: true }))
   if (parsed.reasoning) {
-    html = `<div class="reasoning-block"><div class="reasoning-label">推理过程</div><pre>${sanitizeHtml(parsed.reasoning)}</pre></div>` + html
+    html =
+      `<div class="reasoning-block"><div class="reasoning-label">推理过程</div><pre>${sanitizeHtml(parsed.reasoning)}</pre></div>` +
+      html
   }
   return html
 }

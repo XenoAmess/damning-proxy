@@ -33,6 +33,13 @@ jobs:
         working-directory: admin-web
         run: pnpm install --frozen-lockfile
 
+      - name: Lint, type-check, and format-check frontend
+        working-directory: admin-web
+        run: |
+          pnpm run lint
+          pnpm run type-check
+          pnpm run format:check
+
       - name: Build frontend
         working-directory: admin-web
         run: pnpm run build
@@ -73,6 +80,13 @@ jobs:
       - name: Install frontend dependencies
         working-directory: admin-web
         run: pnpm install --frozen-lockfile
+
+      - name: Lint, type-check, and format-check frontend
+        working-directory: admin-web
+        run: |
+          pnpm run lint
+          pnpm run type-check
+          pnpm run format:check
 
       - name: Build frontend
         working-directory: admin-web

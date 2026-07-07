@@ -69,9 +69,14 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatTimestamp } from '../utils/format.js'
 import { copyToClipboard } from '../utils/clipboard.js'
-import { getAllSessions, saveAllSessions, clearAllSessions } from '../utils/chatStorage.js'
+import { getAllSessions, saveAllSessions } from '../utils/chatStorage.js'
 import { listInstances, listProfiles } from '../api/damning.js'
-import { chatCompletion, chatCompletionStream, createAbortController, listModels } from '../api/chat.js'
+import {
+  chatCompletion,
+  chatCompletionStream,
+  createAbortController,
+  listModels,
+} from '../api/chat.js'
 import html2canvas from 'html2canvas'
 import ChatSessionSidebar from '../components/chat/ChatSessionSidebar.vue'
 import ChatToolbar from '../components/chat/ChatToolbar.vue'
@@ -96,7 +101,6 @@ const pendingFiles = ref([])
 const loading = ref(false)
 const abortController = ref(null)
 const messagesRef = ref(null)
-const uploadRef = ref(null)
 const typewriterTarget = ref(null)
 const typewriterBuffer = ref('')
 const selectMode = ref(false)
@@ -114,9 +118,7 @@ const config = ref({
   systemPrompt: '',
 })
 
-const currentSession = computed(() =>
-  sessions.value.find(s => s.id === currentSessionId.value)
-)
+const currentSession = computed(() => sessions.value.find((s) => s.id === currentSessionId.value))
 
 const currentMessages = computed(() => {
   return currentSession.value ? currentSession.value.messages : []
@@ -127,9 +129,13 @@ const selectedMessages = computed(() => {
   return currentSession.value.messages.filter((_, index) => selectedIndices.value[index])
 })
 
-watch(currentMessages, () => {
-  selectedIndices.value = currentMessages.value.map(() => false)
-}, { immediate: true })
+watch(
+  currentMessages,
+  () => {
+    selectedIndices.value = currentMessages.value.map(() => false)
+  },
+  { immediate: true }
+)
 
 function onToggleSelect(index, val) {
   selectedIndices.value[index] = val
@@ -186,8 +192,8 @@ function extractTextContent(msg) {
   if (!msg || msg.content == null) return ''
   if (Array.isArray(msg.content)) {
     return msg.content
-      .filter(part => part.type === 'text')
-      .map(part => part.text)
+      .filter((part) => part.type === 'text')
+      .map((part) => part.text)
       .join('\n')
   }
   return msg.content
@@ -203,7 +209,7 @@ async function copyMessage(msg) {
 }
 
 const instanceOptions = computed(() =>
-  instances.value.map(i => ({ value: i.slug, label: `${i.name} (${i.slug})` }))
+  instances.value.map((i) => ({ value: i.slug, label: `${i.name} (${i.slug})` }))
 )
 
 const modelOptions = ref([])
@@ -225,13 +231,21 @@ onUnmounted(() => {
   }
 })
 
-watch(() => config.value, () => {
-  debouncedSaveConfig()
-}, { deep: true })
+watch(
+  () => config.value,
+  () => {
+    debouncedSaveConfig()
+  },
+  { deep: true }
+)
 
-watch(sessions, () => {
-  debouncedSaveSessions()
-}, { deep: true })
+watch(
+  sessions,
+  () => {
+    debouncedSaveSessions()
+  },
+  { deep: true }
+)
 
 let saveConfigTimer = null
 function debouncedSaveConfig() {
@@ -267,7 +281,7 @@ async function loadSessions() {
       const legacy = localStorage.getItem(STORAGE_KEY)
       if (legacy) {
         const raw = JSON.parse(legacy)
-        fromDB = raw.slice(0, MAX_SESSIONS).map(s => ({
+        fromDB = raw.slice(0, MAX_SESSIONS).map((s) => ({
           ...s,
           messages: s.messages ? s.messages.slice(-MAX_MESSAGES_PER_SESSION) : [],
         }))
@@ -275,7 +289,7 @@ async function loadSessions() {
         localStorage.removeItem(STORAGE_KEY)
       }
     }
-    sessions.value = fromDB.slice(0, MAX_SESSIONS).map(s => ({
+    sessions.value = fromDB.slice(0, MAX_SESSIONS).map((s) => ({
       ...s,
       messages: s.messages ? s.messages.slice(-MAX_MESSAGES_PER_SESSION) : [],
     }))
@@ -293,7 +307,7 @@ async function loadSessions() {
 
 async function saveSessions() {
   if (!storageReady.value) return
-  const pruned = sessions.value.slice(0, MAX_SESSIONS).map(s => ({
+  const pruned = sessions.value.slice(0, MAX_SESSIONS).map((s) => ({
     ...s,
     messages: s.messages ? s.messages.slice(-MAX_MESSAGES_PER_SESSION) : [],
   }))
@@ -322,7 +336,7 @@ function switchSession(id) {
 async function deleteSession(id) {
   try {
     await ElMessageBox.confirm('确定删除该会话？', '提示', { type: 'warning' })
-    sessions.value = sessions.value.filter(s => s.id !== id)
+    sessions.value = sessions.value.filter((s) => s.id !== id)
     if (currentSessionId.value === id) {
       currentSessionId.value = sessions.value.length > 0 ? sessions.value[0].id : ''
     }
@@ -346,10 +360,7 @@ function clearCurrentHistory() {
 
 async function loadInstances() {
   try {
-    const [instRes, profileRes] = await Promise.all([
-      listInstances(),
-      listProfiles(),
-    ])
+    const [instRes, profileRes] = await Promise.all([listInstances(), listProfiles()])
     instances.value = instRes.data
     profiles.value = profileRes.data
     updateTokenFromProfile()
@@ -366,12 +377,12 @@ async function loadInstances() {
 }
 
 function updateTokenFromProfile() {
-  const instance = instances.value.find(i => i.slug === config.value.instanceSlug)
+  const instance = instances.value.find((i) => i.slug === config.value.instanceSlug)
   if (!instance) {
     config.value.token = ''
     return
   }
-  const profile = profiles.value.find(p => p.id === instance.profileId)
+  const profile = profiles.value.find((p) => p.id === instance.profileId)
   config.value.token = profile && profile.bearerToken ? profile.bearerToken : ''
 }
 
@@ -386,7 +397,7 @@ async function loadModels() {
     const res = await listModels(config.value.instanceSlug, config.value.token)
     const data = res.data
     if (data && Array.isArray(data.data)) {
-      modelOptions.value = data.data.map(m => ({ value: m.id, label: m.id }))
+      modelOptions.value = data.data.map((m) => ({ value: m.id, label: m.id }))
     } else {
       modelOptions.value = []
     }
@@ -443,7 +454,7 @@ function stopStreaming() {
 }
 
 function buildChatBody(history) {
-  const messages = history.map(m => ({
+  const messages = history.map((m) => ({
     role: m.role,
     content: m.content,
   }))
@@ -476,8 +487,8 @@ async function startAssistantRequest() {
   }
   if (loading.value) return
 
-  const history = currentSession.value.messages.filter(m =>
-    m.role === 'user' || m.role === 'assistant'
+  const history = currentSession.value.messages.filter(
+    (m) => m.role === 'user' || m.role === 'assistant'
   )
   const body = buildChatBody(history)
 
@@ -499,7 +510,12 @@ async function startAssistantRequest() {
 
   try {
     if (config.value.stream) {
-      for await (const chunk of chatCompletionStream(config.value.instanceSlug, body, config.value.token, signal)) {
+      for await (const chunk of chatCompletionStream(
+        config.value.instanceSlug,
+        body,
+        config.value.token,
+        signal
+      )) {
         const delta = chunk.choices?.[0]?.delta
         if (delta) {
           if (delta.content) {
@@ -516,7 +532,8 @@ async function startAssistantRequest() {
       const data = res.data
       if (data.choices && data.choices[0]) {
         appendWithTypewriter(assistantIndex, data.choices[0].message?.content || '')
-        currentSession.value.messages[assistantIndex].reasoning = data.choices[0].message?.reasoning_content || ''
+        currentSession.value.messages[assistantIndex].reasoning =
+          data.choices[0].message?.reasoning_content || ''
         await flushTypewriter(assistantIndex)
       } else {
         currentSession.value.messages[assistantIndex].content = JSON.stringify(data)
@@ -640,7 +657,7 @@ async function flushTypewriter(index) {
 }
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function updateSessionTitle(text) {

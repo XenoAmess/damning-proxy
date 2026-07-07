@@ -1,8 +1,8 @@
 <template>
   <div>
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增配置</el-button>
-      <el-button @click="exportProfiles">导出配置</el-button>
+      <el-button type="primary" @click="openDialog()"> 新增配置 </el-button>
+      <el-button @click="exportProfiles"> 导出配置 </el-button>
       <el-upload
         action="#"
         :auto-upload="false"
@@ -15,7 +15,7 @@
       </el-upload>
     </div>
     <ImportPreviewDialog ref="previewDialog" />
-    <el-table :data="profiles" v-loading="loading" @selection-change="handleSelectionChange">
+    <el-table v-loading="loading" :data="profiles" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="name" label="名称" />
@@ -24,13 +24,15 @@
       <el-table-column prop="defaultModel" label="默认模型" />
       <el-table-column prop="enabled" label="启用" width="80">
         <template #default="{ row }">
-          <el-tag :type="row.enabled ? 'success' : 'info'">{{ row.enabled ? '是' : '否' }}</el-tag>
+          <el-tag :type="row.enabled ? 'success' : 'info'">
+            {{ row.enabled ? '是' : '否' }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="150">
         <template #default="{ row }">
-          <el-button size="small" @click="openDialog(row)">编辑</el-button>
-          <el-button size="small" type="danger" @click="remove(row.id)">删除</el-button>
+          <el-button size="small" @click="openDialog(row)"> 编辑 </el-button>
+          <el-button size="small" type="danger" @click="remove(row.id)"> 删除 </el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -51,14 +53,22 @@
         </el-form-item>
         <el-form-item label="自定义 Headers" :error="errors.customHeaders">
           <div :class="['editor-wrapper', { 'has-error': errors.customHeaders }]">
-            <CodeEditor v-model="form.customHeaders" language="JSON" :height="160"
-              placeholder='{"X-Api-Key":"secret"}' />
+            <CodeEditor
+              v-model="form.customHeaders"
+              language="JSON"
+              :height="160"
+              placeholder='{"X-Api-Key":"secret"}'
+            />
           </div>
         </el-form-item>
         <el-form-item label="自定义 Body" :error="errors.customBody">
           <div :class="['editor-wrapper', { 'has-error': errors.customBody }]">
-            <CodeEditor v-model="form.customBody" language="JSON" :height="260"
-              placeholder='{"temperature": 0.7, "max_tokens": 2048}' />
+            <CodeEditor
+              v-model="form.customBody"
+              language="JSON"
+              :height="260"
+              placeholder='{"temperature": 0.7, "max_tokens": 2048}'
+            />
           </div>
         </el-form-item>
         <el-form-item label="默认模型">
@@ -78,8 +88,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="visible = false">取消</el-button>
-        <el-button type="primary" @click="save" :loading="saving">保存</el-button>
+        <el-button @click="visible = false"> 取消 </el-button>
+        <el-button type="primary" :loading="saving" @click="save"> 保存 </el-button>
       </template>
     </el-dialog>
   </div>
@@ -88,7 +98,14 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listProfiles, createProfile, updateProfile, deleteProfile, exportProfiles as exportProfilesApi, importProfiles } from '../api/damning.js'
+import {
+  listProfiles,
+  createProfile,
+  updateProfile,
+  deleteProfile,
+  exportProfiles as exportProfilesApi,
+  importProfiles,
+} from '../api/damning.js'
 import { formatTimestamp } from '../utils/format.js'
 import { exportJson, importJson } from '../utils/export.js'
 import CodeEditor from '../components/CodeEditor.vue'
@@ -137,24 +154,26 @@ async function load() {
 }
 
 function handleSelectionChange(rows) {
-  selectedIds.value = rows.map(r => r.id)
+  selectedIds.value = rows.map((r) => r.id)
 }
 
 function openDialog(row) {
   errors.value = { customHeaders: '', customBody: '' }
-  form.value = row ? { ...row } : {
-    name: '',
-    slug: '',
-    baseUrl: '',
-    bearerToken: '',
-    customHeaders: '',
-    customBody: '',
-    defaultModel: '',
-    timeoutMs: 600000,
-    circuitBreakerFailureThreshold: 3,
-    circuitBreakerOpenTimeoutSeconds: 30,
-    enabled: true,
-  }
+  form.value = row
+    ? { ...row }
+    : {
+        name: '',
+        slug: '',
+        baseUrl: '',
+        bearerToken: '',
+        customHeaders: '',
+        customBody: '',
+        defaultModel: '',
+        timeoutMs: 600000,
+        circuitBreakerFailureThreshold: 3,
+        circuitBreakerOpenTimeoutSeconds: 30,
+        enabled: true,
+      }
   visible.value = true
 }
 
@@ -233,13 +252,18 @@ async function handleImport(file) {
       ElMessage.error('文件格式错误：应为配置数组')
       return
     }
-    const items = list.map(item => ({
+    const items = list.map((item) => ({
       ...item,
-      _existingId: profiles.value.find(p => p.slug === item.slug)?.id || null,
+      _existingId: profiles.value.find((p) => p.slug === item.slug)?.id || null,
     }))
     const confirmed = await previewDialog.value.open({ title: '导入配置预览', items })
     if (!confirmed) return
-    const res = await importProfiles(confirmed.map(i => { delete i._existingId; return i }))
+    const res = await importProfiles(
+      confirmed.map((i) => {
+        delete i._existingId
+        return i
+      })
+    )
     ElMessage.success(`导入成功：新增 ${res.data.imported} 个，跳过 ${res.data.skipped} 个`)
     previewDialog.value.done()
     await load()

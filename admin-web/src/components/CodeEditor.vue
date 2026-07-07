@@ -77,29 +77,38 @@ onUnmounted(() => {
   editorView.value?.destroy()
 })
 
-watch(() => props.modelValue, (value) => {
-  if (!editorView.value) return
-  const current = editorView.value.state.doc.toString()
-  if (value !== current) {
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (!editorView.value) return
+    const current = editorView.value.state.doc.toString()
+    if (value !== current) {
+      editorView.value.dispatch({
+        changes: { from: 0, to: editorView.value.state.doc.length, insert: value || '' },
+      })
+    }
+  }
+)
+
+watch(
+  () => props.language,
+  () => {
+    if (!editorView.value) return
     editorView.value.dispatch({
-      changes: { from: 0, to: editorView.value.state.doc.length, insert: value || '' },
+      effects: languageCompartment.reconfigure(languageSupport.value),
     })
   }
-})
+)
 
-watch(() => props.language, () => {
-  if (!editorView.value) return
-  editorView.value.dispatch({
-    effects: languageCompartment.reconfigure(languageSupport.value),
-  })
-})
-
-watch(() => props.readOnly, (value) => {
-  if (!editorView.value) return
-  editorView.value.dispatch({
-    effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(value)),
-  })
-})
+watch(
+  () => props.readOnly,
+  (value) => {
+    if (!editorView.value) return
+    editorView.value.dispatch({
+      effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(value)),
+    })
+  }
+)
 </script>
 
 <style scoped>

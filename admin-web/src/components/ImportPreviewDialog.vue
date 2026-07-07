@@ -5,7 +5,8 @@
     </div>
     <div v-else class="preview-body">
       <p class="preview-summary">
-        共 {{ items.length }} 条记录，新增 <strong>{{ willCreate }}</strong> 条，覆盖 <strong>{{ willUpdate }}</strong> 条。
+        共 {{ items.length }} 条记录，新增 <strong>{{ willCreate }}</strong> 条，覆盖
+        <strong>{{ willUpdate }}</strong> 条。
       </p>
       <el-table :data="pagedItems" height="360" size="small">
         <el-table-column type="index" width="50" />
@@ -13,8 +14,8 @@
         <el-table-column prop="slug" label="标识" show-overflow-tooltip />
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag v-if="row._existingId" size="small" type="warning">覆盖</el-tag>
-            <el-tag v-else size="small" type="success">新增</el-tag>
+            <el-tag v-if="row._existingId" size="small" type="warning"> 覆盖 </el-tag>
+            <el-tag v-else size="small" type="success"> 新增 </el-tag>
           </template>
         </el-table-column>
       </el-table>
@@ -48,8 +49,8 @@ const page = ref(1)
 const pageSize = ref(10)
 const resolveFn = ref(null)
 
-const willCreate = computed(() => items.value.filter(i => !i._existingId).length)
-const willUpdate = computed(() => items.value.filter(i => i._existingId).length)
+const willCreate = computed(() => items.value.filter((i) => !i._existingId).length)
+const willUpdate = computed(() => items.value.filter((i) => i._existingId).length)
 const pagedItems = computed(() => {
   const start = (page.value - 1) * pageSize.value
   return items.value.slice(start, start + pageSize.value)

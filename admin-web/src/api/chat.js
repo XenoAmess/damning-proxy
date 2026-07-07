@@ -25,7 +25,7 @@ export function createAbortController() {
 export async function* chatCompletionStream(instanceSlug, body, token, signal) {
   const headers = {
     'Content-Type': 'application/json',
-    'Accept': 'text/event-stream',
+    Accept: 'text/event-stream',
   }
   if (token) {
     headers.Authorization = `Bearer ${token}`
@@ -47,9 +47,7 @@ export async function* chatCompletionStream(instanceSlug, body, token, signal) {
     throw new Error('Response body is null')
   }
 
-  const reader = response.body
-    .pipeThrough(new TextDecoderStream())
-    .getReader()
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()
 
   if (signal) {
     signal.addEventListener('abort', () => reader.cancel(), { once: true })

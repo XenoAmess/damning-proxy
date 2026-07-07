@@ -1,7 +1,7 @@
 <template>
   <div class="session-sidebar">
     <div class="sidebar-header">
-      <el-button type="primary" @click="emit('create')" style="width: 100%">
+      <el-button type="primary" style="width: 100%" @click="emit('create')">
         <el-icon><Plus /></el-icon> 新建会话
       </el-button>
     </div>

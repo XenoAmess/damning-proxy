@@ -1,4 +1,3 @@
-
 <template>
   <el-empty v-if="!loading && logs.length === 0" description="暂无流量日志" />
 

@@ -1,16 +1,29 @@
 <template>
-  <div class="plugin-editor" v-loading="loading">
+  <div v-loading="loading" class="plugin-editor">
     <div class="toolbar">
-      <el-button @click="goBack">返回</el-button>
+      <el-button @click="goBack"> 返回 </el-button>
       <span class="title">{{ plugin.name || '插件编辑器' }}</span>
-      <el-tag v-if="plugin.id" :type="plugin.enabled ? 'success' : 'info'">{{ plugin.enabled ? '已启用' : '已禁用' }}</el-tag>
-      <el-tag v-if="plugin.id">{{ plugin.language }}</el-tag>
-      <el-tag v-if="plugin.id">{{ plugin.mode === 'ZIP_PACKAGE' ? 'ZIP包' : '单脚本' }}</el-tag>
-      <el-tag v-if="plugin.id">{{ plugin.executionPhase }}</el-tag>
+      <el-tag v-if="plugin.id" :type="plugin.enabled ? 'success' : 'info'">
+        {{ plugin.enabled ? '已启用' : '已禁用' }}
+      </el-tag>
+      <el-tag v-if="plugin.id">
+        {{ plugin.language }}
+      </el-tag>
+      <el-tag v-if="plugin.id">
+        {{ plugin.mode === 'ZIP_PACKAGE' ? 'ZIP包' : '单脚本' }}
+      </el-tag>
+      <el-tag v-if="plugin.id">
+        {{ plugin.executionPhase }}
+      </el-tag>
       <div class="spacer" />
-      <el-switch v-if="plugin.id" v-model="plugin.enabled" active-text="启用" inactive-text="禁用" />
-      <el-button type="primary" @click="save" :loading="saving">保存</el-button>
-      <el-button type="success" @click="run" :loading="running">运行调试</el-button>
+      <el-switch
+        v-if="plugin.id"
+        v-model="plugin.enabled"
+        active-text="启用"
+        inactive-text="禁用"
+      />
+      <el-button type="primary" :loading="saving" @click="save"> 保存 </el-button>
+      <el-button type="success" :loading="running" @click="run"> 运行调试 </el-button>
     </div>
 
     <div class="main">
@@ -49,7 +62,9 @@
           </el-form-item>
           <template v-if="plugin.mode === 'ZIP_PACKAGE'">
             <el-form-item label="当前包">
-              <div class="package-info">{{ plugin.packagePath || '无' }}</div>
+              <div class="package-info">
+                {{ plugin.packagePath || '无' }}
+              </div>
             </el-form-item>
             <el-form-item label="重新上传 ZIP">
               <el-upload
@@ -59,9 +74,13 @@
                 :on-change="handlePackageSelect"
                 accept=".zip"
               >
-                <el-button type="primary" size="small">{{ packageFile ? '重新选择' : '选择 ZIP' }}</el-button>
+                <el-button type="primary" size="small">
+                  {{ packageFile ? '重新选择' : '选择 ZIP' }}
+                </el-button>
               </el-upload>
-              <div v-if="packageFile" class="package-info">已选择: {{ packageFile.name }} ({{ formatBytes(packageFile.size) }})</div>
+              <div v-if="packageFile" class="package-info">
+                已选择: {{ packageFile.name }} ({{ formatBytes(packageFile.size) }})
+              </div>
               <div v-else class="package-info text-muted">未选择新 ZIP</div>
             </el-form-item>
             <el-form-item v-if="packageEntries.length" label="包内文件">
@@ -77,9 +96,14 @@
       <div class="center-panel">
         <div class="panel-header">
           <span>脚本编辑器</span>
-          <el-button size="small" text @click="resetScript">重置</el-button>
+          <el-button size="small" text @click="resetScript"> 重置 </el-button>
         </div>
-        <CodeEditor v-if="plugin.id" v-model="script" :language="plugin.language" :height="editorHeight" />
+        <CodeEditor
+          v-if="plugin.id"
+          v-model="script"
+          :language="plugin.language"
+          :height="editorHeight"
+        />
       </div>
 
       <div class="right-panel">
@@ -96,19 +120,28 @@
             </el-form-item>
             <el-form-item label="数据来源">
               <el-radio-group v-model="sourceType">
-                <el-radio-button label="manual">手动输入</el-radio-button>
-                <el-radio-button label="instance">从实例加载</el-radio-button>
-                <el-radio-button label="log">从日志加载</el-radio-button>
+                <el-radio-button label="manual"> 手动输入 </el-radio-button>
+                <el-radio-button label="instance"> 从实例加载 </el-radio-button>
+                <el-radio-button label="log"> 从日志加载 </el-radio-button>
               </el-radio-group>
             </el-form-item>
             <el-form-item v-if="sourceType === 'instance'" label="选择实例">
-              <el-select v-model="selectedInstanceId" placeholder="选择实例以应用上游配置" style="width: 100%">
-                <el-option v-for="inst in instances" :key="inst.id" :label="inst.name" :value="inst.id" />
+              <el-select
+                v-model="selectedInstanceId"
+                placeholder="选择实例以应用上游配置"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="inst in instances"
+                  :key="inst.id"
+                  :label="inst.name"
+                  :value="inst.id"
+                />
               </el-select>
             </el-form-item>
             <el-form-item v-if="sourceType === 'log'" label="日志 ID">
               <el-input v-model="logIdInput" placeholder="输入流量日志 ID" style="width: 160px" />
-              <el-button size="small" @click="loadFromLog">加载</el-button>
+              <el-button size="small" @click="loadFromLog"> 加载 </el-button>
             </el-form-item>
           </el-form>
           <el-tabs v-model="inputTab">
@@ -121,7 +154,11 @@
             <el-tab-pane v-if="phase === 'RESPONSE'" label="Response Body" name="responseBody">
               <CodeEditor v-model="responseBodyJson" language="JSON" :height="panelHeight" />
             </el-tab-pane>
-            <el-tab-pane v-if="phase === 'RESPONSE'" label="Response Headers" name="responseHeaders">
+            <el-tab-pane
+              v-if="phase === 'RESPONSE'"
+              label="Response Headers"
+              name="responseHeaders"
+            >
               <CodeEditor v-model="responseHeadersJson" language="JSON" :height="panelHeight" />
             </el-tab-pane>
             <el-tab-pane v-if="phase === 'RESPONSE'" label="Response Status" name="responseStatus">
@@ -136,8 +173,8 @@
             <el-tag v-if="result" :type="result.error ? 'danger' : 'success'" size="small">
               {{ result.error ? '执行出错' : '执行成功' }}
             </el-tag>
-            <el-tag v-if="result && result.returned" type="warning" size="small">短路返回</el-tag>
-            <el-tag v-if="result && result.stopped" type="info" size="small">stop()</el-tag>
+            <el-tag v-if="result && result.returned" type="warning" size="small"> 短路返回 </el-tag>
+            <el-tag v-if="result && result.stopped" type="info" size="small"> stop() </el-tag>
           </div>
           <div v-if="result" class="output-body">
             <el-tabs v-model="outputTab">
@@ -151,16 +188,20 @@
               </el-tab-pane>
               <el-tab-pane label="最终 Request" name="request">
                 <pre>{{ formatJson(result.requestBody) }}</pre>
-                <pre v-if="Object.keys(result.requestHeaders || {}).length">Headers: {{ formatJson(result.requestHeaders) }}</pre>
+                <pre v-if="Object.keys(result.requestHeaders || {}).length">
+Headers: {{ formatJson(result.requestHeaders) }}</pre>
               </el-tab-pane>
               <el-tab-pane label="最终 Response" name="response">
                 <pre>Status: {{ result.responseStatus }}</pre>
                 <pre>{{ formatJson(result.responseBody) }}</pre>
-                <pre v-if="Object.keys(result.responseHeaders || {}).length">Headers: {{ formatJson(result.responseHeaders) }}</pre>
+                <pre v-if="Object.keys(result.responseHeaders || {}).length">
+Headers: {{ formatJson(result.responseHeaders) }}</pre>
               </el-tab-pane>
               <el-tab-pane label="插件日志" name="logs">
                 <div v-if="result.pluginLogs && result.pluginLogs.length" class="log-lines">
-                  <div v-for="(log, idx) in result.pluginLogs" :key="idx" class="log-line">{{ log }}</div>
+                  <div v-for="(log, idx) in result.pluginLogs" :key="idx" class="log-line">
+                    {{ log }}
+                  </div>
                 </div>
                 <div v-else class="text-muted">无日志</div>
               </el-tab-pane>
@@ -219,7 +260,9 @@ const inputTab = ref('requestBody')
 const outputTab = ref('diff')
 
 const requestBodyJson = ref('{}')
-const requestHeadersJson = ref('{"Content-Type": "application/json", "Authorization": "Bearer test"}')
+const requestHeadersJson = ref(
+  '{"Content-Type": "application/json", "Authorization": "Bearer test"}'
+)
 const responseBodyJson = ref('{}')
 const responseHeadersJson = ref('{"Content-Type": "application/json"}')
 const responseStatus = ref(200)
@@ -277,7 +320,7 @@ async function loadPlugin() {
 async function loadPackageEntries() {
   try {
     const res = await axios.get(`/api/plugins/${pluginId.value}/entries`)
-    packageEntries.value = res.data.map(e => ({ name: e, size: '-' }))
+    packageEntries.value = res.data.map((e) => ({ name: e, size: '-' }))
   } catch (e) {
     packageEntries.value = []
   }
@@ -310,7 +353,10 @@ async function readPackageEntries(file) {
     const zip = await JSZip.loadAsync(file)
     zip.forEach((relativePath, zipEntry) => {
       if (!zipEntry.dir) {
-        packageEntries.value.push({ name: relativePath, size: formatBytes(zipEntry._data.uncompressedSize || 0) })
+        packageEntries.value.push({
+          name: relativePath,
+          size: formatBytes(zipEntry._data.uncompressedSize || 0),
+        })
       }
     })
   } catch (e) {
@@ -345,9 +391,9 @@ async function save() {
     originalScript.value = script.value
     ElMessage.success('保存成功')
   } catch (e) {
-    const status = e.response?.status
     const msg = e.response?.data
-    const detail = typeof msg === 'string' ? msg : (msg?.message || msg?.error?.message || JSON.stringify(msg))
+    const detail =
+      typeof msg === 'string' ? msg : msg?.message || msg?.error?.message || JSON.stringify(msg)
     ElMessage.error(detail || '保存失败')
   } finally {
     saving.value = false

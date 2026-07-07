@@ -1,17 +1,40 @@
 <template>
   <div class="toolbar">
-    <el-button type="danger" @click="emit('clear')">清空日志</el-button>
-    <el-button type="warning" @click="emit('prune')">批量清理</el-button>
+    <el-button type="danger" @click="emit('clear')"> 清空日志 </el-button>
+    <el-button type="warning" @click="emit('prune')"> 批量清理 </el-button>
   </div>
 
   <div class="log-filters">
-    <el-select :model-value="filters.instanceId" placeholder="实例" clearable style="width: 160px" @update:model-value="emit('update:filters', { ...filters, instanceId: $event })">
+    <el-select
+      :model-value="filters.instanceId"
+      placeholder="实例"
+      clearable
+      style="width: 160px"
+      @update:model-value="emit('update:filters', { ...filters, instanceId: $event })"
+    >
       <el-option v-for="inst in instances" :key="inst.id" :label="inst.name" :value="inst.id" />
     </el-select>
-    <el-select :model-value="filters.status" placeholder="状态" clearable style="width: 120px" @update:model-value="emit('update:filters', { ...filters, status: $event })">
-      <el-option v-for="opt in statusOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+    <el-select
+      :model-value="filters.status"
+      placeholder="状态"
+      clearable
+      style="width: 120px"
+      @update:model-value="emit('update:filters', { ...filters, status: $event })"
+    >
+      <el-option
+        v-for="opt in statusOptions"
+        :key="opt.value"
+        :label="opt.label"
+        :value="opt.value"
+      />
     </el-select>
-    <el-input :model-value="filters.path" placeholder="路径关键字" clearable style="width: 180px" @update:model-value="emit('update:filters', { ...filters, path: $event })" />
+    <el-input
+      :model-value="filters.path"
+      placeholder="路径关键字"
+      clearable
+      style="width: 180px"
+      @update:model-value="emit('update:filters', { ...filters, path: $event })"
+    />
     <el-date-picker
       :model-value="filters.startTime"
       type="datetime"
@@ -28,8 +51,8 @@
       style="width: 180px"
       @update:model-value="emit('update:filters', { ...filters, endTime: $event })"
     />
-    <el-button type="primary" @click="emit('search')">查询</el-button>
-    <el-button @click="emit('reset')">重置</el-button>
+    <el-button type="primary" @click="emit('search')"> 查询 </el-button>
+    <el-button @click="emit('reset')"> 重置 </el-button>
   </div>
 </template>
 

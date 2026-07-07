@@ -155,16 +155,19 @@ function observeCards() {
   if (observer) {
     observer.disconnect()
   }
-  observer = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-      if (entry.isIntersecting) {
-        const id = Number(entry.target.dataset.id)
-        if (id && !isNaN(id)) {
-          loadFriendlyIfNeeded(id)
+  observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const id = Number(entry.target.dataset.id)
+          if (id && !isNaN(id)) {
+            loadFriendlyIfNeeded(id)
+          }
         }
       }
-    }
-  }, { rootMargin: '100px' })
+    },
+    { rootMargin: '100px' }
+  )
 
   for (const el of Object.values(cardRefs.value)) {
     if (el) observer.observe(el)
@@ -177,7 +180,7 @@ async function loadFriendlyIfNeeded(id) {
   loadedFriendlyIds.value.add(id)
   try {
     const res = await getLogFriendly(id)
-    const log = logs.value.find(l => l.id === id)
+    const log = logs.value.find((l) => l.id === id)
     if (log) {
       log._friendly = res.data
     }
@@ -194,7 +197,7 @@ async function openFriendly(id) {
   activeTab.value = 'summary'
   try {
     await loadFriendlyIfNeeded(id)
-    const log = logs.value.find(l => l.id === id)
+    const log = logs.value.find((l) => l.id === id)
     current.value = log?._friendly || null
     if (!isChatLike(current.value)) {
       activeTab.value = 'rawRequest'
@@ -277,5 +280,4 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

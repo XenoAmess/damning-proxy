@@ -18,15 +18,15 @@
     <div class="message-content">
       <div class="message-header">
         <span class="role-name">{{ msg.role === 'user' ? '我' : '助手' }}</span>
-        <span class="message-time" v-if="msg.time">{{ formatTime(msg.time) }}</span>
+        <span v-if="msg.time" class="message-time">{{ formatTime(msg.time) }}</span>
         <el-button
           v-if="msg.role === 'user'"
           link
           size="small"
           class="action-btn"
           :icon="RefreshRight"
-          @click.stop="emit('resend', index)"
           title="重新发送"
+          @click.stop="emit('resend', index)"
         >
           重发
         </el-button>
@@ -36,8 +36,8 @@
           size="small"
           class="action-btn"
           :icon="Refresh"
-          @click.stop="emit('regenerate', index)"
           title="重新生成"
+          @click.stop="emit('regenerate', index)"
         >
           重新生成
         </el-button>
@@ -46,8 +46,8 @@
           size="small"
           class="copy-btn"
           :icon="CopyDocument"
-          @click.stop="emit('copy', msg)"
           title="复制"
+          @click.stop="emit('copy', msg)"
         />
       </div>
       <div class="message-body">
@@ -73,11 +73,13 @@
         />
 
         <div v-if="msg.reasoning || parseThink(msg.content).reasoning" class="reasoning-block">
-          <div class="reasoning-toggle" @click="msg._showReasoning = !msg._showReasoning">
-            <el-icon><ArrowDown v-if="msg._showReasoning" /><ArrowRight v-else /></el-icon>
+          <div class="reasoning-toggle" @click="toggleReasoning">
+            <el-icon><ArrowDown v-if="showReasoning" /><ArrowRight v-else /></el-icon>
             推理过程
           </div>
-          <pre v-if="msg._showReasoning" class="reasoning-content">{{ msg.reasoning || parseThink(msg.content).reasoning }}</pre>
+          <pre v-if="showReasoning" class="reasoning-content">{{
+            msg.reasoning || parseThink(msg.content).reasoning
+          }}</pre>
         </div>
       </div>
     </div>
@@ -85,7 +87,16 @@
 </template>
 
 <script setup>
-import { User, ChatLineRound, CopyDocument, RefreshRight, Refresh, ArrowDown, ArrowRight } from '@element-plus/icons-vue'
+import { ref } from 'vue'
+import {
+  User,
+  ChatLineRound,
+  CopyDocument,
+  RefreshRight,
+  Refresh,
+  ArrowDown,
+  ArrowRight,
+} from '@element-plus/icons-vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
 import { parseThink } from '../../utils/parse.js'
 
@@ -95,6 +106,11 @@ const props = defineProps({
   selectMode: { type: Boolean, default: false },
   isSelected: { type: Boolean, default: false },
 })
+
+const showReasoning = ref(false)
+function toggleReasoning() {
+  showReasoning.value = !showReasoning.value
+}
 
 const emit = defineEmits(['toggle-select', 'resend', 'regenerate', 'copy'])
 
@@ -210,7 +226,8 @@ function formatTime(ts) {
   margin-bottom: 0;
 }
 
-.text-part :deep(ul), .text-part :deep(ol) {
+.text-part :deep(ul),
+.text-part :deep(ol) {
   margin: 0 0 8px 20px;
   padding: 0;
 }
@@ -224,7 +241,8 @@ function formatTime(ts) {
   margin-bottom: 8px;
 }
 
-.text-part :deep(th), .text-part :deep(td) {
+.text-part :deep(th),
+.text-part :deep(td) {
   border: 1px solid #e4e7ed;
   padding: 6px 10px;
 }

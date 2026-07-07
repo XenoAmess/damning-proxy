@@ -1,8 +1,8 @@
 <template>
   <div>
     <div class="toolbar">
-      <el-button type="primary" @click="openDialog()">新增插件组</el-button>
-      <el-button @click="exportPluginGroups">导出插件组</el-button>
+      <el-button type="primary" @click="openDialog()"> 新增插件组 </el-button>
+      <el-button @click="exportPluginGroups"> 导出插件组 </el-button>
       <el-upload
         action="#"
         :auto-upload="false"
@@ -15,7 +15,7 @@
       </el-upload>
     </div>
     <ImportPreviewDialog ref="previewDialog" />
-    <el-table :data="groups" v-loading="loading" @selection-change="handleSelectionChange">
+    <el-table v-loading="loading" :data="groups" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="name" label="名称" min-width="120" />
@@ -23,7 +23,9 @@
       <el-table-column prop="slug" label="标识" />
       <el-table-column prop="enabled" label="启用" width="80">
         <template #default="{ row }">
-          <el-tag :type="row.enabled ? 'success' : 'info'">{{ row.enabled ? '是' : '否' }}</el-tag>
+          <el-tag :type="row.enabled ? 'success' : 'info'">
+            {{ row.enabled ? '是' : '否' }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="插件数" width="90">
@@ -33,13 +35,19 @@
       </el-table-column>
       <el-table-column label="操作" width="150">
         <template #default="{ row }">
-          <el-button size="small" @click="openDialog(row)">编辑</el-button>
-          <el-button size="small" type="danger" @click="remove(row.id)">删除</el-button>
+          <el-button size="small" @click="openDialog(row)"> 编辑 </el-button>
+          <el-button size="small" type="danger" @click="remove(row.id)"> 删除 </el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="visible" :title="form.id ? '编辑插件组' : '新增插件组'" width="800px" top="5vh" :close-on-click-modal="false">
+    <el-dialog
+      v-model="visible"
+      :title="form.id ? '编辑插件组' : '新增插件组'"
+      width="800px"
+      top="5vh"
+      :close-on-click-modal="false"
+    >
       <el-form :model="form" label-width="100px">
         <el-form-item label="名称" required>
           <el-input v-model="form.name" />
@@ -64,7 +72,7 @@
                 style="width: 100%"
                 clearable
               />
-              <el-button style="margin-top: 8px" @click="addItem">添加</el-button>
+              <el-button style="margin-top: 8px" @click="addItem"> 添加 </el-button>
             </div>
             <div class="selected">
               <div class="section-title">已选插件（按顺序执行）</div>
@@ -76,12 +84,22 @@
                 </el-table-column>
                 <el-table-column label="顺序" width="80">
                   <template #default="{ row }">
-                    <el-input-number v-model="row.orderIndex" :min="0" :controls="false" style="width: 60px" />
+                    <el-input-number
+                      v-model="row.orderIndex"
+                      :min="0"
+                      :controls="false"
+                      style="width: 60px"
+                    />
                   </template>
                 </el-table-column>
                 <el-table-column label="优先级" width="80">
                   <template #default="{ row }">
-                    <el-input-number v-model="row.priority" :min="0" :controls="false" style="width: 60px" />
+                    <el-input-number
+                      v-model="row.priority"
+                      :min="0"
+                      :controls="false"
+                      style="width: 60px"
+                    />
                   </template>
                 </el-table-column>
                 <el-table-column label="启用" width="70">
@@ -91,9 +109,19 @@
                 </el-table-column>
                 <el-table-column label="操作" width="130" fixed="right">
                   <template #default="{ $index }">
-                    <el-button size="small" @click="moveUp($index)" :disabled="$index === 0">↑</el-button>
-                    <el-button size="small" @click="moveDown($index)" :disabled="$index === form.items.length - 1">↓</el-button>
-                    <el-button size="small" type="danger" @click="removeItem($index)">删除</el-button>
+                    <el-button size="small" :disabled="$index === 0" @click="moveUp($index)">
+                      ↑
+                    </el-button>
+                    <el-button
+                      size="small"
+                      :disabled="$index === form.items.length - 1"
+                      @click="moveDown($index)"
+                    >
+                      ↓
+                    </el-button>
+                    <el-button size="small" type="danger" @click="removeItem($index)">
+                      删除
+                    </el-button>
                   </template>
                 </el-table-column>
               </el-table>
@@ -102,8 +130,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="visible = false">取消</el-button>
-        <el-button type="primary" @click="save" :loading="saving">保存</el-button>
+        <el-button @click="visible = false"> 取消 </el-button>
+        <el-button type="primary" :loading="saving" @click="save"> 保存 </el-button>
       </template>
     </el-dialog>
   </div>
@@ -141,19 +169,19 @@ const form = ref({
 })
 
 const availablePluginOptions = computed(() => {
-  const selectedIds = new Set(form.value.items.map(i => i.pluginId))
+  const selectedIds = new Set(form.value.items.map((i) => i.pluginId))
   return plugins.value
-    .filter(p => !selectedIds.has(p.id))
-    .map(p => ({ value: p.id, label: p.name }))
+    .filter((p) => !selectedIds.has(p.id))
+    .map((p) => ({ value: p.id, label: p.name }))
 })
 
 function pluginName(id) {
-  const p = plugins.value.find(x => x.id === id)
+  const p = plugins.value.find((x) => x.id === id)
   return p ? p.name : id
 }
 
 function handleSelectionChange(rows) {
-  selectedIds.value = rows.map(r => r.id)
+  selectedIds.value = rows.map((r) => r.id)
 }
 
 async function load() {
@@ -175,7 +203,7 @@ function openDialog(row) {
       slug: row.slug,
       description: row.description,
       enabled: row.enabled,
-      items: (row.items || []).map(i => ({
+      items: (row.items || []).map((i) => ({
         pluginId: i.plugin ? i.plugin.id : i.pluginId,
         orderIndex: i.orderIndex,
         priority: i.priority,
@@ -243,7 +271,7 @@ async function save() {
       slug: form.value.slug,
       description: form.value.description,
       enabled: form.value.enabled,
-      items: form.value.items.map(i => ({
+      items: form.value.items.map((i) => ({
         pluginId: i.pluginId,
         orderIndex: i.orderIndex,
         priority: i.priority,
@@ -297,13 +325,18 @@ async function handleImport(file) {
       ElMessage.error('文件格式错误：应为插件组数组')
       return
     }
-    const items = list.map(item => ({
+    const items = list.map((item) => ({
       ...item,
-      _existingId: groups.value.find(g => g.slug === item.slug)?.id || null,
+      _existingId: groups.value.find((g) => g.slug === item.slug)?.id || null,
     }))
     const confirmed = await previewDialog.value.open({ title: '导入插件组预览', items })
     if (!confirmed) return
-    const res = await importPluginGroups(confirmed.map(i => { delete i._existingId; return i }))
+    const res = await importPluginGroups(
+      confirmed.map((i) => {
+        delete i._existingId
+        return i
+      })
+    )
     ElMessage.success(`导入成功：新增 ${res.data.imported} 个，跳过 ${res.data.skipped} 个`)
     previewDialog.value.done()
     await load()

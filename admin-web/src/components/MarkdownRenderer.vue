@@ -1,5 +1,5 @@
 <template>
-  <div ref="root" v-html="html"></div>
+  <div ref="root" v-html="html" />
 </template>
 
 <script setup>
@@ -24,7 +24,7 @@ const html = computed(() => {
 
 function addCopyButtons() {
   if (!root.value) return
-  root.value.querySelectorAll('pre').forEach(pre => {
+  root.value.querySelectorAll('pre').forEach((pre) => {
     if (pre.querySelector('.copy-code-btn')) return
     const btn = document.createElement('button')
     btn.className = 'copy-code-btn'
