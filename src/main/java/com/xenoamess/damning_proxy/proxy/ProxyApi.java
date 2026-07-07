@@ -88,6 +88,30 @@ public class ProxyApi {
         return proxyService.chatCompletions(instanceSlug, requestBody, headers);
     }
 
+    @POST
+    @Path("/embeddings")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Blocking
+    public Response embeddings(@PathParam("instanceSlug") String instanceSlug, Map<String, Object> requestBody,
+                                @Context HttpHeaders headers) {
+        if (!rateLimiter.tryAcquire(instanceSlug)) {
+            return rateLimitedResponse(instanceSlug);
+        }
+        return proxyService.embeddings(instanceSlug, requestBody, headers);
+    }
+
+    @POST
+    @Path("/images/generations")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Blocking
+    public Response imageGenerations(@PathParam("instanceSlug") String instanceSlug, Map<String, Object> requestBody,
+                                      @Context HttpHeaders headers) {
+        if (!rateLimiter.tryAcquire(instanceSlug)) {
+            return rateLimitedResponse(instanceSlug);
+        }
+        return proxyService.imageGenerations(instanceSlug, requestBody, headers);
+    }
+
     private class SseStreamingOutput implements StreamingOutput {
         private final Multi<String> sseMulti;
 

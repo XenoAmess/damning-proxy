@@ -102,6 +102,24 @@ public class OpenAiProxyService {
             ));
     }
 
+    public Response embeddings(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        return proxyRequest(instanceSlug, requestBody, "POST", "/v1/embeddings", incomingHeaders,
+            (profile, context) -> upstreamHttpClient.send(
+                "POST", profile.baseUrl, "/embeddings",
+                toMultiMap(context.getRequestHeaders()), context.getRequestBody(), profile.timeoutMs,
+                profile
+            ));
+    }
+
+    public Response imageGenerations(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        return proxyRequest(instanceSlug, requestBody, "POST", "/v1/images/generations", incomingHeaders,
+            (profile, context) -> upstreamHttpClient.send(
+                "POST", profile.baseUrl, "/images/generations",
+                toMultiMap(context.getRequestHeaders()), context.getRequestBody(), profile.timeoutMs,
+                profile
+            ));
+    }
+
     @FunctionalInterface
     private interface UpstreamCall {
         UpstreamHttpClient.UpstreamResponse execute(ProxyProfile profile, PluginContext context);

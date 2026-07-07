@@ -7,6 +7,8 @@
 
 ## 2026-07-07
 
+- 新增代理端点：`/v1/proxy/{instanceSlug}/embeddings` 与 `/v1/proxy/{instanceSlug}/images/generations`，兼容 OpenAI embeddings 与 images/generations 接口。
+- 新增对应代理测试 `ProxyApiTest.shouldProxyEmbeddings` 与 `ProxyApiTest.shouldProxyImageGenerations`。
 - 流式上游失败时返回友好的 SSE 错误：后台对上游连接失败、HTTP 错误状态码等场景统一发送 `event: error` 事件，前端解析后提示具体错误信息，不再静默断流。
 - 新增流式代理错误场景测试 `ProxyApiTest.shouldReturnSseErrorOnUpstreamStreamingFailure`。
 - 日志清理改批量删除：后台新增 `/api/logs/prune` 接口，支持保留最近 N 条或全部清空；前台「流量日志」页面新增「批量清理」按钮与确认对话框。

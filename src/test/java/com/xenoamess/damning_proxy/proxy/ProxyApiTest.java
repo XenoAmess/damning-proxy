@@ -258,6 +258,65 @@ class ProxyApiTest {
     }
 
     @Test
+    void shouldProxyEmbeddings() {
+        wireMockServer.stubFor(post(urlEqualTo("/v1/embeddings"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody("{\"object\":\"list\",\"data\":[{\"object\":\"embedding\",\"embedding\":[0.1,0.2],\"index\":0}],\"model\":\"text-embedding-3-small\",\"usage\":{\"prompt_tokens\":2,\"total_tokens\":2}}")));
+
+        createInstance("openai-embeddings", "http://localhost:18089/v1", "sk-test");
+
+        Map<String, Object> body = Map.of(
+            "model", "text-embedding-3-small",
+            "input", "hello"
+        );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(body)
+            .when().post("/v1/proxy/openai-embeddings/embeddings")
+            .then()
+            .statusCode(200)
+            .body("object", equalTo("list"))
+            .body("data.size()", equalTo(1))
+            .body("model", equalTo("text-embedding-3-small"));
+
+        wireMockServer.verify(postRequestedFor(urlEqualTo("/v1/embeddings"))
+            .withHeader("Authorization", WireMock.equalTo("Bearer sk-test")));
+    }
+
+    @Test
+    void shouldProxyImageGenerations() {
+        wireMockServer.stubFor(post(urlEqualTo("/v1/images/generations"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody("{\"created\":1234567890,\"data\":[{\"url\":\"http://example.com/image.png\"}]}")));
+
+        createInstance("openai-images", "http://localhost:18089/v1", "sk-test");
+
+        Map<String, Object> body = Map.of(
+            "model", "dall-e-3",
+            "prompt", "a cat",
+            "n", 1,
+            "size", "1024x1024"
+        );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(body)
+            .when().post("/v1/proxy/openai-images/images/generations")
+            .then()
+            .statusCode(200)
+            .body("data.size()", equalTo(1))
+            .body("data[0].url", equalTo("http://example.com/image.png"));
+
+        wireMockServer.verify(postRequestedFor(urlEqualTo("/v1/images/generations"))
+            .withHeader("Authorization", WireMock.equalTo("Bearer sk-test")));
+    }
+
+    @Test
     void shouldProxyWithCustomHeaders() {
         wireMockServer.stubFor(post(urlEqualTo("/v1/chat/completions"))
             .willReturn(aResponse()
