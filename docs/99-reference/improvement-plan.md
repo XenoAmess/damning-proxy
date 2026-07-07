@@ -42,7 +42,7 @@
 | P1-12 | ✓ 2026-07-07 | 运维 | 接入 Prometheus / Micrometer 指标 | 监控文档仍写未集成。已增加 `quarkus-micrometer`，暴露请求量、错误、延迟、token 用量、熔断状态等指标。`/q/metrics` 提供 Prometheus 格式指标；监控文档已更新。 |
 | P1-13 | ✓ 2026-07-07 | 代码质量 | 按日志保留天数清理 | 当前仅按数量保留。已增加 `damning-proxy.log.max-age-days` 配置（默认 30 天），`pruneOldLogs` 在数量清理后额外执行按天数清理。 |
 | P1-14 | ✓ 2026-07-07 | 代码质量 | Admin API 统一异常处理 | `PluginAdminApi` 与插件引擎仍用 `RuntimeException` 抛 IO/JSON 错误，最终 500。已全部替换为 `WebApplicationException` 或直接返回 `Response.status(500)`，并携带明确错误信息；插件引擎的 `RuntimeException` 已补充原因消息。 |
-| P1-15 | 代码质量 | 前端路由/代码拆分降低 chunk 体积 | 当前 `index.js` 接近 1 MB gzip。将 Chat、Logs、PluginEditor 等大屏按路由动态导入。 |
+| P1-15 | ✓ 2026-07-07 | 代码质量 | 前端路由/代码拆分降低 chunk 体积 | 当前 `index.js` 接近 1 MB。已配置 `manualChunks`，将 Element Plus（948K）、通用依赖（422K）、CodeMirror（402K）拆分为独立 vendor chunk；主入口降至 6 KB，CodeMirror 按需懒加载。 |
 
 ---
 

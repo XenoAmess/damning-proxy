@@ -9,6 +9,24 @@ export default defineConfig({
   build: {
     outDir: resolve(__dirname, '../src/main/resources/META-INF/resources/admin'),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules/element-plus')) {
+            return 'vendor-element-plus'
+          }
+          if (id.includes('node_modules/@vue')) {
+            return 'vendor-vue'
+          }
+          if (id.includes('node_modules/codemirror') || id.includes('node_modules/@codemirror')) {
+            return 'vendor-codemirror'
+          }
+          if (id.includes('node_modules')) {
+            return 'vendor-lib'
+          }
+        },
+      },
+    },
   },
   server: {
     proxy: {

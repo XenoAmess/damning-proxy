@@ -42,7 +42,7 @@ This plan is derived from a review of the current codebase, documentation, recen
 | P1-12 | ✓ 2026-07-07 | Operations | Add Prometheus / Micrometer metrics | Added `quarkus-micrometer` exposing request, error, latency, token usage, and circuit-breaker metrics. `/q/metrics` provides Prometheus-formatted metrics; monitoring docs updated in both languages. |
 | P1-13 | ✓ 2026-07-07 | Code quality | Add age-based log retention | Retention is currently count-based. Added `damning-proxy.log.max-age-days` config (default 30 days); `pruneOldLogs` now runs age-based cleanup after count-based pruning. |
 | P1-14 | ✓ 2026-07-07 | Code quality | Unify Admin API exception handling | `PluginAdminApi` and plugin engines still threw `RuntimeException` for IO/JSON errors, resulting in 500. Replaced all with `WebApplicationException` or direct `Response.status(500)` with clear messages; engine `RuntimeException` instances now include cause messages. |
-| P1-15 | Code quality | Split frontend chunks to reduce bundle size | `index.js` is close to 1 MB gzipped. Use route-based dynamic imports for Chat, Logs, and PluginEditor. |
+| P1-15 | ✓ 2026-07-07 | Code quality | Split frontend chunks to reduce bundle size | `index.js` was ~1 MB. Configured `manualChunks` to split Element Plus (948K), shared deps (422K), and CodeMirror (402K) into independent vendor chunks; main entry reduced to 6 KB with CodeMirror lazy-loaded on demand. |
 
 ---
 
