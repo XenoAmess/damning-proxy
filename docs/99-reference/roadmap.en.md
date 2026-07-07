@@ -51,7 +51,7 @@ This document lists the next executable optimization and feature backlog for dam
 | 15 | Support embeddings endpoint | Most common next OpenAI endpoint for local vector models | Done |
 | 16 | Support images/generations | For image generation models | Done |
 | 17 | Token usage stats in traffic logs | See token cost per request | Done |
-| 18 | Import/export preview | More control when backing up / migrating configs |
+| 18 | Import/export preview | More control when backing up / migrating configs | Done |
 
 ---
 

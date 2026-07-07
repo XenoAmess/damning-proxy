@@ -14,6 +14,7 @@
         <el-button>导入插件组</el-button>
       </el-upload>
     </div>
+    <ImportPreviewDialog ref="previewDialog" />
     <el-table :data="groups" v-loading="loading" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="ID" width="60" />
@@ -122,6 +123,7 @@ import {
 } from '../api/damning.js'
 import { formatTimestamp } from '../utils/format.js'
 import { exportJson, importJson } from '../utils/export.js'
+import ImportPreviewDialog from '../components/ImportPreviewDialog.vue'
 
 const groups = ref([])
 const plugins = ref([])
@@ -129,7 +131,7 @@ const loading = ref(false)
 const saving = ref(false)
 const visible = ref(false)
 const selectedIds = ref([])
-const selectedPluginId = ref(null)
+const previewDialog = ref(null)
 const form = ref({
   name: '',
   slug: '',
@@ -295,11 +297,19 @@ async function handleImport(file) {
       ElMessage.error('文件格式错误：应为插件组数组')
       return
     }
-    const res = await importPluginGroups(list)
+    const items = list.map(item => ({
+      ...item,
+      _existingId: groups.value.find(g => g.slug === item.slug)?.id || null,
+    }))
+    const confirmed = await previewDialog.value.open({ title: '导入插件组预览', items })
+    if (!confirmed) return
+    const res = await importPluginGroups(confirmed.map(i => { delete i._existingId; return i }))
     ElMessage.success(`导入成功：新增 ${res.data.imported} 个，跳过 ${res.data.skipped} 个`)
+    previewDialog.value.done()
     await load()
   } catch (e) {
     ElMessage.error('导入失败: ' + (e.message || e))
+    if (previewDialog.value) previewDialog.value.done()
   }
 }
 

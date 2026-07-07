@@ -14,6 +14,7 @@
         <el-button>导入配置</el-button>
       </el-upload>
     </div>
+    <ImportPreviewDialog ref="previewDialog" />
     <el-table :data="profiles" v-loading="loading" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="ID" width="60" />
@@ -91,12 +92,14 @@ import { listProfiles, createProfile, updateProfile, deleteProfile, exportProfil
 import { formatTimestamp } from '../utils/format.js'
 import { exportJson, importJson } from '../utils/export.js'
 import CodeEditor from '../components/CodeEditor.vue'
+import ImportPreviewDialog from '../components/ImportPreviewDialog.vue'
 
 const profiles = ref([])
 const loading = ref(false)
 const saving = ref(false)
 const visible = ref(false)
 const selectedIds = ref([])
+const previewDialog = ref(null)
 const errors = ref({ customHeaders: '', customBody: '' })
 const form = ref({
   name: '',
@@ -230,11 +233,19 @@ async function handleImport(file) {
       ElMessage.error('文件格式错误：应为配置数组')
       return
     }
-    const res = await importProfiles(list)
+    const items = list.map(item => ({
+      ...item,
+      _existingId: profiles.value.find(p => p.slug === item.slug)?.id || null,
+    }))
+    const confirmed = await previewDialog.value.open({ title: '导入配置预览', items })
+    if (!confirmed) return
+    const res = await importProfiles(confirmed.map(i => { delete i._existingId; return i }))
     ElMessage.success(`导入成功：新增 ${res.data.imported} 个，跳过 ${res.data.skipped} 个`)
+    previewDialog.value.done()
     await load()
   } catch (e) {
     ElMessage.error('导入失败: ' + (e.message || e))
+    if (previewDialog.value) previewDialog.value.done()
   }
 }
 

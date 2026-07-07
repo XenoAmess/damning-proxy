@@ -7,6 +7,7 @@
 
 ## 2026-07-07
 
+- 导入导出增加预览：新增 `ImportPreviewDialog` 组件，配置、实例、插件组、插件 JSON 导入前可预览新增/覆盖数量并二次确认。
 - 流量日志新增 token 用量统计：从上游响应 `usage` 字段自动提取 prompt_tokens / completion_tokens / total_tokens，并在日志详情与卡片中展示。
 - 新增单元测试 `TrafficLogServiceTest.shouldExtractTokenUsageFromResponse`。
 - 新增代理端点：`/v1/proxy/{instanceSlug}/embeddings` 与 `/v1/proxy/{instanceSlug}/images/generations`，兼容 OpenAI embeddings 与 images/generations 接口。

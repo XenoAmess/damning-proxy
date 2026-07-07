@@ -14,6 +14,7 @@
         <el-button>导入插件</el-button>
       </el-upload>
     </div>
+    <ImportPreviewDialog ref="previewDialog" />
     <el-table :data="plugins" v-loading="loading" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="ID" width="60" />
@@ -138,6 +139,7 @@ import {
 } from '../api/damning.js'
 import axios from 'axios'
 import CodeEditor from '../components/CodeEditor.vue'
+import ImportPreviewDialog from '../components/ImportPreviewDialog.vue'
 import { formatTimestamp } from '../utils/format.js'
 import { formatBytes } from '../utils/parse.js'
 
@@ -149,6 +151,7 @@ const readOnly = ref(false)
 const selectedIds = ref([])
 const packageFile = ref(null)
 const packageEntries = ref([])
+const previewDialog = ref(null)
 
 const defaultForm = {
   name: '',
@@ -381,19 +384,29 @@ async function handleImport(file) {
     let res
     if (raw.name.toLowerCase().endsWith('.zip')) {
       res = await importPlugins(raw)
-    } else {
-      const text = await raw.text()
-      const list = JSON.parse(text)
-      if (!Array.isArray(list)) {
-        ElMessage.error('文件格式错误：应为插件数组')
-        return
-      }
-      res = await importPlugins(list)
+      ElMessage.success(`导入成功：新增 ${res.data.imported} 个，跳过 ${res.data.skipped} 个`)
+      await load()
+      return
     }
+    const text = await raw.text()
+    const list = JSON.parse(text)
+    if (!Array.isArray(list)) {
+      ElMessage.error('文件格式错误：应为插件数组')
+      return
+    }
+    const items = list.map(item => ({
+      ...item,
+      _existingId: plugins.value.find(p => p.slug === item.slug)?.id || null,
+    }))
+    const confirmed = await previewDialog.value.open({ title: '导入插件预览', items })
+    if (!confirmed) return
+    res = await importPlugins(confirmed.map(i => { delete i._existingId; return i }))
     ElMessage.success(`导入成功：新增 ${res.data.imported} 个，跳过 ${res.data.skipped} 个`)
+    previewDialog.value.done()
     await load()
   } catch (e) {
     ElMessage.error('导入失败: ' + (e.message || e))
+    if (previewDialog.value) previewDialog.value.done()
   }
 }
 

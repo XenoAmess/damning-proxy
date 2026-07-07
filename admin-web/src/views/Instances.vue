@@ -14,6 +14,7 @@
         <el-button>导入实例</el-button>
       </el-upload>
     </div>
+    <ImportPreviewDialog ref="previewDialog" />
     <el-table :data="instances" v-loading="loading" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
       <el-table-column prop="id" label="ID" width="60" />
@@ -110,6 +111,7 @@ import {
 import { formatTimestamp } from '../utils/format.js'
 import { copyToClipboard } from '../utils/clipboard.js'
 import { exportJson, importJson } from '../utils/export.js'
+import ImportPreviewDialog from '../components/ImportPreviewDialog.vue'
 
 const instances = ref([])
 const profiles = ref([])
@@ -118,6 +120,7 @@ const loading = ref(false)
 const saving = ref(false)
 const visible = ref(false)
 const selectedIds = ref([])
+const previewDialog = ref(null)
 const form = ref({
   name: '',
   slug: '',
@@ -237,11 +240,19 @@ async function handleImport(file) {
       ElMessage.error('文件格式错误：应为实例数组')
       return
     }
-    const res = await importInstances(list)
+    const items = list.map(item => ({
+      ...item,
+      _existingId: instances.value.find(i => i.slug === item.slug)?.id || null,
+    }))
+    const confirmed = await previewDialog.value.open({ title: '导入实例预览', items })
+    if (!confirmed) return
+    const res = await importInstances(confirmed.map(i => { delete i._existingId; return i }))
     ElMessage.success(`导入成功：新增 ${res.data.imported} 个，跳过 ${res.data.skipped} 个`)
+    previewDialog.value.done()
     await load()
   } catch (e) {
     ElMessage.error('导入失败: ' + (e.message || e))
+    if (previewDialog.value) previewDialog.value.done()
   }
 }
 

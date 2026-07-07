@@ -7,6 +7,7 @@
 
 ## 2026-07-07
 
+- Import/export now shows a preview before applying: added `ImportPreviewDialog` component; JSON imports for profiles, instances, plugin groups, and plugins display a preview of new vs. overwritten entries before confirming.
 - Traffic logs now capture token usage: prompt_tokens / completion_tokens / total_tokens are automatically extracted from the upstream `usage` field and shown in the log detail and card.
 - Added unit test `TrafficLogServiceTest.shouldExtractTokenUsageFromResponse`.
 - Added proxy endpoints: `/v1/proxy/{instanceSlug}/embeddings` and `/v1/proxy/{instanceSlug}/images/generations`, compatible with OpenAI embeddings and images/generations APIs.
