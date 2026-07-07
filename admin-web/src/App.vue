@@ -27,6 +27,10 @@
           <el-icon><Document /></el-icon>
           <span>流量日志</span>
         </el-menu-item>
+        <el-menu-item index="/settings" role="menuitem">
+          <el-icon><Setting /></el-icon>
+          <span>系统设置</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
@@ -38,7 +42,7 @@
 </template>
 
 <script setup>
-import { Monitor, Collection, MagicStick, Connection, Document, ChatDotRound } from '@element-plus/icons-vue'
+import { Monitor, Collection, MagicStick, Connection, Document, ChatDotRound, Setting } from '@element-plus/icons-vue'
 </script>
 
 <style scoped>

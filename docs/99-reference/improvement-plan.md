@@ -32,8 +32,8 @@
 | P1-2 | ✓ 2026-07-07 | 核心代理 | 上游瞬态失败重试/退避 | 目前只有熔断器反应，缺重试。已增加可配置的重试次数和指数退避（`damning-proxy.upstream.max-retries`、`retry-base-delay-ms`、`retry-max-delay-ms`、`retry-status-codes`、`retry-on-timeout`）。非流式和流式上游请求均支持重试。 |
 | P1-3 | ✓ 2026-07-07 | 核心代理 | `TrafficLog` 常用查询加索引 | `PanacheLogRepository` 按 `instanceId`、`profileId`、`requestPath`、`requestTime`、`responseStatus` 过滤。已在这五个列上添加 `@Table` 索引，避免日志量增长后查询退化。 |
 | P1-4 | ✓ 2026-07-07 | 插件系统 | ZIP 插件包大小限制与结构校验 | 当前只校验路径规范化，缺大小限制、入口文件 `main.groovy`/`main.js` 检查。已增加 `damning-proxy.plugin.zip.max-size-bytes`、`max-entries`、`max-entry-size-bytes` 配置，`PluginPackageStorage.storePackage()` 在持久化前校验单包大小、条目数、单条目大小、路径穿越及入口文件存在性。`PluginAdminApi` 捕获校验异常并返回 400。 |
-| P1-5 | 插件系统 | 插件脚本执行超时配置化 | Groovy/JS 引擎硬编码 30 秒。暴露 `damning-proxy.plugin.timeout-ms` 配置项。 |
-| P1-6 | 管理后台 | 增加全局限流配置页 | 当前限流只能通过 `application.properties` 配置。新增 `/api/settings/rate-limit` 读写端点与管理页面。 |
+| P1-5 | ✓ 2026-07-07 | 插件系统 | 插件脚本执行超时配置化 | Groovy/JS 引擎硬编码 30 秒。已增加 `damning-proxy.plugin.timeout-ms` 配置项，Groovy 和 JS 引擎均使用配置值；保留默认 30 秒并补充超时测试。 |
+| P1-6 | ✓ 2026-07-07 | 管理后台 | 增加全局限流配置页 | 当前限流只能通过 `application.properties` 配置。已新增 `GlobalSettings` 表、`/api/settings/rate-limit` 读写端点，以及 admin-web「系统设置」页面，修改后实时生效。 |
 | P1-7 | 管理后台 | 前端接入 ESLint / Prettier / 类型检查 | `admin-web/package.json` 缺少 lint、format、type-check 脚本。接入工具链并纳入 CI。 |
 | P1-8 | 测试 | 为 `RateLimiter`、`CircuitBreaker`、`UpstreamHttpClient` 补单测 | 这些核心韧性组件仅通过 `ProxyApiTest` 间接测试。补充纯单元测试，模拟时间和失败场景。 |
 | P1-9 | 测试 | 插件真实代理端到端测试 | 缺少验证“请求阶段插件改写上游请求 / 响应阶段插件改写返回体”的测试。用 WireMock + 真实插件做端到端验证。 |

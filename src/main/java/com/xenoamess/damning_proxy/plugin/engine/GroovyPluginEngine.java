@@ -10,6 +10,7 @@ import groovy.lang.Script;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.io.IOException;
 import java.util.Map;
@@ -32,7 +33,9 @@ public class GroovyPluginEngine implements PluginEngine {
     @Inject
     PluginPackageStorage packageStorage;
 
-    private static final long SCRIPT_TIMEOUT_MS = 30_000;
+    @ConfigProperty(name = "damning-proxy.plugin.timeout-ms", defaultValue = "30000")
+    long scriptTimeoutMs = 30_000;
+
     private final ExecutorService scriptExecutor = Executors.newCachedThreadPool(r -> {
         Thread t = new Thread(r, "groovy-plugin-exec");
         t.setDaemon(true);
@@ -76,12 +79,12 @@ public class GroovyPluginEngine implements PluginEngine {
         try {
             Script instance = scriptClass.getDeclaredConstructor(Binding.class).newInstance(binding);
             future = scriptExecutor.submit(() -> instance.run());
-            future.get(SCRIPT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            future.get(scriptTimeoutMs, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             if (future != null) {
                 future.cancel(true);
             }
-            throw new RuntimeException("Groovy plugin timed out after " + (SCRIPT_TIMEOUT_MS / 1000) + "s: " + plugin.name);
+            throw new RuntimeException("Groovy plugin timed out after " + (scriptTimeoutMs / 1000) + "s: " + plugin.name);
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute Groovy plugin: " + plugin.name, e);
         }

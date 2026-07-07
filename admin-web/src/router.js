@@ -12,6 +12,7 @@ const routes = [
   { path: '/profiles', component: () => import('./views/Profiles.vue') },
   { path: '/chat', component: () => import('./views/Chat.vue') },
   { path: '/logs', component: () => import('./views/Logs.vue') },
+  { path: '/settings', component: () => import('./views/Settings.vue') },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
 ]
 

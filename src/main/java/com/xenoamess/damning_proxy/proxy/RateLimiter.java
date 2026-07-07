@@ -1,8 +1,11 @@
 package com.xenoamess.damning_proxy.proxy;
 
+import com.xenoamess.damning_proxy.entity.GlobalSettings;
+import com.xenoamess.damning_proxy.repository.GlobalSettingsRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.Iterator;
@@ -16,10 +19,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RateLimiter {
 
     @ConfigProperty(name = "damning-proxy.rate-limit.max-requests", defaultValue = "60")
-    int maxRequests;
+    int defaultMaxRequests;
 
     @ConfigProperty(name = "damning-proxy.rate-limit.window-seconds", defaultValue = "60")
-    int windowSeconds;
+    int defaultWindowSeconds;
+
+    @Inject
+    GlobalSettingsRepository globalSettingsRepository;
 
     private final ConcurrentHashMap<String, WindowBucket> buckets = new ConcurrentHashMap<>();
     private ScheduledExecutorService cleanupExecutor;
@@ -42,6 +48,10 @@ public class RateLimiter {
     }
 
     public boolean tryAcquire(String key) {
+        GlobalSettings settings = globalSettingsRepository.getOrCreateSingleton();
+        int maxRequests = settings.maxRequestsPerWindow != null ? settings.maxRequestsPerWindow : defaultMaxRequests;
+        int windowSeconds = settings.windowSeconds != null ? settings.windowSeconds : defaultWindowSeconds;
+
         long now = System.currentTimeMillis() / 1000;
         WindowBucket bucket = buckets.compute(key, (k, existing) -> {
             if (existing == null) {
@@ -62,6 +72,9 @@ public class RateLimiter {
     }
 
     private void cleanup() {
+        GlobalSettings settings = globalSettingsRepository.getOrCreateSingleton();
+        int windowSeconds = settings.windowSeconds != null ? settings.windowSeconds : defaultWindowSeconds;
+
         long now = System.currentTimeMillis() / 1000;
         Iterator<WindowBucket> it = buckets.values().iterator();
         while (it.hasNext()) {

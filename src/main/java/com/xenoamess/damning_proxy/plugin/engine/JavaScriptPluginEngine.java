@@ -7,6 +7,7 @@ import com.xenoamess.damning_proxy.plugin.storage.PluginPackageStorage;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory;
 
 import javax.script.ScriptEngine;
@@ -40,7 +41,9 @@ public class JavaScriptPluginEngine implements PluginEngine {
     @Inject
     PluginPackageStorage packageStorage;
 
-    private static final long SCRIPT_TIMEOUT_MS = 30_000;
+    @ConfigProperty(name = "damning-proxy.plugin.timeout-ms", defaultValue = "30000")
+    long scriptTimeoutMs = 30_000;
+
     private final ExecutorService scriptExecutor = Executors.newCachedThreadPool(r -> {
         Thread t = new Thread(r, "js-plugin-exec");
         t.setDaemon(true);
@@ -82,12 +85,12 @@ public class JavaScriptPluginEngine implements PluginEngine {
                     engineCache.remove();
                 }
             });
-            future.get(SCRIPT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            future.get(scriptTimeoutMs, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             if (future != null) {
                 future.cancel(true);
             }
-            throw new RuntimeException("JavaScript plugin timed out after " + (SCRIPT_TIMEOUT_MS / 1000) + "s: " + plugin.name);
+            throw new RuntimeException("JavaScript plugin timed out after " + (scriptTimeoutMs / 1000) + "s: " + plugin.name);
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute JavaScript plugin: " + plugin.name, e);
         }

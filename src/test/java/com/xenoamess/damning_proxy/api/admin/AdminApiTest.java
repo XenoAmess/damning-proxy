@@ -1,9 +1,11 @@
 package com.xenoamess.damning_proxy.api.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xenoamess.damning_proxy.entity.GlobalSettings;
 import com.xenoamess.damning_proxy.entity.Plugin;
 import com.xenoamess.damning_proxy.entity.ProxyProfile;
 import com.xenoamess.damning_proxy.entity.TrafficLog;
+import com.xenoamess.damning_proxy.repository.GlobalSettingsRepository;
 import com.xenoamess.damning_proxy.repository.InstanceRepository;
 import com.xenoamess.damning_proxy.repository.LogRepository;
 import com.xenoamess.damning_proxy.repository.PluginGroupRepository;
@@ -40,13 +42,13 @@ class AdminApiTest {
     LogRepository logRepository;
 
     @Inject
-    ObjectMapper objectMapper;
+    InstanceRepository instanceRepository;
+
+    @Inject
+    GlobalSettingsRepository globalSettingsRepository;
 
     @Inject
     PluginGroupRepository pluginGroupRepository;
-
-    @Inject
-    InstanceRepository instanceRepository;
 
     @Inject
     EntityManager entityManager;
@@ -59,6 +61,10 @@ class AdminApiTest {
         profileRepository.listAll().forEach(p -> profileRepository.deleteById(p.id));
         pluginGroupRepository.listAll().forEach(g -> pluginGroupRepository.deleteById(g.id));
         pluginRepository.listAll().forEach(p -> pluginRepository.deleteById(p.id));
+        GlobalSettings settings = globalSettingsRepository.getOrCreateSingleton();
+        settings.maxRequestsPerWindow = 60;
+        settings.windowSeconds = 60;
+        globalSettingsRepository.save(settings);
 
         TrafficLog log = new TrafficLog();
         log.requestPath = "/v1/chat/completions";
@@ -771,5 +777,58 @@ class AdminApiTest {
             .then()
             .statusCode(200)
             .body("size()", equalTo(2));
+    }
+
+    @Test
+    void shouldReturnDefaultRateLimitSettings() {
+        given()
+            .when().get("/api/settings/rate-limit")
+            .then()
+            .statusCode(200)
+            .body("maxRequestsPerWindow", equalTo(60))
+            .body("windowSeconds", equalTo(60));
+    }
+
+    @Test
+    void shouldUpdateRateLimitSettings() {
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("maxRequestsPerWindow", 120, "windowSeconds", 30))
+            .when().put("/api/settings/rate-limit")
+            .then()
+            .statusCode(200)
+            .body("maxRequestsPerWindow", equalTo(120))
+            .body("windowSeconds", equalTo(30));
+
+        given()
+            .when().get("/api/settings/rate-limit")
+            .then()
+            .statusCode(200)
+            .body("maxRequestsPerWindow", equalTo(120))
+            .body("windowSeconds", equalTo(30));
+    }
+
+    @Test
+    void shouldRejectInvalidRateLimitSettings() {
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("maxRequestsPerWindow", 0, "windowSeconds", 30))
+            .when().put("/api/settings/rate-limit")
+            .then()
+            .statusCode(400);
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("maxRequestsPerWindow", 120, "windowSeconds", 0))
+            .when().put("/api/settings/rate-limit")
+            .then()
+            .statusCode(400);
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("maxRequestsPerWindow", 120))
+            .when().put("/api/settings/rate-limit")
+            .then()
+            .statusCode(400);
     }
 }

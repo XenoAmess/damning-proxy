@@ -5,6 +5,7 @@ import com.xenoamess.damning_proxy.entity.PluginGroup;
 import com.xenoamess.damning_proxy.entity.PluginGroupItem;
 import com.xenoamess.damning_proxy.entity.ProxyInstance;
 import com.xenoamess.damning_proxy.entity.ProxyProfile;
+import com.xenoamess.damning_proxy.repository.GlobalSettingsRepository;
 import com.xenoamess.damning_proxy.repository.InstanceRepository;
 import com.xenoamess.damning_proxy.repository.PluginGroupRepository;
 import com.xenoamess.damning_proxy.repository.PluginRepository;
@@ -33,6 +34,9 @@ public class StartupMigration {
 
     @Inject
     ProfileRepository profileRepository;
+
+    @Inject
+    GlobalSettingsRepository globalSettingsRepository;
 
     public static final String SYSTEM_HINT = loadResource("system_hint.txt");
     private static final String SAMPLE_DESCRIPTION = loadResource("sample_description.txt");
@@ -144,6 +148,7 @@ public class StartupMigration {
 
     @Transactional
     public void onStart(@Observes StartupEvent event) {
+        ensureGlobalSettings();
         ensureSamplePluginsAndGroups();
 
         if (!instanceRepository.listAll().isEmpty()) {
@@ -191,6 +196,10 @@ public class StartupMigration {
             instance.enabled = profile.enabled;
             instanceRepository.save(instance);
         }
+    }
+
+    private void ensureGlobalSettings() {
+        globalSettingsRepository.getOrCreateSingleton();
     }
 
     private Plugin ensureSamplePlugin(Plugin sample) {

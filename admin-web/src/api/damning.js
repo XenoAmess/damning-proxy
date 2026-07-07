@@ -169,3 +169,12 @@ export function clearLogs() {
 export function pruneLogs(keepCount, deleteAll = false) {
   return api.post('/logs/prune', { keepCount, deleteAll })
 }
+
+export function getRateLimitSettings() {
+  return api.get('/settings/rate-limit')
+}
+
+export function updateRateLimitSettings(data) {
+  return api.put('/settings/rate-limit', data)
+}
+
