@@ -56,7 +56,7 @@ This plan is derived from a review of the current codebase, documentation, recen
 | P2-4 | Plugin system | Plugin script revision history | Save script snapshots and support rollback. |
 | P2-5 | Admin UI | Dashboard chart page | Visualize request, error, and token trends based on Micrometer metrics. |
 | P2-6 | ✓ 2026-07-07 | Admin UI | Filtered log export CSV/JSON | The logs page only supported pruning. Added `GET /api/logs/export?format=json|csv` with all filter parameters, up to 10,000 records; CSV includes headers and proper escaping. |
-| P2-7 | Operations | H2 hot backup / restore endpoint | Provide an admin API to trigger `BACKUP` and restore. |
+| P2-7 | ✓ 2026-07-07 | Operations | H2 hot backup / restore endpoint | Provide an admin API to trigger `BACKUP` and restore. Added `POST /api/admin/database/backup` (H2 hot backup to `~/.damning-proxy/backups/`) and `POST /api/admin/database/restore` (validate and stage restore file; requires restart due to H2 file lock). |
 | P2-8 | ✓ 2026-07-07 | Operations | Rate-limit response headers | Return standard headers such as `RateLimit-Remaining` and `RateLimit-Reset`. Added `RateLimitInfo` record and `getRateLimitInfo()` method; all proxy endpoint responses now carry `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset` headers. |
 | P2-9 | ✓ 2026-07-07 | Code quality | Document `skip.frontend.build` property | Verified the property works at `pom.xml:186`; corrected the skip-frontend command in the build guide to `-Dskip.frontend.build=true`. |
 | P2-10 | Code quality | Native image reflection configuration | Plugin engines and script caches rely on reflection; add `reflect-config.json` and verify native build. |

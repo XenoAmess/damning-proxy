@@ -2,7 +2,7 @@
 
 # 02 Admin Endpoints
 
-> Last updated: 2026-06-21  
+> Last updated: 2026-07-07  
 > Source version: current workspace
 
 Admin endpoints are prefixed with `/api`. All interfaces return JSON and are currently unauthenticated.
@@ -294,6 +294,7 @@ Response:
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/logs?limit=100&offset=0&profileId=&instanceId=&status=&path=&startTime=&endTime=` | List logs (paginated, filtered) |
+| `GET` | `/api/logs/export?format=json&<filters>` | Export current filtered results (JSON or CSV) |
 | `GET` | `/api/logs/{id}` | Get raw log |
 | `GET` | `/api/logs/{id}/friendly` | Get friendly-format log |
 | `DELETE` | `/api/logs/{id}` | Delete a single log |
@@ -338,6 +339,65 @@ The friendly log additionally extracts:
 - `promptTokens` / `completionTokens` / `totalTokens`: token usage returned by upstream
 - `requestPipeline`: snapshot of request-phase plugin execution
 - `responsePipeline`: snapshot of response-phase plugin execution
+
+---
+
+### Log Export
+
+`GET /api/logs/export?format=json&profileId=1&instanceId=1&status=error&startTime=...&endTime=...`
+
+- `format` values: `json` (default) or `csv`.
+- Supports all filter parameters from `GET /api/logs`.
+- Exports up to 10,000 records by default.
+- JSON returns the raw log array; CSV includes headers and field escaping.
+
+---
+
+## Database /api/admin/database
+
+`src/main/java/com/xenoamess/damning_proxy/api/admin/DatabaseAdminApi.java:17`
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/admin/database/backup?name=...` | Perform H2 hot backup to `~/.damning-proxy/backups/` |
+| `POST` | `/api/admin/database/restore?path=...` | Validate and stage a restore file, return restart command |
+
+### Backup
+
+```bash
+curl -X POST http://localhost:12360/api/admin/database/backup
+```
+
+Response:
+
+```json
+{
+  "path": "/home/xxx/.damning-proxy/backups/backup_20260707_123456.zip",
+  "success": true
+}
+```
+
+- Default filename is `backup_YYYYMMDD_HHmmss.zip`.
+- The `name` parameter can specify a filename but must not contain path separators.
+- In-memory databases (`jdbc:h2:mem:`) do not support hot backup and will return 500.
+
+### Restore
+
+```bash
+curl -X POST "http://localhost:12360/api/admin/database/restore?path=/home/xxx/.damning-proxy/backups/backup_20260707_123456.zip"
+```
+
+Response:
+
+```json
+{
+  "stagedPath": "/home/xxx/.damning-proxy/data.restore.zip",
+  "restartCommand": "Stop the application, then run: ..."
+}
+```
+
+- Restore requires stopping the application, extracting `data.restore.zip` over the current database files, and then restarting.
+- Online hot restore is not currently supported because the H2 file database is locked while the application is running.
 
 ---
 

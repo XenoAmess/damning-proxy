@@ -13,4 +13,13 @@ public final class Validation {
             throw new WebApplicationException("slug is required", Response.Status.BAD_REQUEST);
         }
     }
+
+    public static void validatePathName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new WebApplicationException("Name is required", Response.Status.BAD_REQUEST);
+        }
+        if (name.contains("..") || name.contains("/") || name.contains("\\")) {
+            throw new WebApplicationException("Name must not contain path separators", Response.Status.BAD_REQUEST);
+        }
+    }
 }

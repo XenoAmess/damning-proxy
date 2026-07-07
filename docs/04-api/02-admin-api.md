@@ -2,7 +2,7 @@
 
 # 02 管理后台端点
 
-> 最后更新：2026-06-21  
+> 最后更新：2026-07-07  
 > 对应源码版本：当前工作区
 
 管理后台端点前缀为 `/api`，所有接口均返回 JSON，当前无认证。
@@ -294,6 +294,7 @@ create() 和 update() 接受 `ProfileForm` record（而非 `ProxyProfile` 实体
 | Method | Path | 说明 |
 |---|---|---|
 | `GET` | `/api/logs?limit=100&offset=0&profileId=&instanceId=&status=&path=&startTime=&endTime=` | 列出日志（分页、筛选） |
+| `GET` | `/api/logs/export?format=json&<filters>` | 导出当前筛选结果（JSON 或 CSV） |
 | `GET` | `/api/logs/{id}` | 获取原始日志 |
 | `GET` | `/api/logs/{id}/friendly` | 获取友好格式日志 |
 | `DELETE` | `/api/logs/{id}` | 删除单条日志 |
@@ -326,6 +327,17 @@ create() 和 update() 接受 `ProfileForm` record（而非 `ProxyProfile` 实体
 | `startTime` | String | — | 开始时间，格式 `YYYY-MM-DDTHH:mm:ss` |
 | `endTime` | String | — | 结束时间，格式 `YYYY-MM-DDTHH:mm:ss` |
 
+### 日志导出
+
+`GET /api/logs/export?format=json&profileId=1&instanceId=1&status=error&startTime=...&endTime=...`
+
+- `format` 取值：`json`（默认）或 `csv`。
+- 支持 `GET /api/logs` 的所有筛选参数。
+- 默认最多导出 10000 条。
+- JSON 返回原始日志数组；CSV 包含表头与字段转义。
+
+---
+
 ### 友好日志结构
 
 `src/main/java/com/xenoamess/damning_proxy/dto/TrafficLogFriendlyDto.java`
@@ -338,6 +350,54 @@ create() 和 update() 接受 `ProfileForm` record（而非 `ProxyProfile` 实体
 - `promptTokens` / `completionTokens` / `totalTokens`：上游返回的 token 用量
 - `requestPipeline`：请求阶段插件执行快照
 - `responsePipeline`：响应阶段插件执行快照
+
+---
+
+## 数据库 /api/admin/database
+
+`src/main/java/com/xenoamess/damning_proxy/api/admin/DatabaseAdminApi.java:17`
+
+| Method | Path | 说明 |
+|---|---|---|
+| `POST` | `/api/admin/database/backup?name=...` | 执行 H2 热备份到 `~/.damning-proxy/backups/` |
+| `POST` | `/api/admin/database/restore?path=...` | 验证并暂存恢复文件，返回重启命令 |
+
+### 备份
+
+```bash
+curl -X POST http://localhost:12360/api/admin/database/backup
+```
+
+响应：
+
+```json
+{
+  "path": "/home/xxx/.damning-proxy/backups/backup_20260707_123456.zip",
+  "success": true
+}
+```
+
+- 默认使用 `backup_YYYYMMDD_HHmmss.zip` 文件名。
+- `name` 参数可指定文件名，但不能包含路径分隔符。
+- 内存数据库（`jdbc:h2:mem:`）不支持热备份，会返回 500 错误。
+
+### 恢复
+
+```bash
+curl -X POST "http://localhost:12360/api/admin/database/restore?path=/home/xxx/.damning-proxy/backups/backup_20260707_123456.zip"
+```
+
+响应：
+
+```json
+{
+  "stagedPath": "/home/xxx/.damning-proxy/data.restore.zip",
+  "restartCommand": "Stop the application, then run: ..."
+}
+```
+
+- 恢复需要先停止应用，再解压 `data.restore.zip` 覆盖当前数据库文件，然后重启。
+- 当前实现暂不支持在线热恢复，因为 H2 文件数据库在运行时被锁定。
 
 ---
 
