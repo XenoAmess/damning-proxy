@@ -26,12 +26,12 @@
 
 ## P1 — 近期应该补齐
 
-| # | 类别 | 标题 | 价值与落地方式 |
-|---|------|------|----------------|
-| P1-1 | 核心代理 | 健康检查真正探测上游 | 当前 `/v1/health` 仅检查数据库和熔断快照，应增加对上游 `/v1/models` 或基础 URL 的轻量 HTTP 探测，并返回每个 profile 的连通状态。 |
-| P1-2 | 核心代理 | 上游瞬态失败重试/退避 | 目前只有熔断器反应，缺重试。对 5xx 或连接超时增加可配置的重试次数和指数退避，减少误报。 |
-| P1-3 | 核心代理 | `TrafficLog` 常用查询加索引 | `PanacheLogRepository` 按 `instanceId`、`profileId`、`requestPath`、`requestTime`、`responseStatus` 过滤。日志量增长后查询会退化，需在实体上加 `@Table` 索引。 |
-| P1-4 | 插件系统 | ZIP 插件包大小限制与结构校验 | 当前只校验路径规范化，缺大小限制、入口文件 `main.groovy`/`main.js` 检查。限制单包大小并拒绝结构非法文件。 |
+| # | 状态 | 类别 | 标题 | 价值与落地方式 |
+|---|------|------|------|----------------|
+| P1-1 | ✓ 2026-07-07 | 核心代理 | 健康检查真正探测上游 | 当前 `/v1/health` 仅检查数据库和熔断快照。已增加对每个启用 profile 的 `baseUrl + /models` 进行 5 秒超时 GET 探测，并返回每个上游的 `up`/`down`/`disabled` 状态。整体 `status` 只有在 DB 与所有启用上游都正常时才为 `ok`。 |
+| P1-2 | 待处理 | 核心代理 | 上游瞬态失败重试/退避 | 目前只有熔断器反应，缺重试。对 5xx 或连接超时增加可配置的重试次数和指数退避，减少误报。 |
+| P1-3 | ✓ 2026-07-07 | 核心代理 | `TrafficLog` 常用查询加索引 | `PanacheLogRepository` 按 `instanceId`、`profileId`、`requestPath`、`requestTime`、`responseStatus` 过滤。已在这五个列上添加 `@Table` 索引，避免日志量增长后查询退化。 |
+| P1-4 | 待处理 | 插件系统 | ZIP 插件包大小限制与结构校验 | 当前只校验路径规范化，缺大小限制、入口文件 `main.groovy`/`main.js` 检查。限制单包大小并拒绝结构非法文件。 |
 | P1-5 | 插件系统 | 插件脚本执行超时配置化 | Groovy/JS 引擎硬编码 30 秒。暴露 `damning-proxy.plugin.timeout-ms` 配置项。 |
 | P1-6 | 管理后台 | 增加全局限流配置页 | 当前限流只能通过 `application.properties` 配置。新增 `/api/settings/rate-limit` 读写端点与管理页面。 |
 | P1-7 | 管理后台 | 前端接入 ESLint / Prettier / 类型检查 | `admin-web/package.json` 缺少 lint、format、type-check 脚本。接入工具链并纳入 CI。 |

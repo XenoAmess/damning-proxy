@@ -16,8 +16,28 @@ curl http://localhost:12360/v1/health
 预期响应：
 
 ```json
-{ "status": "ok"|"degraded", "database": "ok"|"error" }
+{
+  "status": "ok"|"degraded",
+  "database": "ok"|"error",
+  "upstreams": {
+    "profile-slug": {
+      "enabled": true,
+      "status": "up"|"down",
+      "statusCode": 200,
+      "baseUrl": "https://api.openai.com/v1"
+    }
+  },
+  "circuitBreakers": { ... }
+}
 ```
+
+说明：
+
+- `status` 为 `ok` 当且仅当数据库连接正常 **且** 所有已启用（`enabled=true`）的 profile 上游可连通。
+- 对每个已启用的 profile，健康检查会向其 `baseUrl + /models` 发送一个 5 秒超时的 GET 探测请求。
+- 上游返回 HTTP 状态码 < 500 视为 `up`（包括 401/403/404 等可到达响应）；连接失败或返回 5xx 视为 `down`。
+- 已禁用的 profile 会显示 `enabled: false`、`status: "disabled"`，不参与整体状态判定。
+- `circuitBreakers` 返回当前各上游熔断器快照。
 
 ---
 

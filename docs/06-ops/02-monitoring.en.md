@@ -16,8 +16,28 @@ curl http://localhost:12360/v1/health
 Expected response:
 
 ```json
-{ "status": "ok"|"degraded", "database": "ok"|"error" }
+{
+  "status": "ok"|"degraded",
+  "database": "ok"|"error",
+  "upstreams": {
+    "profile-slug": {
+      "enabled": true,
+      "status": "up"|"down",
+      "statusCode": 200,
+      "baseUrl": "https://api.openai.com/v1"
+    }
+  },
+  "circuitBreakers": { ... }
+}
 ```
+
+Notes:
+
+- `status` is `ok` only when the database connection is healthy **and** all enabled (`enabled=true`) profiles are reachable.
+- For each enabled profile, the health check sends a 5-second timeout GET probe to `baseUrl + /models`.
+- An HTTP status code < 500 is considered `up` (including 401/403/404, which indicate reachability); connection failures or 5xx responses are considered `down`.
+- Disabled profiles show `enabled: false` and `status: "disabled"` and do not affect the overall status.
+- `circuitBreakers` returns the current circuit-breaker snapshot per upstream.
 
 ---
 

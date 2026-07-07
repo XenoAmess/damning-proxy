@@ -26,12 +26,12 @@ This plan is derived from a review of the current codebase, documentation, recen
 
 ## P1 — Should Complete Soon
 
-| # | Category | Title | Value and Approach |
-|---|----------|-------|--------------------|
-| P1-1 | Core proxy | Add real upstream connectivity to `/v1/health` | Current `/v1/health` only checks the database and circuit-breaker snapshot. Add a lightweight HTTP probe to each enabled profile's base URL or `/v1/models` and include per-upstream status in the response. |
-| P1-2 | Core proxy | Add retry/backoff for transient upstream failures | Only the circuit breaker reacts to failures today. Add configurable retry count and exponential backoff for 5xx and connect timeouts to reduce false positives. |
-| P1-3 | Core proxy | Add database indexes on `TrafficLog` query columns | `PanacheLogRepository` filters by `instanceId`, `profileId`, `requestPath`, `requestTime`, and `responseStatus`. Add `@Table` indexes to avoid degradation as the log table grows. |
-| P1-4 | Plugin system | Enforce ZIP plugin package size limits and validate structure | Currently only path normalization is validated. Add a size limit and require a valid `main.groovy` / `main.js` entry. |
+| # | Status | Category | Title | Value and Approach |
+|---|--------|----------|-------|--------------------|
+| P1-1 | ✓ 2026-07-07 | Core proxy | Add real upstream connectivity to `/v1/health` | Previously `/v1/health` only checked the database and circuit-breaker snapshot. Added a 5-second timeout GET probe to `baseUrl + /models` for each enabled profile, returning `up`/`down`/`disabled` per upstream. Overall `status` is `ok` only when DB and all enabled upstreams are healthy. |
+| P1-2 | Pending | Core proxy | Add retry/backoff for transient upstream failures | Only the circuit breaker reacts to failures today. Add configurable retry count and exponential backoff for 5xx and connect timeouts to reduce false positives. |
+| P1-3 | ✓ 2026-07-07 | Core proxy | Add database indexes on `TrafficLog` query columns | `PanacheLogRepository` filters by `instanceId`, `profileId`, `requestPath`, `requestTime`, and `responseStatus`. Added `@Table` indexes on these five columns to avoid degradation as the log table grows. |
+| P1-4 | Pending | Plugin system | Enforce ZIP plugin package size limits and validate structure | Currently only path normalization is validated. Add a size limit and require a valid `main.groovy` / `main.js` entry. |
 | P1-5 | Plugin system | Make plugin script timeout configurable | Groovy and JS engines hardcode 30 seconds. Expose `damning-proxy.plugin.timeout-ms`. |
 | P1-6 | Admin UI | Add global rate-limiter configuration page | Rate limits are currently configured only via `application.properties`. Add a `/api/settings/rate-limit` endpoint and a management page. |
 | P1-7 | Admin UI | Add ESLint / Prettier / type-check tooling | `admin-web/package.json` lacks lint, format, and type-check scripts. Add the toolchain and enforce it in CI. |

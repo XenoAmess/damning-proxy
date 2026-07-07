@@ -7,7 +7,13 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "traffic_log")
+@Table(name = "traffic_log", indexes = {
+    @Index(name = "idx_traffic_log_instance_id", columnList = "instance_id"),
+    @Index(name = "idx_traffic_log_profile_id", columnList = "profile_id"),
+    @Index(name = "idx_traffic_log_request_path", columnList = "request_path"),
+    @Index(name = "idx_traffic_log_request_time", columnList = "request_time"),
+    @Index(name = "idx_traffic_log_response_status", columnList = "response_status")
+})
 public class TrafficLog extends PanacheEntityBase {
 
     @Id
