@@ -2,7 +2,7 @@
 
 # 01 构建方式
 
-> 最后更新：2026-06-17  
+> 最后更新：2026-07-07  
 > 对应源码版本：当前工作区
 
 ## 环境要求
@@ -113,10 +113,10 @@ npm run build
 如需跳过前端步骤（例如纯后端调试）：
 
 ```bash
-mvn clean package -DskipFrontend
+mvn clean package -Dskip.frontend.build=true
 ```
 
-但当前 `frontend-maven-plugin` 未配置 skip 属性，可通过注释 `pom.xml` 中相关 execution 实现。未来改进点。
+配置项 `skip.frontend.build` 定义在 `pom.xml:22`，默认值为 `false`，通过 `frontend-maven-plugin` 的 `<skip>` 控制。跳过前端时，请确保 `src/main/resources/META-INF/resources/admin/` 中已有构建好的前端文件，否则 admin UI 无法使用。
 
 ---
 
@@ -132,6 +132,7 @@ mvn clean package -DskipFrontend
 | 前端独立开发 | `cd admin-web && npm run dev` |
 | 前端独立构建 | `cd admin-web && npm run build` |
 | 运行测试 | `mvn test` |
+| 跳过前端构建 | `mvn clean package -Dskip.frontend.build=true` |
 
 ---
 

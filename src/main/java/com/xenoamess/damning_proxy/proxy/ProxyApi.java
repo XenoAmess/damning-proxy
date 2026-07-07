@@ -47,10 +47,31 @@ public class ProxyApi {
         return false;
     }
 
-    private static Response rateLimitedResponse(String instanceSlug) {
+    private static Response rateLimitedResponse(String instanceSlug, RateLimiter.RateLimitInfo info) {
         return Response.status(429)
+            .header("RateLimit-Limit", String.valueOf(info.limit()))
+            .header("RateLimit-Remaining", String.valueOf(info.remaining()))
+            .header("RateLimit-Reset", String.valueOf(info.resetSeconds()))
             .entity(Map.of("error", "Rate limit exceeded for instance: " + instanceSlug))
             .build();
+    }
+
+    private Response withRateLimitHeaders(Response response, RateLimiter.RateLimitInfo info) {
+        return Response.fromResponse(response)
+            .header("RateLimit-Limit", String.valueOf(info.limit()))
+            .header("RateLimit-Remaining", String.valueOf(info.remaining()))
+            .header("RateLimit-Reset", String.valueOf(info.resetSeconds()))
+            .build();
+    }
+
+    private Response buildRateLimitedResponse(String instanceSlug) {
+        RateLimiter.RateLimitInfo info = rateLimiter.getRateLimitInfo(instanceSlug);
+        return rateLimitedResponse(instanceSlug, info);
+    }
+
+    private RateLimiter.RateLimitInfo tryAcquireAndGetInfo(String instanceSlug) {
+        rateLimiter.tryAcquire(instanceSlug);
+        return rateLimiter.getRateLimitInfo(instanceSlug);
     }
 
     @GET
@@ -58,9 +79,10 @@ public class ProxyApi {
     @Produces(MediaType.APPLICATION_JSON)
     public Response listModels(@PathParam("instanceSlug") String instanceSlug, @Context HttpHeaders headers) {
         if (!rateLimiter.tryAcquire(instanceSlug)) {
-            return rateLimitedResponse(instanceSlug);
+            return buildRateLimitedResponse(instanceSlug);
         }
-        return proxyService.listModels(instanceSlug, headers);
+        return withRateLimitHeaders(proxyService.listModels(instanceSlug, headers),
+            rateLimiter.getRateLimitInfo(instanceSlug));
     }
 
     @POST
@@ -70,8 +92,9 @@ public class ProxyApi {
     public Response chatCompletions(@PathParam("instanceSlug") String instanceSlug, Map<String, Object> requestBody,
                                      @Context HttpHeaders headers) {
         if (!rateLimiter.tryAcquire(instanceSlug)) {
-            return rateLimitedResponse(instanceSlug);
+            return buildRateLimitedResponse(instanceSlug);
         }
+        RateLimiter.RateLimitInfo info = rateLimiter.getRateLimitInfo(instanceSlug);
         boolean wantsStream = isStreamingRequest(requestBody)
             || headers.getAcceptableMediaTypes().stream().anyMatch(mt -> {
                 return mt.isCompatible(MediaType.SERVER_SENT_EVENTS_TYPE)
@@ -81,11 +104,11 @@ public class ProxyApi {
             requestBody.put("stream", true);
             Multi<String> sseMulti = proxyService.chatCompletionsStream(instanceSlug, requestBody, headers);
             StreamingOutput output = new SseStreamingOutput(sseMulti);
-            return Response.ok(output)
+            return withRateLimitHeaders(Response.ok(output)
                 .type(MediaType.SERVER_SENT_EVENTS)
-                .build();
+                .build(), info);
         }
-        return proxyService.chatCompletions(instanceSlug, requestBody, headers);
+        return withRateLimitHeaders(proxyService.chatCompletions(instanceSlug, requestBody, headers), info);
     }
 
     @POST
@@ -95,9 +118,10 @@ public class ProxyApi {
     public Response embeddings(@PathParam("instanceSlug") String instanceSlug, Map<String, Object> requestBody,
                                 @Context HttpHeaders headers) {
         if (!rateLimiter.tryAcquire(instanceSlug)) {
-            return rateLimitedResponse(instanceSlug);
+            return buildRateLimitedResponse(instanceSlug);
         }
-        return proxyService.embeddings(instanceSlug, requestBody, headers);
+        return withRateLimitHeaders(proxyService.embeddings(instanceSlug, requestBody, headers),
+            rateLimiter.getRateLimitInfo(instanceSlug));
     }
 
     @POST
@@ -107,9 +131,10 @@ public class ProxyApi {
     public Response imageGenerations(@PathParam("instanceSlug") String instanceSlug, Map<String, Object> requestBody,
                                       @Context HttpHeaders headers) {
         if (!rateLimiter.tryAcquire(instanceSlug)) {
-            return rateLimitedResponse(instanceSlug);
+            return buildRateLimitedResponse(instanceSlug);
         }
-        return proxyService.imageGenerations(instanceSlug, requestBody, headers);
+        return withRateLimitHeaders(proxyService.imageGenerations(instanceSlug, requestBody, headers),
+            rateLimiter.getRateLimitInfo(instanceSlug));
     }
 
     private class SseStreamingOutput implements StreamingOutput {

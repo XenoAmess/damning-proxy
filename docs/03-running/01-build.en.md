@@ -2,7 +2,7 @@
 
 # 01 Build Methods
 
-> Last updated: 2026-06-17  
+> Last updated: 2026-07-07  
 > Source version: current workspace
 
 ## Environment Requirements
@@ -113,10 +113,10 @@ Output goes to `admin-web/dist/`; Maven build will automatically copy it to `src
 To skip the frontend step (e.g. for pure backend debugging):
 
 ```bash
-mvn clean package -DskipFrontend
+mvn clean package -Dskip.frontend.build=true
 ```
 
-However, `frontend-maven-plugin` currently has no skip property configured; you can achieve this by commenting the relevant execution in `pom.xml`. Future improvement.
+The property `skip.frontend.build` is defined in `pom.xml:22`, defaults to `false`, and controls the `<skip>` element of `frontend-maven-plugin`. When skipping the frontend, ensure that `src/main/resources/META-INF/resources/admin/` already contains pre-built frontend files, otherwise the admin UI will be unavailable.
 
 ---
 
@@ -132,6 +132,7 @@ However, `frontend-maven-plugin` currently has no skip property configured; you 
 | Frontend standalone dev | `cd admin-web && npm run dev` |
 | Frontend standalone build | `cd admin-web && npm run build` |
 | Run tests | `mvn test` |
+| Skip frontend build | `mvn clean package -Dskip.frontend.build=true` |
 
 ---
 

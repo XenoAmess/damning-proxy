@@ -78,6 +78,30 @@ public class RateLimiter {
         return allowed;
     }
 
+    public RateLimitInfo getRateLimitInfo(String key) {
+        GlobalSettings settings = globalSettingsRepository.getOrCreateSingleton();
+        int maxRequests = settings.maxRequestsPerWindow != null ? settings.maxRequestsPerWindow : defaultMaxRequests;
+        int windowSeconds = settings.windowSeconds != null ? settings.windowSeconds : defaultWindowSeconds;
+
+        WindowBucket bucket = buckets.get(key);
+        if (bucket == null) {
+            return new RateLimitInfo(maxRequests, maxRequests, 0);
+        }
+
+        long now = System.currentTimeMillis() / 1000;
+        long windowAge = now - bucket.windowStart;
+        if (windowAge >= windowSeconds) {
+            return new RateLimitInfo(maxRequests, maxRequests, 0);
+        }
+
+        int remaining = Math.max(0, maxRequests - bucket.counter.get());
+        long resetSeconds = windowSeconds - windowAge;
+        return new RateLimitInfo(maxRequests, remaining, resetSeconds);
+    }
+
+    public record RateLimitInfo(int limit, int remaining, long resetSeconds) {
+    }
+
     private void cleanup() {
         GlobalSettings settings = globalSettingsRepository.getOrCreateSingleton();
         int windowSeconds = settings.windowSeconds != null ? settings.windowSeconds : defaultWindowSeconds;
