@@ -36,8 +36,8 @@
         <template #default="{ row }">
           <el-button size="small" @click="openDialog(row, false)">查看</el-button>
           <el-button size="small" type="primary" @click="copyPlugin(row)">复制</el-button>
-          <el-button v-if="!isSample(row)" size="small" @click="openDialog(row, true)">编辑</el-button>
-          <el-button size="small" type="success" @click="debugPlugin(row)">调试</el-button>
+          <el-button v-if="!isSample(row)" size="small" @click="editPlugin(row)">编辑</el-button>
+          <el-button size="small" type="success" @click="editPlugin(row)">调试</el-button>
           <el-button v-if="!isSample(row)" size="small" type="danger" @click="remove(row.id)">删除</el-button>
         </template>
       </el-table-column>
@@ -229,8 +229,8 @@ function handleSelectionChange(rows) {
   selectedIds.value = rows.map(r => r.id)
 }
 
-function debugPlugin(row) {
-  router.push(`/plugins/${row.id}/debug`)
+function editPlugin(row) {
+  router.push(`/plugins/${row.id}/edit`)
 }
 
 function applyTemplate() {

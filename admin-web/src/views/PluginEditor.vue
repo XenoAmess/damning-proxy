@@ -1,33 +1,92 @@
 <template>
-  <div class="plugin-debugger" v-loading="loading">
+  <div class="plugin-editor" v-loading="loading">
     <div class="toolbar">
       <el-button @click="goBack">返回</el-button>
-      <span class="title" v-if="plugin">{{ plugin.name }} — 插件调试台</span>
-      <el-tag v-if="plugin" :type="plugin.enabled ? 'success' : 'info'">{{ plugin.enabled ? '已启用' : '已禁用' }}</el-tag>
-      <el-tag v-if="plugin">{{ plugin.language }}</el-tag>
-      <el-tag v-if="plugin">{{ plugin.executionPhase }}</el-tag>
+      <span class="title">{{ plugin.name || '插件编辑器' }}</span>
+      <el-tag v-if="plugin.id" :type="plugin.enabled ? 'success' : 'info'">{{ plugin.enabled ? '已启用' : '已禁用' }}</el-tag>
+      <el-tag v-if="plugin.id">{{ plugin.language }}</el-tag>
+      <el-tag v-if="plugin.id">{{ plugin.mode === 'ZIP_PACKAGE' ? 'ZIP包' : '单脚本' }}</el-tag>
+      <el-tag v-if="plugin.id">{{ plugin.executionPhase }}</el-tag>
       <div class="spacer" />
-      <el-switch v-model="editable" active-text="允许编辑" inactive-text="只读" />
-      <el-button type="primary" @click="saveScript" :loading="saving" :disabled="!editable">保存脚本</el-button>
+      <el-switch v-if="plugin.id" v-model="plugin.enabled" active-text="启用" inactive-text="禁用" />
+      <el-button type="primary" @click="save" :loading="saving">保存</el-button>
       <el-button type="success" @click="run" :loading="running">运行调试</el-button>
     </div>
 
-    <div class="main" :class="{ docked }">
-      <div class="panel editor-panel">
+    <div class="main">
+      <div class="left-panel">
+        <el-form label-position="top" size="small">
+          <el-form-item label="名称">
+            <el-input v-model="plugin.name" />
+          </el-form-item>
+          <el-form-item label="标识">
+            <el-input v-model="plugin.slug" disabled />
+          </el-form-item>
+          <el-form-item label="描述">
+            <el-input v-model="plugin.description" type="textarea" :rows="2" />
+          </el-form-item>
+          <el-form-item label="模式">
+            <el-radio-group v-model="plugin.mode">
+              <el-radio-button label="SINGLE_SCRIPT" />
+              <el-radio-button label="ZIP_PACKAGE" />
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="语言">
+            <el-radio-group v-model="plugin.language">
+              <el-radio-button label="GROOVY" />
+              <el-radio-button label="JS" />
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="执行阶段">
+            <el-radio-group v-model="plugin.executionPhase">
+              <el-radio-button label="REQUEST" />
+              <el-radio-button label="RESPONSE" />
+              <el-radio-button label="BOTH" />
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="启用">
+            <el-switch v-model="plugin.enabled" />
+          </el-form-item>
+          <template v-if="plugin.mode === 'ZIP_PACKAGE'">
+            <el-form-item label="当前包">
+              <div class="package-info">{{ plugin.packagePath || '无' }}</div>
+            </el-form-item>
+            <el-form-item label="重新上传 ZIP">
+              <el-upload
+                action="#"
+                :auto-upload="false"
+                :show-file-list="false"
+                :on-change="handlePackageSelect"
+                accept=".zip"
+              >
+                <el-button type="primary" size="small">{{ packageFile ? '重新选择' : '选择 ZIP' }}</el-button>
+              </el-upload>
+              <div v-if="packageFile" class="package-info">已选择: {{ packageFile.name }} ({{ formatBytes(packageFile.size) }})</div>
+              <div v-else class="package-info text-muted">未选择新 ZIP</div>
+            </el-form-item>
+            <el-form-item v-if="packageEntries.length" label="包内文件">
+              <el-table :data="packageEntries" size="small" height="160" border>
+                <el-table-column prop="name" label="路径" show-overflow-tooltip />
+                <el-table-column prop="size" label="大小" width="80" />
+              </el-table>
+            </el-form-item>
+          </template>
+        </el-form>
+      </div>
+
+      <div class="center-panel">
         <div class="panel-header">
           <span>脚本编辑器</span>
           <el-button size="small" text @click="resetScript">重置</el-button>
         </div>
-        <CodeEditor v-if="plugin" v-model="script" :language="plugin.language" :read-only="!editable" :height="editorHeight" />
+        <CodeEditor v-if="plugin.id" v-model="script" :language="plugin.language" :height="editorHeight" />
       </div>
 
-      <div class="side-panels">
-        <div class="panel">
+      <div class="right-panel">
+        <div class="panel input-panel">
           <div class="panel-header">
             <span>输入上下文</span>
-            <el-button size="small" text @click="dockToggle">{{ docked ? '收起' : '固定' }}</el-button>
           </div>
-
           <el-form label-position="top" size="small">
             <el-form-item label="调试阶段">
               <el-radio-group v-model="phase">
@@ -35,7 +94,6 @@
                 <el-radio-button label="RESPONSE" />
               </el-radio-group>
             </el-form-item>
-
             <el-form-item label="数据来源">
               <el-radio-group v-model="sourceType">
                 <el-radio-button label="manual">手动输入</el-radio-button>
@@ -43,19 +101,16 @@
                 <el-radio-button label="log">从日志加载</el-radio-button>
               </el-radio-group>
             </el-form-item>
-
             <el-form-item v-if="sourceType === 'instance'" label="选择实例">
               <el-select v-model="selectedInstanceId" placeholder="选择实例以应用上游配置" style="width: 100%">
                 <el-option v-for="inst in instances" :key="inst.id" :label="inst.name" :value="inst.id" />
               </el-select>
             </el-form-item>
-
             <el-form-item v-if="sourceType === 'log'" label="日志 ID">
               <el-input v-model="logIdInput" placeholder="输入流量日志 ID" style="width: 160px" />
               <el-button size="small" @click="loadFromLog">加载</el-button>
             </el-form-item>
           </el-form>
-
           <el-tabs v-model="inputTab">
             <el-tab-pane label="Request Body" name="requestBody">
               <CodeEditor v-model="requestBodyJson" language="JSON" :height="panelHeight" />
@@ -84,7 +139,6 @@
             <el-tag v-if="result && result.returned" type="warning" size="small">短路返回</el-tag>
             <el-tag v-if="result && result.stopped" type="info" size="small">stop()</el-tag>
           </div>
-
           <div v-if="result" class="output-body">
             <el-tabs v-model="outputTab">
               <el-tab-pane label="Diff" name="diff">
@@ -123,9 +177,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import axios from 'axios'
 import CodeEditor from '../components/CodeEditor.vue'
 import {
   getPlugin,
@@ -134,6 +189,7 @@ import {
   listInstances,
   getLogFriendly,
 } from '../api/damning.js'
+import { formatBytes } from '../utils/parse.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -142,10 +198,18 @@ const pluginId = computed(() => route.params.id)
 const loading = ref(false)
 const saving = ref(false)
 const running = ref(false)
-const plugin = ref(null)
+const plugin = ref({
+  name: '',
+  slug: '',
+  description: '',
+  language: 'GROOVY',
+  mode: 'SINGLE_SCRIPT',
+  executionPhase: 'BOTH',
+  enabled: true,
+  packagePath: '',
+})
 const script = ref('')
 const originalScript = ref('')
-const editable = ref(false)
 
 const phase = ref('REQUEST')
 const sourceType = ref('manual')
@@ -162,12 +226,20 @@ const responseStatus = ref(200)
 
 const instances = ref([])
 const result = ref(null)
-const docked = ref(false)
+const packageFile = ref(null)
+const packageEntries = ref([])
 
-const editorHeight = computed(() => docked.value ? 520 : 420)
-const panelHeight = computed(() => docked.value ? 240 : 200)
+const editorHeight = ref(window.innerHeight - 120)
+const panelHeight = ref(220)
+
+function updateHeights() {
+  editorHeight.value = window.innerHeight - 120
+  panelHeight.value = Math.max(180, Math.floor((window.innerHeight - 360) / 2))
+}
 
 onMounted(async () => {
+  updateHeights()
+  window.addEventListener('resize', updateHeights)
   await Promise.all([loadPlugin(), loadInstances()])
   const queryPhase = route.query.phase
   if (queryPhase === 'REQUEST' || queryPhase === 'RESPONSE') {
@@ -181,17 +253,33 @@ onMounted(async () => {
   }
 })
 
+onUnmounted(() => {
+  window.removeEventListener('resize', updateHeights)
+})
+
 async function loadPlugin() {
   loading.value = true
   try {
     const res = await getPlugin(pluginId.value)
-    plugin.value = res.data
+    plugin.value = { ...plugin.value, ...res.data }
     script.value = res.data.script || ''
     originalScript.value = script.value
+    if (plugin.value.mode === 'ZIP_PACKAGE') {
+      await loadPackageEntries()
+    }
   } catch (e) {
     ElMessage.error('加载插件失败')
   } finally {
     loading.value = false
+  }
+}
+
+async function loadPackageEntries() {
+  try {
+    const res = await axios.get(`/api/plugins/${pluginId.value}/entries`)
+    packageEntries.value = res.data.map(e => ({ name: e, size: '-' }))
+  } catch (e) {
+    packageEntries.value = []
   }
 }
 
@@ -209,23 +297,55 @@ function resetScript() {
   ElMessage.info('已重置为保存时的脚本')
 }
 
-async function saveScript() {
-  if (!plugin.value) return
+function handlePackageSelect(file) {
+  packageFile.value = file.raw
+  readPackageEntries(file.raw)
+}
+
+async function readPackageEntries(file) {
+  packageEntries.value = []
+  if (!file) return
+  try {
+    const JSZip = (await import('jszip')).default
+    const zip = await JSZip.loadAsync(file)
+    zip.forEach((relativePath, zipEntry) => {
+      if (!zipEntry.dir) {
+        packageEntries.value.push({ name: relativePath, size: formatBytes(zipEntry._data.uncompressedSize || 0) })
+      }
+    })
+  } catch (e) {
+    ElMessage.warning('无法预览 ZIP 内容，请确保文件有效')
+  }
+}
+
+function buildFormData() {
+  const fd = new FormData()
+  fd.append('name', plugin.value.name)
+  fd.append('slug', plugin.value.slug)
+  fd.append('description', plugin.value.description || '')
+  fd.append('language', plugin.value.language)
+  fd.append('mode', plugin.value.mode)
+  fd.append('executionPhase', plugin.value.executionPhase)
+  fd.append('enabled', plugin.value.enabled)
+  if (plugin.value.mode === 'SINGLE_SCRIPT') {
+    fd.append('script', script.value)
+  }
+  if (packageFile.value) {
+    fd.append('packageFile', packageFile.value)
+  }
+  return fd
+}
+
+async function save() {
+  if (!plugin.value.id) return
   saving.value = true
   try {
-    const form = new FormData()
-    form.append('name', plugin.value.name)
-    form.append('slug', plugin.value.slug)
-    form.append('description', plugin.value.description || '')
-    form.append('language', plugin.value.language)
-    form.append('mode', plugin.value.mode || 'SINGLE_SCRIPT')
-    form.append('script', script.value)
-    form.append('executionPhase', plugin.value.executionPhase)
-    form.append('enabled', plugin.value.enabled)
-    await updatePlugin(plugin.value.id, form)
+    const fd = buildFormData()
+    await updatePlugin(plugin.value.id, fd)
     originalScript.value = script.value
-    ElMessage.success('脚本已保存并生效')
+    ElMessage.success('保存成功')
   } catch (e) {
+    const status = e.response?.status
     const msg = e.response?.data
     const detail = typeof msg === 'string' ? msg : (msg?.message || msg?.error?.message || JSON.stringify(msg))
     ElMessage.error(detail || '保存失败')
@@ -306,17 +426,13 @@ function goBack() {
   router.push('/plugins')
 }
 
-function dockToggle() {
-  docked.value = !docked.value
-}
-
 watch(phase, () => {
   inputTab.value = phase.value === 'REQUEST' ? 'requestBody' : 'responseBody'
 })
 </script>
 
 <style scoped>
-.plugin-debugger {
+.plugin-editor {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 60px);
@@ -348,34 +464,33 @@ watch(phase, () => {
   gap: 12px;
 }
 
-.main.docked {
-  flex-direction: column;
+.left-panel {
+  width: 280px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  background: #fff;
 }
 
-.editor-panel {
+.center-panel {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
 }
 
-.main.docked .editor-panel {
-  flex: none;
-  height: 50%;
-}
-
-.side-panels {
+.right-panel {
   width: 520px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  flex-shrink: 0;
-}
-
-.main.docked .side-panels {
-  width: 100%;
-  flex-direction: row;
-  flex: 1;
 }
 
 .panel {
@@ -474,5 +589,11 @@ pre {
 .text-muted {
   color: #909399;
   padding: 12px;
+}
+
+.package-info {
+  color: #606266;
+  font-size: 13px;
+  margin-top: 6px;
 }
 </style>
