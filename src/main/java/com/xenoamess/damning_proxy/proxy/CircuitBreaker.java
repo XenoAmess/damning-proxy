@@ -1,8 +1,11 @@
 package com.xenoamess.damning_proxy.proxy;
 
 import com.xenoamess.damning_proxy.entity.ProxyProfile;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 import java.time.Instant;
 import java.util.Map;
@@ -83,10 +86,19 @@ public class CircuitBreaker {
         }
     }
 
+    @Inject
+    MeterRegistry meterRegistry;
+
     private final ConcurrentHashMap<String, CircuitState> circuits = new ConcurrentHashMap<>();
 
     public boolean allowRequest(String baseUrl) {
-        CircuitState circuit = circuits.computeIfAbsent(baseUrl, k -> new CircuitState());
+        CircuitState circuit = circuits.computeIfAbsent(baseUrl, k -> {
+            CircuitState s = new CircuitState();
+            if (meterRegistry != null) {
+                meterRegistry.gauge("damning.circuit_breaker.state", Tags.of("baseUrl", baseUrl), s, state -> state.state.ordinal());
+            }
+            return s;
+        });
         return circuit.allowRequest();
     }
 

@@ -2,6 +2,8 @@ package com.xenoamess.damning_proxy.proxy;
 
 import com.xenoamess.damning_proxy.entity.GlobalSettings;
 import com.xenoamess.damning_proxy.repository.GlobalSettingsRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -26,6 +28,9 @@ public class RateLimiter {
 
     @Inject
     GlobalSettingsRepository globalSettingsRepository;
+
+    @Inject
+    MeterRegistry meterRegistry;
 
     private final ConcurrentHashMap<String, WindowBucket> buckets = new ConcurrentHashMap<>();
     private ScheduledExecutorService cleanupExecutor;
@@ -65,10 +70,12 @@ public class RateLimiter {
         });
 
         int current = bucket.counter.incrementAndGet();
-        if (current > maxRequests) {
-            return false;
+        boolean allowed = current <= maxRequests;
+        if (meterRegistry != null) {
+            Tags tags = Tags.of("instance", key, "result", allowed ? "acquired" : "rejected");
+            meterRegistry.counter("damning.rate_limit.requests", tags).increment();
         }
-        return true;
+        return allowed;
     }
 
     private void cleanup() {

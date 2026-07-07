@@ -2,7 +2,7 @@
 
 # 02 健康检查与监控
 
-> 最后更新：2026-06-21  
+> 最后更新：2026-07-07  
 > 对应源码版本：当前工作区
 
 ## 健康检查端点
@@ -41,15 +41,58 @@ curl http://localhost:12360/v1/health
 
 ---
 
+## Prometheus 指标
+
+项目已集成 `quarkus-micrometer` 与 `quarkus-micrometer-registry-prometheus`，默认通过 `/q/metrics` 暴露 Prometheus 指标。
+
+```bash
+curl http://localhost:12360/q/metrics
+```
+
+### 主要指标
+
+| 指标名 | 类型 | 标签 | 说明 |
+|---|---|---|---|
+| `damning_proxy_requests_total` | Counter | `instance`, `path`, `status` | 代理端点请求总数（按实例、路径、状态码统计） |
+| `damning_proxy_request_duration_seconds` | Timer | `instance`, `path` | 代理端点请求处理耗时 |
+| `damning_upstream_requests_total` | Counter | `baseUrl`, `status` | 上游 HTTP 请求总数（含最终状态码） |
+| `damning_upstream_request_duration_seconds` | Timer | `baseUrl` | 上游请求耗时（含重试） |
+| `damning_tokens_total` | Counter | `instance`, `type` | Token 用量（`type=prompt/completion/total`） |
+| `damning_rate_limit_requests_total` | Counter | `instance`, `result` | 限流结果（`acquired` / `rejected`） |
+| `damning_circuit_breaker_state` | Gauge | `baseUrl` | 熔断器状态（`0=closed`, `1=open`, `2=half_open`） |
+
+说明：
+
+- 代理请求指标在 `TrafficLogService.recordResponse()` 中采集，覆盖非流式与流式请求的最终响应。
+- 上游指标在 `UpstreamHttpClient.send()` 中采集，反映经过重试后的最终上游调用结果。
+- Token 用量从上游响应的 `usage` 字段提取，仅在上游返回标准 OpenAI 格式时产生。
+
+### 配置
+
+`src/main/resources/application.properties`：
+
+```properties
+quarkus.micrometer.enabled=true
+quarkus.micrometer.export.prometheus.enabled=true
+```
+
+如需关闭 Prometheus 导出，设为 `false` 即可。
+
+---
+
 ## 可用于监控的指标
 
-当前版本未集成 Micrometer/Prometheus，可通过以下方式监控：
+当前版本已集成 Micrometer/Prometheus：
 
 ### 1. 健康检查
 
 定期请求 `/v1/health`，状态码 200 表示服务存活。
 
-### 2. 日志
+### 2. Prometheus 指标
+
+抓取 `/q/metrics` 获取 QPS、延迟、错误率、token 用量、熔断器状态等。
+
+### 3. 日志
 
 查看应用日志中的错误和上游请求失败信息。
 
@@ -58,7 +101,7 @@ ERROR [com.xenoamess.damning_proxy.filter.GlobalExceptionMapper] Unhandled excep
 ERROR [com.xenoamess.damning_proxy.proxy.UpstreamHttpClient] Upstream request failed
 ```
 
-### 3. 流量日志
+### 4. 流量日志
 
 通过 `/api/logs` 分析请求量、错误率、平均耗时。
 
@@ -109,9 +152,3 @@ DEBUG [com.xenoamess.damning_proxy.proxy.UpstreamHttpClient] Upstream request: P
 - 超出 `damning-proxy.log.max-count`（默认 100000）时自动删除最旧的日志
 - 可通过配置项调整阈值
 
----
-
-## 未来改进
-
-- 集成 `quarkus-micrometer` 暴露 Prometheus 指标。
-- 统计 QPS、延迟分位值、上游错误率。

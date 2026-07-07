@@ -2,6 +2,8 @@ package com.xenoamess.damning_proxy.proxy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xenoamess.damning_proxy.entity.ProxyProfile;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import io.quarkus.logging.Log;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
@@ -41,6 +43,9 @@ public class UpstreamHttpClient {
 
     @Inject
     CircuitBreaker circuitBreaker;
+
+    @Inject
+    MeterRegistry meterRegistry;
 
     @ConfigProperty(name = "damning-proxy.upstream.max-retries", defaultValue = "0")
     int maxRetries;
@@ -88,6 +93,7 @@ public class UpstreamHttpClient {
                                   MultiMap headers, Object body, int timeoutMs,
                                   ProxyProfile profile) {
         if (!circuitBreaker.allowRequest(baseUrl)) {
+            meterRegistry.counter("damning.upstream.requests.errors", Tags.of("baseUrl", baseUrl, "error", "circuit_open")).increment();
             throw new WebApplicationException("Circuit breaker open for upstream: " + baseUrl,
                 Response.Status.SERVICE_UNAVAILABLE);
         }
@@ -95,9 +101,8 @@ public class UpstreamHttpClient {
         URI uri = buildUri(baseUrl, path);
         Log.debugf("Upstream request: %s %s", method, uri);
 
-        // Bound the wait so a stuck upstream connection (e.g. HTTP/1.1 keep-alive
-        // socket that never closes) cannot pin a worker thread forever.
         int effectiveTimeoutMs = clampTimeoutMs(timeoutMs);
+        long startNs = System.nanoTime();
 
         WebApplicationException lastException = null;
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
@@ -124,6 +129,7 @@ public class UpstreamHttpClient {
                 if (result.statusCode < 400) {
                     circuitBreaker.recordSuccess(baseUrl);
                 }
+                recordUpstreamMetrics(baseUrl, result.statusCode, startNs);
                 return result;
             } catch (TimeoutException e) {
                 if (retryOnTimeout && attempt < maxRetries) {
@@ -133,6 +139,7 @@ public class UpstreamHttpClient {
                     continue;
                 }
                 circuitBreaker.recordFailure(baseUrl, profile);
+                recordUpstreamMetrics(baseUrl, Response.Status.GATEWAY_TIMEOUT.getStatusCode(), startNs);
                 throw new WebApplicationException(
                     "Upstream request timed out after " + (effectiveTimeoutMs / 1000) + " s",
                     Response.Status.GATEWAY_TIMEOUT);
@@ -145,11 +152,13 @@ public class UpstreamHttpClient {
                     continue;
                 }
                 circuitBreaker.recordFailure(baseUrl, profile);
+                recordUpstreamMetrics(baseUrl, Response.Status.BAD_GATEWAY.getStatusCode(), startNs);
                 throw new WebApplicationException(
                     "Upstream request failed: " + cause.getMessage(),
                     Response.Status.BAD_GATEWAY);
             } catch (Exception e) {
                 circuitBreaker.recordFailure(baseUrl, profile);
+                recordUpstreamMetrics(baseUrl, Response.Status.BAD_GATEWAY.getStatusCode(), startNs);
                 Log.errorf(e, "Upstream request failed: %s %s", method, uri);
                 throw new WebApplicationException("Upstream request failed: " + e.getMessage(), Response.Status.BAD_GATEWAY);
             }
@@ -157,10 +166,19 @@ public class UpstreamHttpClient {
 
         if (lastException != null) {
             circuitBreaker.recordFailure(baseUrl, profile);
+            recordUpstreamMetrics(baseUrl, lastException.getResponse().getStatus(), startNs);
             throw lastException;
         }
         circuitBreaker.recordFailure(baseUrl, profile);
+        recordUpstreamMetrics(baseUrl, Response.Status.BAD_GATEWAY.getStatusCode(), startNs);
         throw new WebApplicationException("Upstream request failed: max retries exceeded", Response.Status.BAD_GATEWAY);
+    }
+
+    private void recordUpstreamMetrics(String baseUrl, int statusCode, long startNs) {
+        Tags tags = Tags.of("baseUrl", baseUrl, "status", String.valueOf(statusCode));
+        meterRegistry.counter("damning.upstream.requests.total", tags).increment();
+        meterRegistry.timer("damning.upstream.request.duration", "baseUrl", baseUrl)
+            .record(System.nanoTime() - startNs, java.util.concurrent.TimeUnit.NANOSECONDS);
     }
 
     private UpstreamResponse sendOnce(String method, String baseUrl, String path,

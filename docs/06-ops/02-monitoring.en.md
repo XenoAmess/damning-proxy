@@ -2,7 +2,7 @@
 
 # 02 Health Checks and Monitoring
 
-> Last updated: 2026-06-21  
+> Last updated: 2026-07-07  
 > Source version: current workspace
 
 ## Health Check Endpoint
@@ -41,15 +41,58 @@ Notes:
 
 ---
 
+## Prometheus Metrics
+
+The project integrates `quarkus-micrometer` and `quarkus-micrometer-registry-prometheus`. Prometheus metrics are exposed by default at `/q/metrics`.
+
+```bash
+curl http://localhost:12360/q/metrics
+```
+
+### Key Metrics
+
+| Metric Name | Type | Labels | Description |
+|---|---|---|---|
+| `damning_proxy_requests_total` | Counter | `instance`, `path`, `status` | Total proxy endpoint requests (by instance, path, and status code) |
+| `damning_proxy_request_duration_seconds` | Timer | `instance`, `path` | Proxy endpoint request processing time |
+| `damning_upstream_requests_total` | Counter | `baseUrl`, `status` | Total upstream HTTP requests (including final status code) |
+| `damning_upstream_request_duration_seconds` | Timer | `baseUrl` | Upstream request duration (including retries) |
+| `damning_tokens_total` | Counter | `instance`, `type` | Token usage (`type=prompt/completion/total`) |
+| `damning_rate_limit_requests_total` | Counter | `instance`, `result` | Rate limit results (`acquired` / `rejected`) |
+| `damning_circuit_breaker_state` | Gauge | `baseUrl` | Circuit breaker state (`0=closed`, `1=open`, `2=half_open`) |
+
+Notes:
+
+- Proxy request metrics are collected in `TrafficLogService.recordResponse()` and cover both non-streaming and streaming final responses.
+- Upstream metrics are collected in `UpstreamHttpClient.send()` and reflect the final upstream call after retries.
+- Token usage is extracted from the `usage` field in upstream responses and is only emitted when the upstream returns a standard OpenAI format.
+
+### Configuration
+
+`src/main/resources/application.properties`:
+
+```properties
+quarkus.micrometer.enabled=true
+quarkus.micrometer.export.prometheus.enabled=true
+```
+
+Set `quarkus.micrometer.export.prometheus.enabled=false` to disable Prometheus export.
+
+---
+
 ## Metrics Available for Monitoring
 
-The current version does not integrate Micrometer/Prometheus. Monitoring can be done as follows:
+The current version integrates Micrometer/Prometheus:
 
 ### 1. Health Checks
 
 Periodically request `/v1/health`. HTTP 200 means the service is alive.
 
-### 2. Logs
+### 2. Prometheus Metrics
+
+Scrape `/q/metrics` for QPS, latency, error rate, token usage, and circuit-breaker state.
+
+### 3. Logs
 
 Check application logs for errors and upstream request failures.
 
@@ -58,7 +101,7 @@ ERROR [com.xenoamess.damning_proxy.filter.GlobalExceptionMapper] Unhandled excep
 ERROR [com.xenoamess.damning_proxy.proxy.UpstreamHttpClient] Upstream request failed
 ```
 
-### 3. Traffic Logs
+### 4. Traffic Logs
 
 Analyze request volume, error rate, and average latency via `/api/logs`.
 
@@ -109,9 +152,3 @@ Sliding-window rate limit counted by instance slug:
 - Automatically deletes oldest logs when exceeding `damning-proxy.log.max-count` (default 100000)
 - Threshold can be adjusted via configuration
 
----
-
-## Future Improvements
-
-- Integrate `quarkus-micrometer` to expose Prometheus metrics.
-- Track QPS, latency percentiles, and upstream error rates.

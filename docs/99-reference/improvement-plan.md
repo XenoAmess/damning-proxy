@@ -35,11 +35,11 @@
 | P1-5 | ✓ 2026-07-07 | 插件系统 | 插件脚本执行超时配置化 | Groovy/JS 引擎硬编码 30 秒。已增加 `damning-proxy.plugin.timeout-ms` 配置项，Groovy 和 JS 引擎均使用配置值；保留默认 30 秒并补充超时测试。 |
 | P1-6 | ✓ 2026-07-07 | 管理后台 | 增加全局限流配置页 | 当前限流只能通过 `application.properties` 配置。已新增 `GlobalSettings` 表、`/api/settings/rate-limit` 读写端点，以及 admin-web「系统设置」页面，修改后实时生效。 |
 | P1-7 | ✓ 2026-07-07 | 管理后台 | 前端接入 ESLint / Prettier / 类型检查 | `admin-web/package.json` 缺少 lint、format、type-check 脚本。已新增 ESLint 9 + `eslint-plugin-vue` + `eslint-config-prettier`、Prettier、`vue-tsc` + `tsconfig.json`；统一格式化全部源码并修复 prop 修改等真实问题；CI 已纳入 lint、type-check、format-check。 |
-| P1-8 | 测试 | 为 `RateLimiter`、`CircuitBreaker`、`UpstreamHttpClient` 补单测 | 这些核心韧性组件仅通过 `ProxyApiTest` 间接测试。补充纯单元测试，模拟时间和失败场景。 |
-| P1-9 | 测试 | 插件真实代理端到端测试 | 缺少验证“请求阶段插件改写上游请求 / 响应阶段插件改写返回体”的测试。用 WireMock + 真实插件做端到端验证。 |
+| P1-8 | ✓ 2026-07-07 | 测试 | 为 `RateLimiter`、`CircuitBreaker`、`UpstreamHttpClient` 补单测 | 这些核心韧性组件仅通过 `ProxyApiTest` 间接测试。已补充纯单元测试，模拟时间和失败场景。 |
+| P1-9 | ✓ 2026-07-07 | 测试 | 插件真实代理端到端测试 | 缺少验证“请求阶段插件改写上游请求 / 响应阶段插件改写返回体”的测试。已用 WireMock + 真实插件做端到端验证。 |
 | P1-10 | ✓ 2026-07-07 | 文档 | 修正插件缓存过时说明 | `docs/05-guides/02-plugin-development.md` 仍写“修改后需重启服务生效”。实际插件脚本按内容哈希缓存，且 `PluginAdminApi` 在更新插件时会调用 `evictCache`；已更新为中英文说明，明确保存后下次请求自动生效。 |
 | P1-11 | ✓ 2026-07-07 | 运维 | 提供 Dockerfile 与 docker-compose | 文档仅有手工 Docker 片段。已新增多阶段 `Dockerfile`（Maven + pnpm 构建前端，Eclipse Temurin 21 JRE 运行）和 `docker-compose.yml`，H2 数据通过 volume 挂载到 `/data` 持久化；运行文档已同步更新。 |
-| P1-12 | 运维 | 接入 Prometheus / Micrometer 指标 | 监控文档仍写未集成。增加 `quarkus-micrometer`，暴露请求量、错误、延迟、token 用量、熔断状态等指标。 |
+| P1-12 | ✓ 2026-07-07 | 运维 | 接入 Prometheus / Micrometer 指标 | 监控文档仍写未集成。已增加 `quarkus-micrometer`，暴露请求量、错误、延迟、token 用量、熔断状态等指标。`/q/metrics` 提供 Prometheus 格式指标；监控文档已更新。 |
 | P1-13 | 代码质量 | 按日志保留天数清理 | 当前仅按数量保留。增加 `damning-proxy.log.max-age-days` 配置，按时间窗口清理。 |
 | P1-14 | 代码质量 | Admin API 统一异常处理 | `PluginAdminApi` 与插件引擎仍用 `RuntimeException` 抛 IO/JSON 错误，最终 500。转换为 `WebApplicationException` 并携带明确状态码。 |
 | P1-15 | 代码质量 | 前端路由/代码拆分降低 chunk 体积 | 当前 `index.js` 接近 1 MB gzip。将 Chat、Logs、PluginEditor 等大屏按路由动态导入。 |

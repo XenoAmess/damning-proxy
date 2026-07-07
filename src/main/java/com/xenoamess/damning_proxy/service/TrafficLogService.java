@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xenoamess.damning_proxy.dto.PluginExecutionSnapshot;
 import com.xenoamess.damning_proxy.entity.TrafficLog;
 import com.xenoamess.damning_proxy.repository.LogRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -27,6 +29,9 @@ public class TrafficLogService {
 
     @Inject
     ObjectMapper objectMapper;
+
+    @Inject
+    MeterRegistry meterRegistry;
 
     @ConfigProperty(name = "damning-proxy.log.max-body-length", defaultValue = "1073741824")
     int maxBodyLength;
@@ -101,6 +106,8 @@ public class TrafficLogService {
         extractTokenUsage(existing, responseBody);
         logRepository.save(existing);
 
+        recordMetrics(existing, durationMs);
+
         if (recordCounter.incrementAndGet() % PRUNE_INTERVAL == 0) {
             pruneOldLogs();
         }
@@ -118,6 +125,30 @@ public class TrafficLogService {
         log.promptTokens = asInteger(u.get("prompt_tokens"));
         log.completionTokens = asInteger(u.get("completion_tokens"));
         log.totalTokens = asInteger(u.get("total_tokens"));
+    }
+
+    private void recordMetrics(TrafficLog log, long durationMs) {
+        String instance = log.instanceSlug != null ? log.instanceSlug : "unknown";
+        String path = log.requestPath != null ? log.requestPath : "unknown";
+        String status = log.responseStatus != null ? String.valueOf(log.responseStatus) : "unknown";
+
+        Tags tags = Tags.of("instance", instance, "path", path, "status", status);
+        meterRegistry.counter("damning.proxy.requests.total", tags).increment();
+        meterRegistry.timer("damning.proxy.request.duration", "instance", instance, "path", path)
+            .record(durationMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        if (log.promptTokens != null) {
+            meterRegistry.counter("damning.tokens.total", "instance", instance, "type", "prompt")
+                .increment(log.promptTokens);
+        }
+        if (log.completionTokens != null) {
+            meterRegistry.counter("damning.tokens.total", "instance", instance, "type", "completion")
+                .increment(log.completionTokens);
+        }
+        if (log.totalTokens != null) {
+            meterRegistry.counter("damning.tokens.total", "instance", instance, "type", "total")
+                .increment(log.totalTokens);
+        }
     }
 
     private Integer asInteger(Object value) {
