@@ -164,6 +164,94 @@ class AdminApiTest {
     }
 
     @Test
+    void shouldRejectPluginWithInvalidScript() {
+        given()
+            .multiPart("name", "InvalidGroovy")
+            .multiPart("slug", "invalid-groovy")
+            .multiPart("language", Plugin.Language.GROOVY.name())
+            .multiPart("executionPhase", Plugin.ExecutionPhase.REQUEST.name())
+            .multiPart("mode", Plugin.Mode.SINGLE_SCRIPT.name())
+            .multiPart("script", "def x = { // missing closure end")
+            .multiPart("enabled", "true")
+            .when().post("/api/plugins")
+            .then()
+            .statusCode(400)
+            .body(containsString("Groovy compile error"));
+
+        given()
+            .multiPart("name", "InvalidJs")
+            .multiPart("slug", "invalid-js")
+            .multiPart("language", Plugin.Language.JS.name())
+            .multiPart("executionPhase", Plugin.ExecutionPhase.REQUEST.name())
+            .multiPart("mode", Plugin.Mode.SINGLE_SCRIPT.name())
+            .multiPart("script", "function foo() { return { // missing braces")
+            .multiPart("enabled", "true")
+            .when().post("/api/plugins")
+            .then()
+            .statusCode(400)
+            .body(containsString("JavaScript"));
+    }
+
+    @Test
+    void shouldRejectPluginUpdateWithInvalidScript() {
+        Long id = given()
+            .multiPart("name", "UpdatePlugin")
+            .multiPart("slug", "update-plugin")
+            .multiPart("language", Plugin.Language.GROOVY.name())
+            .multiPart("executionPhase", Plugin.ExecutionPhase.REQUEST.name())
+            .multiPart("mode", Plugin.Mode.SINGLE_SCRIPT.name())
+            .multiPart("script", "context.log('ok')")
+            .multiPart("enabled", "true")
+            .when().post("/api/plugins")
+            .then()
+            .statusCode(201)
+            .extract().jsonPath().getLong("id");
+
+        given()
+            .multiPart("name", "UpdatePlugin")
+            .multiPart("slug", "update-plugin")
+            .multiPart("language", Plugin.Language.GROOVY.name())
+            .multiPart("executionPhase", Plugin.ExecutionPhase.REQUEST.name())
+            .multiPart("mode", Plugin.Mode.SINGLE_SCRIPT.name())
+            .multiPart("script", "def broken = { // syntax error")
+            .multiPart("enabled", "true")
+            .when().put("/api/plugins/" + id)
+            .then()
+            .statusCode(400)
+            .body(containsString("Groovy compile error"));
+    }
+
+    @Test
+    void shouldDryRunPlugin() {
+        Long id = given()
+            .multiPart("name", "DryRunPlugin")
+            .multiPart("slug", "dry-run-plugin")
+            .multiPart("language", Plugin.Language.GROOVY.name())
+            .multiPart("executionPhase", Plugin.ExecutionPhase.REQUEST.name())
+            .multiPart("mode", Plugin.Mode.SINGLE_SCRIPT.name())
+            .multiPart("script", "def body = context.getRequestBody(); body.dry = true; context.setRequestBody(body);")
+            .multiPart("enabled", "true")
+            .when().post("/api/plugins")
+            .then()
+            .statusCode(201)
+            .extract().jsonPath().getLong("id");
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "phase", "REQUEST",
+                "requestBody", Map.of("messages", java.util.List.of())
+            ))
+            .when().post("/api/plugins/" + id + "/dry-run")
+            .then()
+            .statusCode(200)
+            .body("pluginName", equalTo("DryRunPlugin"))
+            .body("phase", equalTo("REQUEST"))
+            .body("requestBody.dry", equalTo(true))
+            .body("error", equalTo(false));
+    }
+
+    @Test
     void shouldCrudInstances() {
         Long profileId = given()
             .contentType(ContentType.JSON)

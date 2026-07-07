@@ -7,6 +7,8 @@
 
 ## 2026-07-07
 
+- 新增测试覆盖：插件保存校验 400、插件 dry-run、日志批量删除分页。
+- 修复 `PanacheLogRepository.deleteOldest` 分批删除时未 flush，导致同一事务内后续批次重复读到已删除记录的问题。
 - 插件保存错误提示更明显：后台校验失败返回的 400 错误信息现在会在「插件管理」和「插件调试台」保存时直接展示给用户，不再只进入 friendly snapshot。
 - 技术债清理：将核心代理、健康检查、实例导出、日志序列化等模块中剩余的 `HashMap` 替换为 `LinkedHashMap`/`ConcurrentHashMap`，保证输出顺序确定并与项目线程安全实践一致；`@Transactional` 与 `ExecutorService` 生命周期已确认规范，无需额外调整。
 - 拆分管理后台 Chat / Logs 页面：将 `Chat.vue`、`Logs.vue` 拆分为多个可复用子组件，降低页面复杂度与维护成本。

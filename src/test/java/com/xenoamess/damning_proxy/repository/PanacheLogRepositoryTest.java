@@ -52,6 +52,23 @@ class PanacheLogRepositoryTest {
 
     @Test
     @TestTransaction
+    void shouldDeleteOldestLogs() {
+        logRepository.deleteAll();
+        for (int i = 0; i < 5; i++) {
+            TrafficLog log = new TrafficLog();
+            log.requestPath = "/v1/chat/completions";
+            log.requestMethod = "POST";
+            log.requestTime = java.time.LocalDateTime.now().plusNanos(i * 1_000_000L);
+            logRepository.save(log);
+        }
+
+        logRepository.deleteOldest(3, 2);
+
+        long remaining = logRepository.count();
+        assertEquals(2, remaining);
+    }
+    @Test
+    @TestTransaction
     void shouldClearAllLogs() {
         TrafficLog log = new TrafficLog();
         log.requestPath = "/v1";

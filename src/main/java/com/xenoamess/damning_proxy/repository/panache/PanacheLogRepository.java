@@ -103,6 +103,7 @@ public class PanacheLogRepository implements LogRepository {
             for (TrafficLog log : oldest) {
                 log.delete();
             }
+            TrafficLog.flush();
             remaining -= oldest.size();
         }
     }

@@ -7,6 +7,8 @@
 
 ## 2026-07-07
 
+- Added tests covering plugin save validation (400), plugin dry-run, and batched log pruning.
+- Fixed `PanacheLogRepository.deleteOldest` not flushing between batches, which could cause subsequent batches in the same transaction to re-read already-deleted records.
 - Plugin save errors are now surfaced in the UI: the validation error returned by the backend 400 response is displayed when saving from both the Plugins page and the Plugin Debugger, instead of only appearing in the friendly snapshot.
 - Technical-debt cleanup: replaced remaining `HashMap` usage in the core proxy, health check, instance export, and log serialization modules with `LinkedHashMap`/`ConcurrentHashMap` for deterministic ordering and consistency with the project's thread-safety practices; verified that `@Transactional` and `ExecutorService` lifecycles are already properly managed.
 - Split admin Chat / Logs pages: `Chat.vue` and `Logs.vue` are now decomposed into multiple reusable child components, reducing page complexity and maintenance burden.
