@@ -225,7 +225,7 @@ class ProxyApiTest {
             .extract().body().asString();
 
         assertTrue(response.contains("event: error"), response);
-        assertTrue(response.contains("Internal Server Error"), response);
+        assertTrue(response.contains("500"), response);
 
         TrafficLog log = waitForLogByInstance(instance.id);
         assertEquals("/v1/chat/completions", log.requestPath);

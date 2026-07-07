@@ -306,28 +306,31 @@ public class OpenAiProxyService {
                 context.setResponseStatus(response.statusCode());
                 context.getResponseHeaders().putAll(toMap(response.headers()));
                 if (response.statusCode() >= 400) {
-                    StringBuilder errorBody = new StringBuilder();
-                    response.handler(buffer -> errorBody.append(buffer.toString()));
-                    response.exceptionHandler(err -> {
-                        finishWithError.run();
-                        Log.error("Streaming upstream response failed", err);
-                        circuitBreaker.recordFailure(ctx.profile.baseUrl, ctx.profile);
-                        String msg = "Upstream response error: " + err.getMessage();
-                        recordError.accept(response.statusCode(), msg);
-                        emitter.emit(sseError(msg, null));
-                        emitter.complete();
-                    });
-                    response.endHandler(v -> {
-                        finishWithError.run();
-                        String body = errorBody.toString();
-                        context.setResponseBody(parseJson(body));
-                        circuitBreaker.recordFailure(ctx.profile.baseUrl, ctx.profile);
-                        String msg = "Upstream returned " + response.statusCode()
-                            + (body.isBlank() ? "" : ": " + body);
-                        recordError.accept(response.statusCode(), msg);
-                        emitter.emit(sseError(msg, response.statusCode()));
-                        emitter.complete();
-                    });
+                    response.body()
+                        .onSuccess(bodyBuffer -> {
+                            finishWithError.run();
+                            String body = bodyBuffer != null ? bodyBuffer.toString() : "";
+                            context.setResponseBody(parseJson(body));
+                            circuitBreaker.recordFailure(ctx.profile.baseUrl, ctx.profile);
+                            String statusMessage = response.statusMessage();
+                            String detail = body.isBlank() && statusMessage != null && !statusMessage.isBlank()
+                                ? statusMessage
+                                : body;
+                            String msg = "Upstream returned " + response.statusCode()
+                                + (detail.isBlank() ? "" : ": " + detail);
+                            recordError.accept(response.statusCode(), msg);
+                            emitter.emit(sseError(msg, response.statusCode()));
+                            emitter.complete();
+                        })
+                        .onFailure(err -> {
+                            finishWithError.run();
+                            Log.error("Streaming upstream response failed", err);
+                            circuitBreaker.recordFailure(ctx.profile.baseUrl, ctx.profile);
+                            String msg = "Upstream response error: " + err.getMessage();
+                            recordError.accept(response.statusCode(), msg);
+                            emitter.emit(sseError(msg, null));
+                            emitter.complete();
+                        });
                     return;
                 }
                 response.handler(buffer -> {
