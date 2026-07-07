@@ -2,7 +2,7 @@
 
 # 01 代理端点
 
-> 最后更新：2026-06-20  
+> 最后更新：2026-07-07  
 > 对应源码版本：当前工作区
 
 代理端点基于实例的 `slug` 对外暴露，路径前缀为 `/v1/proxy/{instanceSlug}`。
@@ -17,6 +17,8 @@
 |---|---|---|---|
 | `GET` | `/v1/proxy/{instanceSlug}/models` | `application/json` | 模型列表 |
 | `POST` | `/v1/proxy/{instanceSlug}/chat/completions` | `application/json` / `text/event-stream` | 统一聊天补全端点，根据 `stream` 字段返回 JSON 或 SSE |
+| `POST` | `/v1/proxy/{instanceSlug}/embeddings` | `application/json` | 文本向量（Embeddings） |
+| `POST` | `/v1/proxy/{instanceSlug}/images/generations` | `application/json` | 图像生成（Images/Generations） |
 
 ---
 
@@ -122,6 +124,18 @@ data: [DONE]
 
 ```
 
+### 流式错误处理
+
+当上游连接失败、返回非 2xx 状态码或流式读取异常时，代理不会直接关闭连接，而是继续向客户端发送一个 SSE `event: error` 事件，然后正常结束流。事件格式如下：
+
+```text
+event: error
+data: {"error":{"message":"Upstream returned 500: ...","code":500}}
+
+```
+
+客户端应当监听并解析该事件，将错误信息展示给用户。
+
 ### 流式实现细节
 
 - 上游返回的每个 SSE 事件会被重新格式化为标准 `data: ...\n\n`。
@@ -130,6 +144,68 @@ data: [DONE]
 - 响应阶段插件在 SSE 完整接收后执行，操作累积内容。
 - 若请求阶段插件直接 `returnResponse`，响应被包装成单个 SSE 事件加 `data: [DONE]`。
 - 为避免上游长连接期间被 `readTimeout` 断开，当 Profile `timeoutMs <= 0` 时上游 HTTP 客户端会禁用超时；同时每 30 秒记录一次心跳到 `TrafficLog.pluginLogs`，用于诊断长时间等待的连接。
+
+---
+
+## POST /v1/proxy/{instanceSlug}/embeddings
+
+兼容 OpenAI Embeddings API。请求体原样透传到上游 `/v1/embeddings`，响应经过插件处理后返回。
+
+### 请求示例
+
+```bash
+curl -H "Authorization: Bearer sk-test" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "text-embedding-3-small",
+    "input": "hello"
+  }' \
+  http://localhost:12360/v1/proxy/my-instance/embeddings
+```
+
+### 响应示例
+
+```json
+{
+  "object": "list",
+  "data": [
+    { "object": "embedding", "embedding": [0.1, 0.2], "index": 0 }
+  ],
+  "model": "text-embedding-3-small",
+  "usage": { "prompt_tokens": 2, "total_tokens": 2 }
+}
+```
+
+---
+
+## POST /v1/proxy/{instanceSlug}/images/generations
+
+兼容 OpenAI Images Generations API。请求体原样透传到上游 `/v1/images/generations`，响应经过插件处理后返回。
+
+### 请求示例
+
+```bash
+curl -H "Authorization: Bearer sk-test" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "dall-e-3",
+    "prompt": "a cat",
+    "n": 1,
+    "size": "1024x1024"
+  }' \
+  http://localhost:12360/v1/proxy/my-instance/images/generations
+```
+
+### 响应示例
+
+```json
+{
+  "created": 1234567890,
+  "data": [
+    { "url": "http://example.com/image.png" }
+  ]
+}
+```
 
 ---
 
@@ -143,15 +219,14 @@ data: [DONE]
 
 ## OpenAI 兼容性
 
-当前实现兼容 OpenAI Chat Completions API 的以下能力：
+当前实现兼容 OpenAI API 的以下能力：
 
-- `model`
-- `messages`
-- `stream`
-- 温度、top_p 等标准参数（透传到上游）
+- Chat Completions：`model`、`messages`、`stream` 以及温度、top_p 等标准参数。
+- Embeddings：`model`、`input` 等标准参数。
+- Images Generations：`model`、`prompt`、`n`、`size` 等标准参数。
+- 工具调用（`tool_calls`）在流式响应中已被识别并转发；非流式响应同样透传。
 
 不兼容或尚未实现：
 
-- 工具调用（tools/function_calling）相关的特殊处理
 - 多模态图片 URL 的本地代理
 - 流式下的逐 chunk 响应插件修改（当前是整体累积后修改）

@@ -14,6 +14,7 @@
 - 请求/响应时间、耗时
 - 插件日志
 - 插件执行快照（friendly snapshots）
+- 上游返回的 token 用量（`promptTokens`、`completionTokens`、`totalTokens`）
 
 实体定义：`src/main/java/com/xenoamess/damning_proxy/entity/TrafficLog.java`
 
@@ -41,7 +42,7 @@
 | 字段 | 最大长度 |
 |---|---|
 | requestHeaders / responseHeaders | 2000 |
-| requestBody / responseBody | 10000 |
+| requestBody / responseBody | 1073741824 |
 | pluginLogs | 5000 |
 | friendlyPluginSnapshots | 8000 |
 
@@ -76,8 +77,8 @@ curl http://localhost:12360/api/logs/1/friendly
 
 - 卡片式列表展示最近日志。
 - 点击卡片查看详情。
-- 详情包含：对话摘要、请求插件流水线、响应插件流水线、原始请求/响应、插件日志。
-- 支持删除单条日志和清空全部日志。
+- 详情包含：对话摘要、请求插件流水线、响应插件流水线、原始请求/响应、插件日志、token 用量。
+- 支持删除单条日志、清空全部日志、批量清理保留最近 N 条。
 
 ---
 
@@ -89,6 +90,16 @@ curl -X DELETE http://localhost:12360/api/logs/1
 
 # 清空全部
 curl -X POST http://localhost:12360/api/logs/clear
+
+# 批量清理：保留最近 10000 条
+curl -X POST http://localhost:12360/api/logs/prune \
+  -H "Content-Type: application/json" \
+  -d '{"keepCount":10000}'
+
+# 全部删除（忽略保留数）
+curl -X POST http://localhost:12360/api/logs/prune \
+  -H "Content-Type: application/json" \
+  -d '{"deleteAll":true}'
 ```
 
 ---
@@ -102,6 +113,7 @@ curl -X POST http://localhost:12360/api/logs/clear
 - `userPrompt`：用户提示词
 - `modelOutput`：模型输出
 - `model`：请求模型名
+- `promptTokens` / `completionTokens` / `totalTokens`：上游返回的 token 用量
 - `requestPipeline`：请求阶段插件快照列表
 - `responsePipeline`：响应阶段插件快照列表
 

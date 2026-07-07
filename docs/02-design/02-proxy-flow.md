@@ -7,7 +7,7 @@
 
 ## 公共前置步骤
 
-无论 `/models`、`/chat/completions` 还是流式 `/chat/completions`，都会先执行：
+无论 `/models`、`/chat/completions`、`/embeddings`、`/images/generations` 还是流式 `/chat/completions`，都会先执行：
 
 1. **解析 Instance**：根据 URL 中的 `instanceSlug` 查找 `ProxyInstance`。
 2. **校验启用状态**：Instance、Profile、PluginGroup 必须均启用。
@@ -56,8 +56,6 @@ OpenAiProxyService.chatCompletions(instanceSlug, requestBody)
   │     └─ 若 context.isReturned() 为 true：
   │          ├─ recordResponse(...)
   │          └─ 直接返回
-  ├─ 检测 stream 字段：
-  │     若 stream=true，返回 400 Bad Request，提示使用 SSE 端点
   ├─ upstreamHttpClient.send("POST", baseUrl, "/chat/completions", ...)
   ├─ 设置响应状态/响应体
   ├─ executeResponsePlugins(plugins, context)
@@ -101,13 +99,19 @@ Multi.createFrom().emitter(...)
   │     ├─ 识别 data: <payload>
   │     ├─ 过滤 [DONE]
   │     ├─ emitter.emit(payload)     立即下发给客户端
-  │     └─ accumulateStreamContent   累积 content / reasoning_content 到 contentBuffer
+  │     └─ accumulateStreamContent   累积 content / reasoning_content / tool_calls 到 contentBuffer
   │
-  └─ response.endHandler(v)          流结束
-        ├─ buildStreamingResponseBody(contentBuffer.toString())
-        ├─ context.setResponseBody(parsedBody)
-        ├─ executeResponsePlugins(plugins, context)
-        ├─ 异步 recordResponse(..., 200, ...)
+  ├─ response.endHandler(v)          流结束
+  │       ├─ buildStreamingResponseBody(contentBuffer.toString())
+  │       ├─ context.setResponseBody(parsedBody)
+  │       ├─ executeResponsePlugins(plugins, context)
+  │       ├─ 异步 recordResponse(..., 200, ...)
+  │       └─ emitter.complete()
+  │
+  └─ response.statusCode >= 400 或 Future 失败
+        ├─ circuitBreaker.recordFailure(...)
+        ├─ 异步 recordResponse(..., status, ...)
+        ├─ emitter.emit("event: error\ndata: {...}\n\n")
         └─ emitter.complete()
 ```
 
@@ -172,7 +176,7 @@ send(method, baseUrl, path, headers, body, timeoutMs)
 | 状态码 | 触发场景 |
 |---|---|
 | 200 | 代理成功 |
-| 400 | 请求参数错误，或 stream=true 却调用非流式端点 |
+| 400 | 请求参数错误（管理 API） |
 | 403 | Instance 或 Profile 被禁用 |
 | 404 | Instance / Profile / PluginGroup 不存在 |
 | 409 | slug 冲突（管理 API） |

@@ -60,6 +60,8 @@
 ```text
 GET  /v1/proxy/my-instance/models
 POST /v1/proxy/my-instance/chat/completions
+POST /v1/proxy/my-instance/embeddings
+POST /v1/proxy/my-instance/images/generations
 ```
 
 ---
@@ -166,6 +168,9 @@ public enum ExecutionPhase {
 | responseBody | String | 可空，Lob | JSON 格式响应体 |
 | responseBodyLength | Integer | 可空 | 截断前响应体原始长度 |
 | errorMessage | String | 可空，长度 2000 | 上游请求错误信息 |
+| promptTokens | Integer | 可空 | 上游返回 usage.prompt_tokens |
+| completionTokens | Integer | 可空 | 上游返回 usage.completion_tokens |
+| totalTokens | Integer | 可空 | 上游返回 usage.total_tokens |
 | responseTime | LocalDateTime | 可空 | 响应时间 |
 | durationMs | Long | 可空 | 请求耗时毫秒 |
 | pluginLogs | String | 可空，Lob | JSON 数组，插件日志 |

@@ -22,7 +22,7 @@ OpenAI-compatible style:
 ```json
 {
   "error": {
-    "message": "Streaming requests are not supported by this endpoint, use /chat/completions with Accept: text/event-stream",
+    "message": "Example parameter error",
     "type": "invalid_request_error"
   }
 }
@@ -30,8 +30,8 @@ OpenAI-compatible style:
 
 Trigger scenarios:
 
-- The request body contains `stream=true` but the non-streaming endpoint is called.
 - Admin API parameters are missing (in this case plain text may be returned, e.g., `slug is required`).
+- Streaming endpoints now **unify** `stream=true` handling and no longer return this 400.
 
 ---
 
@@ -58,7 +58,7 @@ Trigger scenarios:
 | Status Code | Trigger Scenario |
 |---|---|
 | 200 | Proxy success |
-| 400 | Request parameter error, or `stream=true` called on a non-streaming endpoint |
+| 400 | Request parameter error (admin API) |
 | 403 | Instance or Profile is disabled |
 | 404 | Instance / Profile / PluginGroup does not exist |
 | 429 | Rate limit exceeded |

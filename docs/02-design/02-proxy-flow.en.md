@@ -7,7 +7,7 @@
 
 ## Common Preprocessing Steps
 
-Regardless of `/models`, `/chat/completions`, or streaming `/chat/completions`, the following steps are executed first:
+Regardless of `/models`, `/chat/completions`, `/embeddings`, `/images/generations`, or streaming `/chat/completions`, the following steps are executed first:
 
 1. **Resolve Instance**: Find `ProxyInstance` by the `instanceSlug` in the URL.
 2. **Validate Enabled Status**: Instance, Profile, and PluginGroup must all be enabled.
@@ -56,8 +56,6 @@ OpenAiProxyService.chatCompletions(instanceSlug, requestBody)
   │     └─ If context.isReturned() is true:
   │          ├─ recordResponse(...)
   │          └─ Return directly
-  ├─ Detect stream field:
-  │     If stream=true, return 400 Bad Request, prompt to use SSE endpoint
   ├─ upstreamHttpClient.send("POST", baseUrl, "/chat/completions", ...)
   ├─ Set response status/body
   ├─ executeResponsePlugins(plugins, context)
@@ -101,13 +99,19 @@ Multi.createFrom().emitter(...)
   │     ├─ Identify data: <payload>
   │     ├─ Filter [DONE]
   │     ├─ emitter.emit(payload)     Deliver to client immediately
-  │     └─ accumulateStreamContent   Accumulate content / reasoning_content to contentBuffer
+  │     └─ accumulateStreamContent   Accumulate content / reasoning_content / tool_calls to contentBuffer
   │
-  └─ response.endHandler(v)          Stream ends
-        ├─ buildStreamingResponseBody(contentBuffer.toString())
-        ├─ context.setResponseBody(parsedBody)
-        ├─ executeResponsePlugins(plugins, context)
-        ├─ Async recordResponse(..., 200, ...)
+  ├─ response.endHandler(v)          Stream ends
+  │       ├─ buildStreamingResponseBody(contentBuffer.toString())
+  │       ├─ context.setResponseBody(parsedBody)
+  │       ├─ executeResponsePlugins(plugins, context)
+  │       ├─ Async recordResponse(..., 200, ...)
+  │       └─ emitter.complete()
+  │
+  └─ response.statusCode >= 400 or Future failure
+        ├─ circuitBreaker.recordFailure(...)
+        ├─ Async recordResponse(..., status, ...)
+        ├─ emitter.emit("event: error\ndata: {...}\n\n")
         └─ emitter.complete()
 ```
 
@@ -173,8 +177,8 @@ send(method, baseUrl, path, headers, body, timeoutMs)
 | Status Code | Trigger Scenario |
 |---|---|
 | 200 | Proxy success |
-| 400 | Request parameter error, or stream=true called on non-streaming endpoint |
-| 403 | Instance or Profile disabled |
+| 400 | Request parameter error (admin API) |
+| 403 | Instance or Profile is disabled |
 | 404 | Instance / Profile / PluginGroup does not exist |
 | 409 | slug conflict (admin API) |
 | 502 | Upstream request failed |

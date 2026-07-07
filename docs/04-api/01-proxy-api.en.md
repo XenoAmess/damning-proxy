@@ -2,7 +2,7 @@
 
 # 01 Proxy Endpoints
 
-> Last updated: 2026-06-20  
+> Last updated: 2026-07-07  
 > Source version: current workspace
 
 Proxy endpoints are exposed based on the instance `slug`, with the path prefix `/v1/proxy/{instanceSlug}`.
@@ -17,6 +17,8 @@ Code entry point: `src/main/java/com/xenoamess/damning_proxy/proxy/ProxyApi.java
 |---|---|---|---|
 | `GET` | `/v1/proxy/{instanceSlug}/models` | `application/json` | Model list |
 | `POST` | `/v1/proxy/{instanceSlug}/chat/completions` | `application/json` / `text/event-stream` | Unified chat completions endpoint; returns JSON or SSE based on the `stream` field |
+| `POST` | `/v1/proxy/{instanceSlug}/embeddings` | `application/json` | Text embeddings |
+| `POST` | `/v1/proxy/{instanceSlug}/images/generations` | `application/json` | Image generations |
 
 ---
 
@@ -122,6 +124,18 @@ data: [DONE]
 
 ```
 
+### Streaming Error Handling
+
+When the upstream connection fails, returns a non-2xx status code, or a stream read error occurs, the proxy does not close the connection abruptly. Instead, it sends an SSE `event: error` event to the client and then completes the stream normally. The event format is:
+
+```text
+event: error
+data: {"error":{"message":"Upstream returned 500: ...","code":500}}
+
+```
+
+Clients should listen for and parse this event so the error message is surfaced to the user.
+
 ### Streaming Implementation Details
 
 - Each SSE event returned by the upstream is reformatted into the standard `data: ...\n\n`.
@@ -130,6 +144,68 @@ data: [DONE]
 - Response-phase plugins execute after the SSE stream is fully received, operating on accumulated content.
 - If a request-phase plugin directly calls `returnResponse`, the response is wrapped into a single SSE event plus `data: [DONE]`.
 - To avoid being disconnected by `readTimeout` during long upstream connections, the upstream HTTP client disables timeout when `Profile.timeoutMs <= 0`; meanwhile a heartbeat is logged to `TrafficLog.pluginLogs` every 30 seconds to diagnose long-waiting connections.
+
+---
+
+## POST /v1/proxy/{instanceSlug}/embeddings
+
+Compatible with the OpenAI Embeddings API. The request body is passed through to the upstream `/v1/embeddings` endpoint, and the response is returned after plugin processing.
+
+### Request Example
+
+```bash
+curl -H "Authorization: Bearer sk-test" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "text-embedding-3-small",
+    "input": "hello"
+  }' \
+  http://localhost:12360/v1/proxy/my-instance/embeddings
+```
+
+### Response Example
+
+```json
+{
+  "object": "list",
+  "data": [
+    { "object": "embedding", "embedding": [0.1, 0.2], "index": 0 }
+  ],
+  "model": "text-embedding-3-small",
+  "usage": { "prompt_tokens": 2, "total_tokens": 2 }
+}
+```
+
+---
+
+## POST /v1/proxy/{instanceSlug}/images/generations
+
+Compatible with the OpenAI Images Generations API. The request body is passed through to the upstream `/v1/images/generations` endpoint, and the response is returned after plugin processing.
+
+### Request Example
+
+```bash
+curl -H "Authorization: Bearer sk-test" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "dall-e-3",
+    "prompt": "a cat",
+    "n": 1,
+    "size": "1024x1024"
+  }' \
+  http://localhost:12360/v1/proxy/my-instance/images/generations
+```
+
+### Response Example
+
+```json
+{
+  "created": 1234567890,
+  "data": [
+    { "url": "http://example.com/image.png" }
+  ]
+}
+```
 
 ---
 
@@ -143,15 +219,14 @@ data: [DONE]
 
 ## OpenAI Compatibility
 
-The current implementation is compatible with the following OpenAI Chat Completions API capabilities:
+The current implementation is compatible with the following OpenAI API capabilities:
 
-- `model`
-- `messages`
-- `stream`
-- Standard parameters such as temperature and top_p (passed through to the upstream)
+- Chat Completions: `model`, `messages`, `stream`, and standard parameters such as temperature and top_p.
+- Embeddings: `model`, `input`, and other standard parameters.
+- Images Generations: `model`, `prompt`, `n`, `size`, and other standard parameters.
+- Tool calls (`tool_calls`) are recognized and forwarded in both streaming and non-streaming responses.
 
 Not compatible or not yet implemented:
 
-- Special handling for tool calls (tools/function_calling)
 - Local proxying of multimodal image URLs
 - Per-chunk response plugin modifications in streaming mode (currently modified after the full stream is accumulated)

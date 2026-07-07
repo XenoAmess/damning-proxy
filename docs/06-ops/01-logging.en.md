@@ -14,6 +14,7 @@ Every proxied request is recorded in the `TrafficLog` table:
 - Request/response timestamps and duration
 - Plugin logs
 - Plugin execution snapshots (friendly snapshots)
+- Token usage from upstream (`promptTokens`, `completionTokens`, `totalTokens`)
 
 Entity definition: `src/main/java/com/xenoamess/damning_proxy/entity/TrafficLog.java`
 
@@ -41,7 +42,7 @@ Entity definition: `src/main/java/com/xenoamess/damning_proxy/entity/TrafficLog.
 | Field | Max Length |
 |---|---|
 | requestHeaders / responseHeaders | 2000 |
-| requestBody / responseBody | 10000 |
+| requestBody / responseBody | 1073741824 |
 | pluginLogs | 5000 |
 | friendlyPluginSnapshots | 8000 |
 
@@ -76,8 +77,8 @@ Open the **Traffic Log** page:
 
 - Card-style list showing recent logs.
 - Click a card to view details.
-- Details include: conversation summary, request plugin pipeline, response plugin pipeline, raw request/response, and plugin logs.
-- Supports deleting a single log and clearing all logs.
+- Details include: conversation summary, request plugin pipeline, response plugin pipeline, raw request/response, plugin logs, and token usage.
+- Supports deleting a single log, clearing all logs, and bulk pruning to keep the last N entries.
 
 ---
 
@@ -89,6 +90,16 @@ curl -X DELETE http://localhost:12360/api/logs/1
 
 # Clear all logs
 curl -X POST http://localhost:12360/api/logs/clear
+
+# Bulk prune: keep the last 10000 entries
+curl -X POST http://localhost:12360/api/logs/prune \
+  -H "Content-Type: application/json" \
+  -d '{"keepCount":10000}'
+
+# Delete all entries (ignore keep count)
+curl -X POST http://localhost:12360/api/logs/prune \
+  -H "Content-Type: application/json" \
+  -d '{"deleteAll":true}'
 ```
 
 ---
@@ -102,6 +113,7 @@ The friendly log extracts from the raw log:
 - `userPrompt`: the user prompt
 - `modelOutput`: the model output
 - `model`: the requested model name
+- `promptTokens` / `completionTokens` / `totalTokens`: token usage returned by upstream
 - `requestPipeline`: list of request-phase plugin snapshots
 - `responsePipeline`: list of response-phase plugin snapshots
 

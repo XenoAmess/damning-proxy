@@ -22,7 +22,7 @@ OpenAI 兼容风格：
 ```json
 {
   "error": {
-    "message": "Streaming requests are not supported by this endpoint, use /chat/completions with Accept: text/event-stream",
+    "message": "参数错误示例",
     "type": "invalid_request_error"
   }
 }
@@ -30,8 +30,8 @@ OpenAI 兼容风格：
 
 触发场景：
 
-- 请求体中 `stream=true` 却调用非流式端点。
 - 管理 API 参数缺失（此时可能返回纯文本，如 `slug is required`）。
+- 流式端点现在**统一处理** `stream=true`，不再返回此 400。
 
 ---
 
@@ -58,7 +58,7 @@ OpenAI 兼容风格：
 | 状态码 | 触发场景 |
 |---|---|
 | 200 | 代理成功 |
-| 400 | 请求参数错误，或 stream=true 却调用非流式端点 |
+| 400 | 请求参数错误（管理 API） |
 | 403 | Instance 或 Profile 被禁用 |
 | 404 | Instance / Profile / PluginGroup 不存在 |
 | 429 | 请求频率超限（rate limit exceeded） |

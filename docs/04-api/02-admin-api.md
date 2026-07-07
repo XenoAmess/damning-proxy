@@ -293,11 +293,12 @@ create() 和 update() 接受 `ProfileForm` record（而非 `ProxyProfile` 实体
 
 | Method | Path | 说明 |
 |---|---|---|
-| `GET` | `/api/logs?limit=100&offset=0&profileId=&instanceId=` | 列出日志（分页） |
+| `GET` | `/api/logs?limit=100&offset=0&profileId=&instanceId=&status=&path=&startTime=&endTime=` | 列出日志（分页、筛选） |
 | `GET` | `/api/logs/{id}` | 获取原始日志 |
 | `GET` | `/api/logs/{id}/friendly` | 获取友好格式日志 |
 | `DELETE` | `/api/logs/{id}` | 删除单条日志 |
 | `POST` | `/api/logs/clear` | 清空所有日志 |
+| `POST` | `/api/logs/prune` | 批量清理日志 |
 
 ### GET /api/logs 响应格式
 
@@ -320,6 +321,10 @@ create() 和 update() 接受 `ProfileForm` record（而非 `ProxyProfile` 实体
 | `offset` | int | 0 | 分页偏移量 |
 | `profileId` | Long | — | 按上游 Profile 筛选 |
 | `instanceId` | Long | — | 按 Instance 筛选 |
+| `status` | String | — | 状态筛选：`success`（2xx/空状态）或 `error`（>=400） |
+| `path` | String | — | 请求路径关键字模糊匹配 |
+| `startTime` | String | — | 开始时间，格式 `YYYY-MM-DDTHH:mm:ss` |
+| `endTime` | String | — | 结束时间，格式 `YYYY-MM-DDTHH:mm:ss` |
 
 ### 友好日志结构
 
@@ -330,6 +335,7 @@ create() 和 update() 接受 `ProfileForm` record（而非 `ProxyProfile` 实体
 - `userPrompt`：用户提示词
 - `modelOutput`：模型输出
 - `model`：请求模型名
+- `promptTokens` / `completionTokens` / `totalTokens`：上游返回的 token 用量
 - `requestPipeline`：请求阶段插件执行快照
 - `responsePipeline`：响应阶段插件执行快照
 

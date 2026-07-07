@@ -130,10 +130,11 @@ npm run build
 - Check whether `bearerToken` is valid.
 - Check the upstream request address and error message in the logs.
 
-### Non-Streaming Endpoint Returns 400 (streaming not supported)
+### Streaming request returns event: error
 
-- The request body has `stream: true`, but the non-streaming endpoint with `Accept: application/json` was called.
-- Streaming requests need `Accept: text/event-stream`.
+- When the upstream connection fails, returns a non-2xx status code, or a stream read error occurs, the proxy sends an SSE `event: error` event and completes the stream.
+- Inspect the `message` and `code` fields in the event body to locate the cause.
+- Check the `circuitBreakers` snapshot in `/v1/health` to confirm whether the circuit is open.
 
 ---
 
@@ -141,7 +142,8 @@ npm run build
 
 ### Plugin Changes Not Taking Effect
 
-- Groovy/JS engines cache scripts by `script` content; restart the service after modifying a plugin.
+- Plugins are reloaded when saved, but running instances may cache the old script; save and re-trigger a request to verify.
+- Use the plugin debugger page's dry-run feature to validate scripts quickly.
 
 ### Plugin Errors but Pipeline Continues
 

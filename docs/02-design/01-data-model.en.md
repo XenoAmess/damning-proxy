@@ -60,6 +60,8 @@ The instance is the entry point for external access. For example, if `slug = my-
 ```text
 GET  /v1/proxy/my-instance/models
 POST /v1/proxy/my-instance/chat/completions
+POST /v1/proxy/my-instance/embeddings
+POST /v1/proxy/my-instance/images/generations
 ```
 
 ---
@@ -166,6 +168,9 @@ public enum ExecutionPhase {
 | responseBody | String | Nullable, Lob | Response body in JSON format |
 | responseBodyLength | Integer | Nullable | Original response body length before truncation |
 | errorMessage | String | Nullable, length 2000 | Upstream request error message |
+| promptTokens | Integer | Nullable | `usage.prompt_tokens` from upstream |
+| completionTokens | Integer | Nullable | `usage.completion_tokens` from upstream |
+| totalTokens | Integer | Nullable | `usage.total_tokens` from upstream |
 | responseTime | LocalDateTime | Nullable | Response time |
 | durationMs | Long | Nullable | Request duration in milliseconds |
 | pluginLogs | String | Nullable, Lob | JSON array of plugin logs |

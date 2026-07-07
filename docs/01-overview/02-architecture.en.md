@@ -73,14 +73,31 @@ Client
   │ POST /v1/proxy/{instanceSlug}/chat/completions
   │ Accept: text/event-stream
   ▼
-ProxyApi.chatCompletionsStream()                   [ProxyApi.java:40]
-  │
+ProxyApi.chatCompletions()                              [src/main/java/com/xenoamess/damning_proxy/proxy/ProxyApi.java:30]
+  │ stream=true is upgraded to SSE
   ▼
-OpenAiProxyService.chatCompletionsStream()         [OpenAiProxyService.java:152]
+OpenAiProxyService.chatCompletionsStream()              [src/main/java/com/xenoamess/damning_proxy/proxy/OpenAiProxyService.java:152]
   ├─ Request-phase plugin execution
-  ├─ upstreamHttpClient.sendStream(...)            [UpstreamHttpClient.java:85]
+  ├─ upstreamHttpClient.sendStream(...)               [src/main/java/com/xenoamess/damning_proxy/proxy/UpstreamHttpClient.java:85]
   ├─ Multi<String> SSE chunks streamed to client
-  └─ Response-phase plugins and logging executed after stream ends
+  └─ Response-phase plugins and logging executed after stream ends; upstream failures emit event: error
+```
+
+### Embeddings / Images Generations
+
+```text
+Client
+  │ POST /v1/proxy/{instanceSlug}/embeddings
+  │ or POST /v1/proxy/{instanceSlug}/images/generations
+  ▼
+ProxyApi.embeddings() / imageGenerations()
+  ▼
+OpenAiProxyService.embeddings() / imageGenerations()
+  ├─ resolveInstance / loadPlugins / recordRequest
+  ├─ Request-phase plugin execution
+  ├─ upstreamHttpClient.send(...)
+  ├─ Response-phase plugin execution
+  └─ recordResponse
 ```
 
 For the detailed flow, see [02 Proxy Request Flow](../02-design/02-proxy-flow.en.md).

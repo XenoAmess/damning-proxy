@@ -73,14 +73,31 @@ Client
   │ POST /v1/proxy/{instanceSlug}/chat/completions
   │ Accept: text/event-stream
   ▼
-ProxyApi.chatCompletionsStream()                   [ProxyApi.java:40]
-  │
+ProxyApi.chatCompletions()                          [src/main/java/com/xenoamess/damning_proxy/proxy/ProxyApi.java:30]
+  │ stream=true 时升级为 SSE
   ▼
-OpenAiProxyService.chatCompletionsStream()         [OpenAiProxyService.java:152]
+OpenAiProxyService.chatCompletionsStream()            [src/main/java/com/xenoamess/damning_proxy/proxy/OpenAiProxyService.java:152]
   ├─ 请求阶段插件执行
-  ├─ upstreamHttpClient.sendStream(...)            [UpstreamHttpClient.java:85]
+  ├─ upstreamHttpClient.sendStream(...)             [src/main/java/com/xenoamess/damning_proxy/proxy/UpstreamHttpClient.java:85]
   ├─ Multi<String> SSE 逐 chunk 下发
-  └─ 流结束后执行响应阶段插件并记录日志
+  └─ 流结束后执行响应阶段插件并记录日志；若上游失败则下发 event: error
+```
+
+### Embeddings / Images Generations
+
+```text
+Client
+  │ POST /v1/proxy/{instanceSlug}/embeddings
+  │ 或 POST /v1/proxy/{instanceSlug}/images/generations
+  ▼
+ProxyApi.embeddings() / imageGenerations()
+  ▼
+OpenAiProxyService.embeddings() / imageGenerations()
+  ├─ resolveInstance / loadPlugins / recordRequest
+  ├─ 请求阶段插件执行
+  ├─ upstreamHttpClient.send(...)
+  ├─ 响应阶段插件执行
+  └─ recordResponse
 ```
 
 详细流程见 [02 代理请求处理流程](../02-design/02-proxy-flow.md)。

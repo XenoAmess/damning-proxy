@@ -130,10 +130,11 @@ npm run build
 - 检查 `bearerToken` 是否有效。
 - 查看日志中的上游请求地址和错误信息。
 
-### 非流式端点收到 400（streaming not supported）
+### 流式请求返回 event: error
 
-- 请求体中 `stream: true`，但调用了 `Accept: application/json` 的非流式端点。
-- 流式请求需要设置 `Accept: text/event-stream`。
+- 上游连接失败、返回非 2xx 状态码或流式读取异常时，代理会发送 SSE `event: error` 事件并结束流。
+- 检查事件体中的 `message` 和 `code` 字段定位原因。
+- 查看 `/v1/health` 中的 `circuitBreakers` 快照确认是否处于熔断状态。
 
 ---
 
@@ -141,7 +142,8 @@ npm run build
 
 ### 插件修改后未生效
 
-- Groovy/JS 引擎按 `script` 内容缓存脚本，修改后需重启服务才能生效。
+- 插件保存时会重新加载，但已运行的实例可能缓存了旧脚本；保存后建议重新触发请求验证。
+- 使用插件调试器页面的「试运行」功能可快速验证脚本。
 
 ### 插件报错但流水线继续
 

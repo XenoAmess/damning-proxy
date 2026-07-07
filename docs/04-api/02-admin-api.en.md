@@ -293,11 +293,12 @@ Response:
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/logs?limit=100&offset=0&profileId=&instanceId=` | List logs (paginated) |
+| `GET` | `/api/logs?limit=100&offset=0&profileId=&instanceId=&status=&path=&startTime=&endTime=` | List logs (paginated, filtered) |
 | `GET` | `/api/logs/{id}` | Get raw log |
 | `GET` | `/api/logs/{id}/friendly` | Get friendly-format log |
 | `DELETE` | `/api/logs/{id}` | Delete a single log |
 | `POST` | `/api/logs/clear` | Clear all logs |
+| `POST` | `/api/logs/prune` | Bulk prune logs |
 
 ### GET /api/logs Response Format
 
@@ -320,6 +321,10 @@ Returns a `PageResponse` object:
 | `offset` | int | 0 | Pagination offset |
 | `profileId` | Long | — | Filter by upstream Profile |
 | `instanceId` | Long | — | Filter by Instance |
+| `status` | String | — | Status filter: `success` (2xx/empty status) or `error` (>=400) |
+| `path` | String | — | Fuzzy match on request path |
+| `startTime` | String | — | Start time, format `YYYY-MM-DDTHH:mm:ss` |
+| `endTime` | String | — | End time, format `YYYY-MM-DDTHH:mm:ss` |
 
 ### Friendly Log Structure
 
@@ -330,6 +335,7 @@ The friendly log additionally extracts:
 - `userPrompt`: user prompt
 - `modelOutput`: model output
 - `model`: requested model name
+- `promptTokens` / `completionTokens` / `totalTokens`: token usage returned by upstream
 - `requestPipeline`: snapshot of request-phase plugin execution
 - `responsePipeline`: snapshot of response-phase plugin execution
 
