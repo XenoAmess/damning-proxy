@@ -2,7 +2,7 @@
 
 # Project Roadmap
 
-> Last updated: 2026-07-06  
+> Last updated: 2026-07-07  
 > Source version: current workspace
 
 This document lists the next executable optimization and feature backlog for damning-proxy, based on the current codebase and the local-only usage scenario. Security hardening is not prioritized because the project is intended for local / trusted-network use.
