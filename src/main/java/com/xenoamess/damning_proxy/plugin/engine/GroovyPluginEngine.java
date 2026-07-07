@@ -64,14 +64,14 @@ public class GroovyPluginEngine implements PluginEngine {
                 try {
                     return packageStorage.readResourceBytes(plugin, path);
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    throw new RuntimeException("Failed to read resource: " + path, e);
                 }
             });
             binding.setVariable("readResourceText", (Function<String, String>) path -> {
                 try {
                     return packageStorage.readResourceText(plugin, path);
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    throw new RuntimeException("Failed to read resource: " + path, e);
                 }
             });
         }

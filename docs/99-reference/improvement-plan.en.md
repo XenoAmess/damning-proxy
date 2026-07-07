@@ -41,7 +41,7 @@ This plan is derived from a review of the current codebase, documentation, recen
 | P1-11 | ✓ 2026-07-07 | Operations | Provide Dockerfile and docker-compose | Docs only contained a manual Docker snippet. Added a multi-stage `Dockerfile` (Maven + pnpm build frontend, Eclipse Temurin 21 JRE runtime) and `docker-compose.yml` with an H2 data volume mounted at `/data`; run documentation updated in both languages. |
 | P1-12 | ✓ 2026-07-07 | Operations | Add Prometheus / Micrometer metrics | Added `quarkus-micrometer` exposing request, error, latency, token usage, and circuit-breaker metrics. `/q/metrics` provides Prometheus-formatted metrics; monitoring docs updated in both languages. |
 | P1-13 | ✓ 2026-07-07 | Code quality | Add age-based log retention | Retention is currently count-based. Added `damning-proxy.log.max-age-days` config (default 30 days); `pruneOldLogs` now runs age-based cleanup after count-based pruning. |
-| P1-14 | Code quality | Unify Admin API exception handling | `PluginAdminApi` and plugin engines still throw `RuntimeException` for IO/JSON errors, resulting in 500. Convert to `WebApplicationException` with explicit status codes. |
+| P1-14 | ✓ 2026-07-07 | Code quality | Unify Admin API exception handling | `PluginAdminApi` and plugin engines still threw `RuntimeException` for IO/JSON errors, resulting in 500. Replaced all with `WebApplicationException` or direct `Response.status(500)` with clear messages; engine `RuntimeException` instances now include cause messages. |
 | P1-15 | Code quality | Split frontend chunks to reduce bundle size | `index.js` is close to 1 MB gzipped. Use route-based dynamic imports for Chat, Logs, and PluginEditor. |
 
 ---

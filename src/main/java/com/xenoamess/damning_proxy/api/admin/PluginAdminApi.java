@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.WebApplicationException;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
 
 import java.io.ByteArrayInputStream;
@@ -75,7 +76,8 @@ public class PluginAdminApi {
             } catch (IllegalArgumentException e) {
                 return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
             } catch (IOException e) {
-                throw new RuntimeException("Failed to store plugin package", e);
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("Failed to store plugin package: " + e.getMessage()).build();
             }
         }
         return Response.status(Response.Status.CREATED).entity(plugin).build();
@@ -104,7 +106,8 @@ public class PluginAdminApi {
                     } catch (IllegalArgumentException e) {
                         return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
                     } catch (IOException e) {
-                        throw new RuntimeException("Failed to store plugin package", e);
+                        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                            .entity("Failed to store plugin package: " + e.getMessage()).build();
                     }
                 } else if (plugin.mode == Plugin.Mode.SINGLE_SCRIPT) {
                     packageStorage.deletePackage(existing);
@@ -189,7 +192,8 @@ public class PluginAdminApi {
                 .header("Content-Disposition", "attachment; filename=\"plugin-template-" + lang.name().toLowerCase() + "-" + m.name().toLowerCase() + ".zip\"")
                 .build();
         } catch (IOException e) {
-            throw new RuntimeException("Failed to build template zip", e);
+            throw new WebApplicationException("Failed to build template zip: " + e.getMessage(),
+                Response.Status.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -238,7 +242,8 @@ public class PluginAdminApi {
                 .header("Content-Disposition", "attachment; filename=\"damning_proxy_plugins_export.zip\"")
                 .build();
         } catch (IOException e) {
-            throw new RuntimeException("Failed to build export zip", e);
+            throw new WebApplicationException("Failed to build export zip: " + e.getMessage(),
+                Response.Status.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -312,7 +317,8 @@ public class PluginAdminApi {
                         return Response.status(Response.Status.BAD_REQUEST)
                             .entity("Invalid plugin package for " + m.slug + ": " + e.getMessage()).build();
                     } catch (IOException e) {
-                        throw new RuntimeException("Failed to store imported plugin package", e);
+                        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                            .entity("Failed to store imported plugin package for " + m.slug + ": " + e.getMessage()).build();
                     }
                 }
             }
@@ -330,7 +336,9 @@ public class PluginAdminApi {
                 try {
                     return Files.readAllBytes(path);
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    throw new WebApplicationException(
+                        "Failed to read plugin package for export: " + e.getMessage(),
+                        Response.Status.INTERNAL_SERVER_ERROR);
                 }
             }
         }
@@ -339,7 +347,9 @@ public class PluginAdminApi {
         try {
             return ZipBuilder.buildZip(entries);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new WebApplicationException(
+                "Failed to build plugin zip for export: " + e.getMessage(),
+                Response.Status.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -364,7 +374,9 @@ public class PluginAdminApi {
         try {
             return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(value);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new WebApplicationException(
+                "Failed to serialize export manifest: " + e.getMessage(),
+                Response.Status.INTERNAL_SERVER_ERROR);
         }
     }
 

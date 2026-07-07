@@ -41,7 +41,7 @@
 | P1-11 | ✓ 2026-07-07 | 运维 | 提供 Dockerfile 与 docker-compose | 文档仅有手工 Docker 片段。已新增多阶段 `Dockerfile`（Maven + pnpm 构建前端，Eclipse Temurin 21 JRE 运行）和 `docker-compose.yml`，H2 数据通过 volume 挂载到 `/data` 持久化；运行文档已同步更新。 |
 | P1-12 | ✓ 2026-07-07 | 运维 | 接入 Prometheus / Micrometer 指标 | 监控文档仍写未集成。已增加 `quarkus-micrometer`，暴露请求量、错误、延迟、token 用量、熔断状态等指标。`/q/metrics` 提供 Prometheus 格式指标；监控文档已更新。 |
 | P1-13 | ✓ 2026-07-07 | 代码质量 | 按日志保留天数清理 | 当前仅按数量保留。已增加 `damning-proxy.log.max-age-days` 配置（默认 30 天），`pruneOldLogs` 在数量清理后额外执行按天数清理。 |
-| P1-14 | 代码质量 | Admin API 统一异常处理 | `PluginAdminApi` 与插件引擎仍用 `RuntimeException` 抛 IO/JSON 错误，最终 500。转换为 `WebApplicationException` 并携带明确状态码。 |
+| P1-14 | ✓ 2026-07-07 | 代码质量 | Admin API 统一异常处理 | `PluginAdminApi` 与插件引擎仍用 `RuntimeException` 抛 IO/JSON 错误，最终 500。已全部替换为 `WebApplicationException` 或直接返回 `Response.status(500)`，并携带明确错误信息；插件引擎的 `RuntimeException` 已补充原因消息。 |
 | P1-15 | 代码质量 | 前端路由/代码拆分降低 chunk 体积 | 当前 `index.js` 接近 1 MB gzip。将 Chat、Logs、PluginEditor 等大屏按路由动态导入。 |
 
 ---

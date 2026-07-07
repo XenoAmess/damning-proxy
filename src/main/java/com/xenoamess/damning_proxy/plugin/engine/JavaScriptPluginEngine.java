@@ -79,7 +79,7 @@ public class JavaScriptPluginEngine implements PluginEngine {
                     try {
                         engine.eval("(function(){\n" + script + "\n})();");
                     } catch (ScriptException e) {
-                        throw new RuntimeException(e);
+                        throw new RuntimeException("JavaScript script execution error: " + e.getMessage(), e);
                     }
                 } finally {
                     engineCache.remove();
