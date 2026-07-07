@@ -16,7 +16,7 @@ This document lists the next executable optimization and feature backlog for dam
 | 1 | Plugin changes take effect without restart | Fix the pain caused by Groovy/JS engine script caching | Done |
 | 2 | Plugin dry-run / validation | Enter sample requests in the UI and see before/after diff without calling upstream | Done |
 | 3 | Groovy syntax highlighting | Current Groovy scripts fall back to JS highlighting, which is poor | Done |
-| 4 | Plugin errors surfaced more clearly | Errors currently only appear in friendly snapshots; saving gives no UI feedback | TODO |
+| 4 | Plugin errors surfaced more clearly | Errors currently only appear in friendly snapshots; saving gives no UI feedback | Done |
 
 ---
 

@@ -226,7 +226,9 @@ async function saveScript() {
     originalScript.value = script.value
     ElMessage.success('脚本已保存并生效')
   } catch (e) {
-    ElMessage.error('保存失败')
+    const msg = e.response?.data
+    const detail = typeof msg === 'string' ? msg : (msg?.message || msg?.error?.message || JSON.stringify(msg))
+    ElMessage.error(detail || '保存失败')
   } finally {
     saving.value = false
   }
