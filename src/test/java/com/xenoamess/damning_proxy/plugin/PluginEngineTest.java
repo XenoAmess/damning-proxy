@@ -116,4 +116,74 @@ class PluginEngineTest {
 
         assertTrue(context.isStopped());
     }
+
+    @Test
+    void groovyShouldBlockSandboxedClassInstantiation() {
+        GroovyPluginEngine engine = new GroovyPluginEngine();
+        Plugin plugin = new Plugin();
+        plugin.language = Plugin.Language.GROOVY;
+        plugin.script = "new File('/etc/passwd').text";
+
+        PluginContext context = new PluginContext();
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> engine.execute(plugin, context));
+        assertTrue(thrown.getMessage().contains("not allowed") || thrown.getMessage().contains("SecurityException"),
+            thrown.getMessage());
+    }
+
+    @Test
+    void groovyShouldBlockSandboxedImport() {
+        GroovyPluginEngine engine = new GroovyPluginEngine();
+        Plugin plugin = new Plugin();
+        plugin.language = Plugin.Language.GROOVY;
+        plugin.script = """
+            import java.net.URL
+            new URL('http://example.com')
+            """;
+
+        PluginContext context = new PluginContext();
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> engine.execute(plugin, context));
+        assertTrue(thrown.getMessage().contains("not allowed") || thrown.getMessage().contains("SecurityException"),
+            thrown.getMessage());
+    }
+
+    @Test
+    void javaScriptShouldBlockSandboxedJavaType() {
+        JavaScriptPluginEngine engine = new JavaScriptPluginEngine();
+        Plugin plugin = new Plugin();
+        plugin.id = 4L;
+        plugin.name = "test";
+        plugin.language = Plugin.Language.JS;
+        plugin.script = "var File = Java.type('java.io.File'); new File('/etc/passwd');";
+
+        PluginContext context = new PluginContext();
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> engine.execute(plugin, context));
+        assertSandboxBlocked(thrown, "java.io.File");
+    }
+
+    @Test
+    void javaScriptShouldBlockSandboxedDirectClassAccess() {
+        JavaScriptPluginEngine engine = new JavaScriptPluginEngine();
+        Plugin plugin = new Plugin();
+        plugin.id = 5L;
+        plugin.name = "test";
+        plugin.language = Plugin.Language.JS;
+        plugin.script = "new java.io.File('/etc/passwd');";
+
+        PluginContext context = new PluginContext();
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> engine.execute(plugin, context));
+        assertSandboxBlocked(thrown, "java.io.File");
+    }
+
+    private void assertSandboxBlocked(RuntimeException thrown, String className) {
+        String message = thrown.getMessage();
+        Throwable cause = thrown.getCause();
+        while (cause != null) {
+            if (cause.getMessage() != null) {
+                message += " " + cause.getMessage();
+            }
+            cause = cause.getCause();
+        }
+        assertTrue(message.contains(className) || message.contains("ClassNotFoundException") || message.contains("ClassFilter"),
+            message);
+    }
 }

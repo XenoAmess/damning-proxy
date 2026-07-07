@@ -4,10 +4,12 @@ import com.xenoamess.damning_proxy.entity.Plugin;
 import com.xenoamess.damning_proxy.plugin.PluginContext;
 import com.xenoamess.damning_proxy.plugin.PluginEngine;
 import com.xenoamess.damning_proxy.plugin.storage.PluginPackageStorage;
-import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.openjdk.nashorn.api.scripting.ClassFilter;
 import org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory;
 
 import javax.script.ScriptEngine;
@@ -33,22 +35,41 @@ public class JavaScriptPluginEngine implements PluginEngine {
 
     private final NashornScriptEngineFactory engineFactory = new NashornScriptEngineFactory();
 
-    // Nashorn ScriptEngine instances are not thread-safe. Cache them per-thread
-    // via ThreadLocal to avoid the heavy creation cost on every execution.
-    private final ThreadLocal<ScriptEngine> engineCache = ThreadLocal.withInitial(() ->
-        engineFactory.getScriptEngine(new String[]{"--language=es6"}));
-
     @Inject
     PluginPackageStorage packageStorage;
 
+    @Inject
+    PluginSandbox sandbox;
+
     @ConfigProperty(name = "damning-proxy.plugin.timeout-ms", defaultValue = "30000")
     long scriptTimeoutMs = 30_000;
+
+    private ClassFilter classFilter;
+    private ClassLoader engineClassLoader;
 
     private final ExecutorService scriptExecutor = Executors.newCachedThreadPool(r -> {
         Thread t = new Thread(r, "js-plugin-exec");
         t.setDaemon(true);
         return t;
     });
+
+    public JavaScriptPluginEngine() {
+        // Used when the engine is instantiated outside of CDI (e.g. unit tests).
+        // Defaults to a sandboxed configuration.
+        initSandbox(new PluginSandbox());
+    }
+
+    @PostConstruct
+    void init() {
+        // Reinitialize with the CDI-injected sandbox so configuration is honored.
+        initSandbox(sandbox != null ? sandbox : new PluginSandbox());
+    }
+
+    private void initSandbox(PluginSandbox sandbox) {
+        engineClassLoader = this.getClass().getClassLoader();
+        classFilter = sandbox.isEnabled() ? sandbox::isClassAllowed : null;
+        scriptCache.clear();
+    }
 
     @PreDestroy
     void shutdown() {
@@ -60,7 +81,7 @@ public class JavaScriptPluginEngine implements PluginEngine {
         return language == Plugin.Language.JS;
     }
 
-@Override
+    @Override
     public void execute(Plugin plugin, PluginContext context) {
         String script = resolveScript(plugin);
 
@@ -70,7 +91,7 @@ public class JavaScriptPluginEngine implements PluginEngine {
                 try {
                     // Compile and execute on the same thread to avoid double-compile
                     ensureCompiled(plugin, script);
-                    ScriptEngine engine = engineCache.get();
+                    ScriptEngine engine = createEngine();
                     engine.put("context", context);
                     if (plugin.mode == Plugin.Mode.ZIP_PACKAGE) {
                         engine.put("readResource", new ResourceReader(plugin, false, packageStorage));
@@ -105,7 +126,7 @@ public class JavaScriptPluginEngine implements PluginEngine {
             // errors during this dry run are swallowed because they usually mean
             // the script just touched a body field that the dummy context doesn't
             // have – the real execute() call supplies the actual request body.
-            ScriptEngine engine = engineCache.get();
+            ScriptEngine engine = createEngine();
             try {
                 PluginContext dummy = new PluginContext();
                 dummy.setRequestBody(new java.util.LinkedHashMap<String, Object>() {{
@@ -130,7 +151,7 @@ public class JavaScriptPluginEngine implements PluginEngine {
 
     public String validate(Plugin plugin) {
         String script = resolveScript(plugin);
-        ScriptEngine engine = engineCache.get();
+        ScriptEngine engine = createEngine();
         try {
             PluginContext dummy = new PluginContext();
             dummy.setRequestBody(new java.util.LinkedHashMap<String, Object>() {{
@@ -167,6 +188,17 @@ public class JavaScriptPluginEngine implements PluginEngine {
 
     private String cacheKey(Plugin plugin, String script) {
         return plugin.id + ":" + plugin.mode + ":" + script.hashCode();
+    }
+
+    // Nashorn ScriptEngine instances are not thread-safe. Cache them per-thread
+    // via ThreadLocal to avoid the heavy creation cost on every execution.
+    private final ThreadLocal<ScriptEngine> engineCache = ThreadLocal.withInitial(this::createEngine);
+
+    private ScriptEngine createEngine() {
+        if (classFilter != null) {
+            return engineFactory.getScriptEngine(new String[]{"--language=es6"}, engineClassLoader, classFilter);
+        }
+        return engineFactory.getScriptEngine(new String[]{"--language=es6"});
     }
 
     public static class ResourceReader {

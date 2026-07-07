@@ -7,12 +7,16 @@ import com.xenoamess.damning_proxy.plugin.storage.PluginPackageStorage;
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
-import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.codehaus.groovy.control.CompilerConfiguration;
+import org.codehaus.groovy.control.customizers.SecureASTCustomizer;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -25,13 +29,16 @@ import java.util.function.Function;
 @ApplicationScoped
 public class GroovyPluginEngine implements PluginEngine {
 
-    private final GroovyShell shell = new GroovyShell();
+    private GroovyShell shell;
     // Cache the compiled Script *class*, not instance: Script objects are not thread-safe
     // and should not be reused across concurrent requests.
     private final Map<String, Class<? extends Script>> scriptClassCache = new ConcurrentHashMap<>();
 
     @Inject
     PluginPackageStorage packageStorage;
+
+    @Inject
+    PluginSandbox sandbox;
 
     @ConfigProperty(name = "damning-proxy.plugin.timeout-ms", defaultValue = "30000")
     long scriptTimeoutMs = 30_000;
@@ -41,6 +48,31 @@ public class GroovyPluginEngine implements PluginEngine {
         t.setDaemon(true);
         return t;
     });
+
+    public GroovyPluginEngine() {
+        // Used when the engine is instantiated outside of CDI (e.g. unit tests).
+        // Defaults to a sandboxed configuration.
+        initShell(new PluginSandbox());
+    }
+
+    @PostConstruct
+    void init() {
+        // Reinitialize with the CDI-injected sandbox so configuration is honored.
+        initShell(sandbox != null ? sandbox : new PluginSandbox());
+    }
+
+    private void initShell(PluginSandbox sandbox) {
+        CompilerConfiguration config = new CompilerConfiguration();
+        if (sandbox.isEnabled()) {
+            SecureASTCustomizer customizer = new SecureASTCustomizer();
+            customizer.setDisallowedImports(new ArrayList<>(sandbox.getDeniedClasses()));
+            customizer.setDisallowedStarImports(new ArrayList<>(sandbox.getDeniedPackages()));
+            customizer.setDisallowedReceivers(new ArrayList<>(sandbox.getDeniedClasses()));
+            config.addCompilationCustomizers(customizer);
+        }
+        shell = new GroovyShell(config);
+        scriptClassCache.clear();
+    }
 
     @PreDestroy
     void shutdown() {

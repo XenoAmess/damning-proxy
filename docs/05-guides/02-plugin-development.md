@@ -41,6 +41,37 @@
 
 ---
 
+## 插件沙箱
+
+插件脚本默认在沙箱中执行，禁止访问文件、网络、反射等危险 API，以降低运行不可信脚本的风险。
+
+### 默认禁止的类/包
+
+| 类别 | 禁止示例 |
+|------|----------|
+| 文件 IO | `java.io.*`（`File`、`FileInputStream` 等） |
+| 网络 | `java.net.*`（`URL`、`Socket`、`URLConnection` 等） |
+| NIO 文件 | `java.nio.file.*`（`Files`、`Paths` 等） |
+| 反射 | `java.lang.reflect.*` |
+| 进程/运行时 | `java.lang.Runtime`、`java.lang.ProcessBuilder` |
+
+Groovy 脚本会在编译期被 `SecureASTCustomizer` 拦截 import 和 receiver 调用；JavaScript 脚本通过 Nashorn `ClassFilter` 阻止访问被禁用的 Java 类。
+
+### 配置
+
+在 `application.properties` 中：
+
+```properties
+# 关闭沙箱（不推荐）
+damning-proxy.plugin.sandbox.enabled=false
+
+# 追加禁止的类或包
+damning-proxy.plugin.sandbox.denied-classes=java.sql.DriverManager
+damning-proxy.plugin.sandbox.denied-packages=java.sql
+```
+
+---
+
 ## JavaScript 插件示例
 
 ### 修改请求模型名

@@ -41,6 +41,37 @@ When creating a plugin, select the execution phase:
 
 ---
 
+## Plugin Sandbox
+
+Plugin scripts run inside a sandbox by default. Dangerous APIs such as file, network, and reflection access are blocked to reduce the risk of running untrusted scripts.
+
+### Default Denied Classes / Packages
+
+| Category | Examples |
+|----------|----------|
+| File IO | `java.io.*` (`File`, `FileInputStream`, etc.) |
+| Network | `java.net.*` (`URL`, `Socket`, `URLConnection`, etc.) |
+| NIO file | `java.nio.file.*` (`Files`, `Paths`, etc.) |
+| Reflection | `java.lang.reflect.*` |
+| Process / runtime | `java.lang.Runtime`, `java.lang.ProcessBuilder` |
+
+Groovy scripts are intercepted at compile time by `SecureASTCustomizer` (imports and receiver calls). JavaScript scripts use the Nashorn `ClassFilter` to prevent access to blocked Java classes.
+
+### Configuration
+
+In `application.properties`:
+
+```properties
+# Disable the sandbox (not recommended)
+damning-proxy.plugin.sandbox.enabled=false
+
+# Add extra denied classes or packages
+damning-proxy.plugin.sandbox.denied-classes=java.sql.DriverManager
+damning-proxy.plugin.sandbox.denied-packages=java.sql
+```
+
+---
+
 ## JavaScript Plugin Examples
 
 ### Rewrite the request model name
