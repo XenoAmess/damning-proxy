@@ -3,8 +3,10 @@ package com.xenoamess.damning_proxy.plugin.storage;
 import com.xenoamess.damning_proxy.entity.Plugin;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -22,6 +24,16 @@ public class PluginPackageStorage {
 
     private static final String BASE_DIR = System.getProperty("user.home") + "/.damning-proxy/plugins";
 
+    @ConfigProperty(name = "damning-proxy.plugin.zip.max-size-bytes", defaultValue = "10485760")
+    long maxZipSizeBytes;
+
+    @ConfigProperty(name = "damning-proxy.plugin.zip.max-entries", defaultValue = "100")
+    int maxZipEntries;
+
+    @ConfigProperty(name = "damning-proxy.plugin.zip.max-entry-size-bytes", defaultValue = "1048576")
+    long maxEntrySizeBytes;
+
+    @Inject
     public PluginPackageStorage() {
         try {
             Files.createDirectories(Path.of(BASE_DIR));
@@ -45,8 +57,19 @@ public class PluginPackageStorage {
     public String storePackage(Plugin plugin, InputStream zipInput) throws IOException {
         String fileName = "plugin-" + plugin.slug + "-" + UUID.randomUUID() + ".zip";
         Path target = Path.of(BASE_DIR).resolve(fileName);
-        Files.copy(zipInput, target, StandardCopyOption.REPLACE_EXISTING);
-        return fileName;
+        Path temp = Path.of(BASE_DIR).resolve(fileName + ".tmp");
+        try {
+            Files.copy(zipInput, temp, StandardCopyOption.REPLACE_EXISTING);
+            validateZipFile(temp, plugin);
+            Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
+            return fileName;
+        } catch (IllegalArgumentException e) {
+            Files.deleteIfExists(temp);
+            throw e;
+        } catch (IOException e) {
+            Files.deleteIfExists(temp);
+            throw e;
+        }
     }
 
     public void deletePackage(Plugin plugin) {
@@ -100,6 +123,48 @@ public class PluginPackageStorage {
 
     public Path getPackagePath(Plugin plugin) {
         return resolvePackagePath(plugin);
+    }
+
+    private void validateZipFile(Path zipPath, Plugin plugin) throws IOException {
+        long size = Files.size(zipPath);
+        if (size > maxZipSizeBytes) {
+            throw new IllegalArgumentException(
+                "Plugin ZIP package too large: " + size + " bytes (max " + maxZipSizeBytes + ")");
+        }
+        try (ZipFile zipFile = new ZipFile(zipPath.toFile())) {
+            List<ZipArchiveEntry> entries = new ArrayList<>();
+            zipFile.getEntries().asIterator().forEachRemaining(entries::add);
+            if (entries.size() > maxZipEntries) {
+                throw new IllegalArgumentException(
+                    "Plugin ZIP package has too many entries: " + entries.size() + " (max " + maxZipEntries + ")");
+            }
+            String expectedMain = plugin.language == Plugin.Language.GROOVY ? "main.groovy" : "main.js";
+            boolean hasMain = false;
+            for (ZipArchiveEntry entry : entries) {
+                String name = entry.getName();
+                if (name == null || name.isBlank()) {
+                    throw new IllegalArgumentException("Plugin ZIP package contains an entry with an empty name");
+                }
+                normalizeResourcePath(name);
+                long entrySize = entry.getSize();
+                if (entrySize < 0) {
+                    try (InputStream is = zipFile.getInputStream(entry)) {
+                        entrySize = is.readAllBytes().length;
+                    }
+                }
+                if (entrySize > maxEntrySizeBytes) {
+                    throw new IllegalArgumentException(
+                        "Plugin ZIP entry too large: " + name + " (" + entrySize + " bytes, max " + maxEntrySizeBytes + ")");
+                }
+                if (name.equals(expectedMain)) {
+                    hasMain = true;
+                }
+            }
+            if (!hasMain) {
+                throw new IllegalArgumentException(
+                    "Plugin ZIP package must contain " + expectedMain);
+            }
+        }
     }
 
     private String normalizeResourcePath(String path) {

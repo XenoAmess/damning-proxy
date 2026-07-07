@@ -72,6 +72,8 @@ public class PluginAdminApi {
             try {
                 String stored = packageStorage.storePackage(plugin, Files.newInputStream(form.packageFile.uploadedFile()));
                 plugin.packagePath = stored;
+            } catch (IllegalArgumentException e) {
+                return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
             } catch (IOException e) {
                 throw new RuntimeException("Failed to store plugin package", e);
             }
@@ -99,6 +101,8 @@ public class PluginAdminApi {
                     try {
                         String stored = packageStorage.storePackage(plugin, Files.newInputStream(form.packageFile.uploadedFile()));
                         plugin.packagePath = stored;
+                    } catch (IllegalArgumentException e) {
+                        return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
                     } catch (IOException e) {
                         throw new RuntimeException("Failed to store plugin package", e);
                     }
@@ -304,6 +308,9 @@ public class PluginAdminApi {
                     try {
                         String stored = packageStorage.storePackage(plugin, new ByteArrayInputStream(zipBytes));
                         plugin.packagePath = stored;
+                    } catch (IllegalArgumentException e) {
+                        return Response.status(Response.Status.BAD_REQUEST)
+                            .entity("Invalid plugin package for " + m.slug + ": " + e.getMessage()).build();
                     } catch (IOException e) {
                         throw new RuntimeException("Failed to store imported plugin package", e);
                     }

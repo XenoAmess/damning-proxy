@@ -9,6 +9,7 @@ import com.xenoamess.damning_proxy.repository.LogRepository;
 import com.xenoamess.damning_proxy.repository.PluginGroupRepository;
 import com.xenoamess.damning_proxy.repository.PluginRepository;
 import com.xenoamess.damning_proxy.repository.ProfileRepository;
+import com.xenoamess.damning_proxy.plugin.storage.ZipBuilder;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.LinkedHashMap;
 import jakarta.persistence.EntityManager;
 
 import static io.restassured.RestAssured.given;
@@ -255,6 +257,48 @@ class AdminApiTest {
             .then()
             .statusCode(400)
             .body(containsString("Groovy compile error"));
+    }
+
+    @Test
+    void shouldRejectZipPluginPackageWithoutMainEntry() throws Exception {
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        entries.put("other.txt", "content".getBytes());
+        byte[] zipBytes = ZipBuilder.buildZip(entries);
+
+        given()
+            .multiPart("name", "BadZip")
+            .multiPart("slug", "bad-zip")
+            .multiPart("language", Plugin.Language.GROOVY.name())
+            .multiPart("executionPhase", Plugin.ExecutionPhase.REQUEST.name())
+            .multiPart("mode", Plugin.Mode.ZIP_PACKAGE.name())
+            .multiPart("script", "")
+            .multiPart("enabled", "true")
+            .multiPart("packageFile", "package.zip", zipBytes, "application/zip")
+            .when().post("/api/plugins")
+            .then()
+            .statusCode(400)
+            .body(containsString("must contain main.groovy"));
+    }
+
+    @Test
+    void shouldCreateZipPluginPackageWithMainEntry() throws Exception {
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        entries.put("main.groovy", "context.stop()".getBytes());
+        byte[] zipBytes = ZipBuilder.buildZip(entries);
+
+        given()
+            .multiPart("name", "GoodZip")
+            .multiPart("slug", "good-zip")
+            .multiPart("language", Plugin.Language.GROOVY.name())
+            .multiPart("executionPhase", Plugin.ExecutionPhase.REQUEST.name())
+            .multiPart("mode", Plugin.Mode.ZIP_PACKAGE.name())
+            .multiPart("script", "")
+            .multiPart("enabled", "true")
+            .multiPart("packageFile", "package.zip", zipBytes, "application/zip")
+            .when().post("/api/plugins")
+            .then()
+            .statusCode(201)
+            .body("name", equalTo("GoodZip"));
     }
 
     @Test
