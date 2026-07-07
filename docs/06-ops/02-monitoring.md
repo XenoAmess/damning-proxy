@@ -148,7 +148,8 @@ DEBUG [com.xenoamess.damning_proxy.proxy.UpstreamHttpClient] Upstream request: P
 
 `src/main/java/com/xenoamess/damning_proxy/service/TrafficLogService.java`
 
-- 每写入 100 条日志检查一次总数
+- 每写入 100 条日志检查一次总数与存活天数
 - 超出 `damning-proxy.log.max-count`（默认 100000）时自动删除最旧的日志
-- 可通过配置项调整阈值
+- 超出 `damning-proxy.log.max-age-days`（默认 30 天）时自动删除超期日志
+- 可通过配置项调整阈值（设为 0 或负数可禁用对应维度）
 

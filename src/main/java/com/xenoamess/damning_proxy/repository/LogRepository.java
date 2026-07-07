@@ -42,4 +42,6 @@ public interface LogRepository {
 
     long deleteByFilters(Long instanceId, Long profileId, String status, String path,
                          LocalDateTime startTime, LocalDateTime endTime);
+
+    long deleteOlderThan(LocalDateTime cutoff);
 }

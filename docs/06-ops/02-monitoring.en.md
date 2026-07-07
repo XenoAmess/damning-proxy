@@ -148,7 +148,8 @@ Sliding-window rate limit counted by instance slug:
 
 `src/main/java/com/xenoamess/damning_proxy/service/TrafficLogService.java`
 
-- Checks total count after every 100 writes
+- Checks total count and age after every 100 writes
 - Automatically deletes oldest logs when exceeding `damning-proxy.log.max-count` (default 100000)
-- Threshold can be adjusted via configuration
+- Automatically deletes logs older than `damning-proxy.log.max-age-days` (default 30 days)
+- Thresholds can be adjusted via configuration (set to 0 or negative to disable the respective dimension)
 

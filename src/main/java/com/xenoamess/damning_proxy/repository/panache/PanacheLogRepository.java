@@ -115,6 +115,19 @@ public class PanacheLogRepository implements LogRepository {
         return TrafficLog.delete(fq.query, fq.params);
     }
 
+    @Override
+    public long deleteOlderThan(LocalDateTime cutoff) {
+        long deleted = 0;
+        List<TrafficLog> all = TrafficLog.listAll();
+        for (TrafficLog log : all) {
+            if (log.requestTime != null && log.requestTime.isBefore(cutoff)) {
+                log.delete();
+                deleted++;
+            }
+        }
+        return deleted;
+    }
+
     private record FilterQuery(String query, Parameters params) {
     }
 

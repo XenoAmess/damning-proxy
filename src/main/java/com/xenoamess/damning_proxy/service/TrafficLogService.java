@@ -48,6 +48,9 @@ public class TrafficLogService {
     @ConfigProperty(name = "damning-proxy.log.max-count", defaultValue = "100000")
     long maxLogCount;
 
+    @ConfigProperty(name = "damning-proxy.log.max-age-days", defaultValue = "30")
+    int maxAgeDays;
+
     @ConfigProperty(name = "damning-proxy.log.prune-batch-size", defaultValue = "1000")
     int pruneBatchSize;
 
@@ -255,6 +258,11 @@ public class TrafficLogService {
     }
 
     private void pruneOldLogs() {
+        pruneByCount();
+        pruneByAge();
+    }
+
+    private void pruneByCount() {
         long total = logRepository.count();
         if (total <= maxLogCount) {
             return;
@@ -264,7 +272,22 @@ public class TrafficLogService {
         try {
             logRepository.deleteOldest((int) Math.min(toDelete, Integer.MAX_VALUE), pruneBatchSize);
         } catch (Exception e) {
-            Log.error("Failed to prune old logs", e);
+            Log.error("Failed to prune old logs by count", e);
+        }
+    }
+
+    private void pruneByAge() {
+        if (maxAgeDays <= 0) {
+            return;
+        }
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(maxAgeDays);
+        try {
+            long deleted = logRepository.deleteOlderThan(cutoff);
+            if (deleted > 0) {
+                Log.infof("Pruned %d traffic logs older than %d days (cutoff: %s)", deleted, maxAgeDays, cutoff);
+            }
+        } catch (Exception e) {
+            Log.error("Failed to prune old logs by age", e);
         }
     }
 }

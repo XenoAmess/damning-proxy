@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -113,6 +114,26 @@ class TrafficLogServiceTest {
         assertEquals(input.length(), log.requestBody.length(),
             "default config disables truncation, body length should be preserved");
         assertFalse(log.requestBody.endsWith("...[truncated]"));
+    }
+
+    @Test
+    @Transactional
+    void shouldDeleteLogsOlderThanCutoff() {
+        TrafficLog log = trafficLogService.recordRequest(
+            10L, "test-instance", 1L, "/v1/chat/completions", "POST",
+            Map.of(), Map.of("model", "gpt-4"),
+            "https://api.example.com", 30000, false
+        );
+        assertNotNull(log.id);
+
+        TrafficLog found = TrafficLog.findById(log.id);
+        assertNotNull(found);
+        found.requestTime = LocalDateTime.now().minusDays(60);
+
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(30);
+        long deleted = logRepository.deleteOlderThan(cutoff);
+        assertTrue(deleted >= 1, "Expected at least 1 log deleted, got " + deleted);
+        assertTrue(TrafficLog.findByIdOptional(log.id).isEmpty());
     }
 
     @Transactional
