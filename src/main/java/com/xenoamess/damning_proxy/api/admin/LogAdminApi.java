@@ -13,13 +13,16 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.StreamingOutput;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Path("/api/logs")
 @Produces(MediaType.APPLICATION_JSON)
@@ -118,6 +121,71 @@ public class LogAdminApi {
     public static class PruneRequest {
         public Long keepCount;
         public Boolean deleteAll;
+    }
+
+    @GET
+    @Path("/export")
+    public Response exportLogs(@QueryParam("format") @DefaultValue("json") String format,
+                               @QueryParam("profileId") Long profileId,
+                               @QueryParam("instanceId") Long instanceId,
+                               @QueryParam("status") String status,
+                               @QueryParam("path") String path,
+                               @QueryParam("startTime") String startTime,
+                               @QueryParam("endTime") String endTime) {
+        LocalDateTime start = parseDateTime(startTime);
+        LocalDateTime end = parseDateTime(endTime);
+        int fetchLimit = 10000;
+        List<TrafficLog> items = logRepository.findByFilters(
+            instanceId, profileId, status, path, start, end, 0, fetchLimit);
+
+        if ("csv".equalsIgnoreCase(format)) {
+            StreamingOutput csvOutput = os -> {
+                os.write(("id,instance_slug,request_method,request_path,request_time," +
+                    "response_status,duration_ms,upstream_base_url,error_message," +
+                    "prompt_tokens,completion_tokens,total_tokens\n")
+                    .getBytes(StandardCharsets.UTF_8));
+                for (TrafficLog log : items) {
+                    os.write(csvLine(log).getBytes(StandardCharsets.UTF_8));
+                }
+            };
+            return Response.ok(csvOutput)
+                .header("Content-Disposition", "attachment; filename=\"damning_proxy_logs.csv\"")
+                .type("text/csv; charset=UTF-8")
+                .build();
+        }
+
+        StreamingOutput jsonOutput = os -> objectMapper.writeValue(os, items);
+        return Response.ok(jsonOutput)
+            .header("Content-Disposition", "attachment; filename=\"damning_proxy_logs.json\"")
+            .type(MediaType.APPLICATION_JSON)
+            .build();
+    }
+
+    private static String csvLine(TrafficLog log) {
+        return String.join(",", List.of(
+            escapeCsv(Objects.toString(log.id, "")),
+            escapeCsv(log.instanceSlug),
+            escapeCsv(log.requestMethod),
+            escapeCsv(log.requestPath),
+            escapeCsv(Objects.toString(log.requestTime, "")),
+            escapeCsv(Objects.toString(log.responseStatus, "")),
+            escapeCsv(Objects.toString(log.durationMs, "")),
+            escapeCsv(log.upstreamBaseUrl),
+            escapeCsv(log.errorMessage),
+            escapeCsv(Objects.toString(log.promptTokens, "")),
+            escapeCsv(Objects.toString(log.completionTokens, "")),
+            escapeCsv(Objects.toString(log.totalTokens, ""))
+        )) + "\n";
+    }
+
+    private static String escapeCsv(String val) {
+        if (val == null) {
+            return "";
+        }
+        if (val.contains(",") || val.contains("\"") || val.contains("\n")) {
+            return "\"" + val.replace("\"", "\"\"") + "\"";
+        }
+        return val;
     }
 
     private TrafficLogFriendlyDto toFriendly(TrafficLog log) {
