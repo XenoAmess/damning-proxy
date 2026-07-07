@@ -1,0 +1,17 @@
+services:
+  damning-proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: damning-proxy:latest
+    container_name: damning-proxy
+    ports:
+      - "12360:12360"
+    volumes:
+      - damning-data:/data
+    environment:
+      - JAVA_OPTS=-Duser.home=/data
+    restart: unless-stopped
+
+volumes:
+  damning-data:

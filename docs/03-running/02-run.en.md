@@ -2,7 +2,7 @@
 
 # 02 Run Methods
 
-> Last updated: 2026-06-18  
+> Last updated: 2026-07-07  
 > Source version: current workspace
 
 ## Dev Mode
@@ -173,23 +173,59 @@ WantedBy=multi-user.target
 
 ---
 
-## Docker Run (Optional)
+## Docker Run
 
-The project currently does not provide a Dockerfile; you can create one manually:
+The project now provides a `Dockerfile` and `docker-compose.yml` that multi-stage-build the Quarkus app and the Vue admin UI into a single image.
 
-```dockerfile
-FROM eclipse-temurin:21-jre
-WORKDIR /app
-COPY target/quarkus-app /app/quarkus-app
-EXPOSE 12360
-CMD ["java", "-jar", "/app/quarkus-app/quarkus-run.jar"]
-```
-
-Build and run:
+### Using docker-compose (recommended)
 
 ```bash
-docker build -t damning-proxy .
-docker run -p 12360:12360 damning-proxy
+docker compose up -d
 ```
 
-Remember to mount a volume to persist the H2 database.
+- Service listens at `http://localhost:12360`
+- The H2 data file is persisted in the Docker volume `damning-data` (mounted at `/data` in the container)
+
+Stop and remove:
+
+```bash
+docker compose down
+```
+
+### Using Docker directly
+
+```bash
+# Build image
+docker build -t damning-proxy .
+
+# Run with a data volume
+docker run -d \
+  --name damning-proxy \
+  -p 12360:12360 \
+  -v damning-data:/data \
+  damning-proxy
+```
+
+### Custom port
+
+Change the port mapping in `docker-compose.yml`:
+
+```yaml
+ports:
+  - "8080:12360"
+```
+
+Or override when running `docker run`:
+
+```bash
+docker run -d \
+  --name damning-proxy \
+  -p 8080:12360 \
+  -e QUARKUS_HTTP_PORT=12360 \
+  -v damning-data:/data \
+  damning-proxy
+```
+
+### Data file location
+
+Inside the container the H2 data file is at `/data/.damning-proxy/data.mv.db`. It is persisted through the volume, so data survives container recreation.

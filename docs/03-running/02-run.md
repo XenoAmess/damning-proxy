@@ -2,7 +2,7 @@
 
 # 02 运行方式
 
-> 最后更新：2026-06-18  
+> 最后更新：2026-07-07  
 > 对应源码版本：当前工作区
 
 ## 开发模式运行
@@ -173,23 +173,59 @@ WantedBy=multi-user.target
 
 ---
 
-## Docker 运行（可选）
+## Docker 运行
 
-项目当前未提供 Dockerfile，可手动创建：
+项目已提供 `Dockerfile` 和 `docker-compose.yml`，使用多阶段构建把 Quarkus 应用与 Vue 管理后台打包进一个镜像。
 
-```dockerfile
-FROM eclipse-temurin:21-jre
-WORKDIR /app
-COPY target/quarkus-app /app/quarkus-app
-EXPOSE 12360
-CMD ["java", "-jar", "/app/quarkus-app/quarkus-run.jar"]
-```
-
-构建并运行：
+### 使用 docker-compose（推荐）
 
 ```bash
-docker build -t damning-proxy .
-docker run -p 12360:12360 damning-proxy
+docker compose up -d
 ```
 
-注意挂载数据卷以持久化 H2 数据库。
+- 服务监听 `http://localhost:12360`
+- H2 数据文件持久化在 Docker volume `damning-data` 中（挂载到容器 `/data`）
+
+停止并移除：
+
+```bash
+docker compose down
+```
+
+### 使用 Docker 直接构建运行
+
+```bash
+# 构建镜像
+docker build -t damning-proxy .
+
+# 运行并挂载数据卷
+docker run -d \
+  --name damning-proxy \
+  -p 12360:12360 \
+  -v damning-data:/data \
+  damning-proxy
+```
+
+### 自定义端口
+
+修改 `docker-compose.yml` 的端口映射：
+
+```yaml
+ports:
+  - "8080:12360"
+```
+
+或在 `docker run` 时覆盖：
+
+```bash
+docker run -d \
+  --name damning-proxy \
+  -p 8080:12360 \
+  -e QUARKUS_HTTP_PORT=12360 \
+  -v damning-data:/data \
+  damning-proxy
+```
+
+### 数据文件位置
+
+容器内 H2 数据文件位于 `/data/.damning-proxy/data.mv.db`，通过 volume 持久化到宿主机，避免容器重建后数据丢失。

@@ -1,0 +1,25 @@
+.git/
+.gitignore
+
+# Build outputs
+target/
+admin-web/dist/
+admin-web/node_modules/
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Local data (kept in Docker volume, not image)
+*.mv.db
+*.trace.db
