@@ -48,6 +48,9 @@ public class GroovyPluginEngine implements PluginEngine {
     @ConfigProperty(name = "damning-proxy.plugin.execution.pool-size", defaultValue = "16")
     int poolSize = 16;
 
+    @ConfigProperty(name = "damning-proxy.plugin.groovy.cache-max-size", defaultValue = "256")
+    int cacheMaxSize = 256;
+
     private ExecutorService scriptExecutor;
 
     public GroovyPluginEngine() {
@@ -107,7 +110,12 @@ public class GroovyPluginEngine implements PluginEngine {
     @Override
     public void execute(Plugin plugin, PluginContext context) {
         String script = resolveScript(plugin);
-        Class<? extends Script> scriptClass = scriptClassCache.computeIfAbsent(cacheKey(plugin, script), k -> shell.parse(script).getClass());
+        Class<? extends Script> scriptClass = scriptClassCache.computeIfAbsent(cacheKey(plugin, script), k -> {
+            if (scriptClassCache.size() >= cacheMaxSize) {
+                scriptClassCache.clear();
+            }
+            return shell.parse(script).getClass();
+        });
         Binding binding = new Binding();
         binding.setVariable("context", context);
         if (plugin.mode == Plugin.Mode.ZIP_PACKAGE) {

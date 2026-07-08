@@ -10,6 +10,7 @@ import com.xenoamess.damning_proxy.repository.PluginRepository;
 import com.xenoamess.damning_proxy.repository.PluginScriptRevisionRepository;
 import com.xenoamess.damning_proxy.util.BoundedInputStream;
 import com.xenoamess.damning_proxy.util.Validation;
+import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -105,6 +106,7 @@ public class PluginAdminApi {
                     .entity("Failed to store plugin package: " + e.getMessage()).build();
             }
         }
+        Log.infof("Plugin created: id=%d slug=%s", plugin.id, plugin.slug);
         return Response.status(Response.Status.CREATED).entity(plugin).build();
     }
 
@@ -151,6 +153,7 @@ public class PluginAdminApi {
                 }
                 pluginRepository.save(plugin);
                 evictPluginCache(existing);
+                Log.infof("Plugin updated: id=%d slug=%s", plugin.id, plugin.slug);
                 return Response.ok(plugin).build();
             })
             .orElse(Response.status(Response.Status.NOT_FOUND).build());
@@ -167,6 +170,7 @@ public class PluginAdminApi {
         packageStorage.deletePackage(plugin);
         revisionRepository.deleteByPluginId(id);
         boolean deleted = pluginRepository.deleteById(id);
+        Log.infof("Plugin deleted: id=%d slug=%s", plugin.id, plugin.slug);
         return deleted ? Response.noContent().build() : Response.status(Response.Status.NOT_FOUND).build();
     }
 

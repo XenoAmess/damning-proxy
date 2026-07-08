@@ -5,6 +5,7 @@ import com.xenoamess.damning_proxy.repository.InstanceRepository;
 import com.xenoamess.damning_proxy.repository.PluginGroupRepository;
 import com.xenoamess.damning_proxy.repository.ProfileRepository;
 import com.xenoamess.damning_proxy.util.Validation;
+import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -58,6 +59,7 @@ public class InstanceAdminApi {
         }
         ProxyInstance instance = toEntity(request);
         instanceRepository.save(instance);
+        Log.infof("Instance created: id=%d slug=%s", instance.id, instance.slug);
         return Response.status(Response.Status.CREATED).entity(instance).build();
     }
 
@@ -81,6 +83,7 @@ public class InstanceAdminApi {
         ProxyInstance instance = toEntity(request);
         instance.id = id;
         instanceRepository.save(instance);
+        Log.infof("Instance updated: id=%d slug=%s", instance.id, instance.slug);
         return Response.ok(instance).build();
     }
 
@@ -88,8 +91,13 @@ public class InstanceAdminApi {
     @Path("/{id}")
     @Transactional
     public Response delete(@PathParam("id") Long id) {
-        boolean deleted = instanceRepository.deleteById(id);
-        return deleted ? Response.noContent().build() : Response.status(Response.Status.NOT_FOUND).build();
+        ProxyInstance instance = instanceRepository.findById(id).orElse(null);
+        if (instance == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        instanceRepository.deleteById(id);
+        Log.infof("Instance deleted: id=%d slug=%s", instance.id, instance.slug);
+        return Response.noContent().build();
     }
 
     @POST

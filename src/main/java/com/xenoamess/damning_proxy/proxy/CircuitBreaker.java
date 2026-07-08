@@ -129,4 +129,8 @@ public class CircuitBreaker {
         });
         return snapshot;
     }
+
+    public void removeCircuit(String baseUrl) {
+        circuits.remove(baseUrl);
+    }
 }

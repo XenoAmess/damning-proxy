@@ -1,8 +1,10 @@
 package com.xenoamess.damning_proxy.api.admin;
 
 import com.xenoamess.damning_proxy.entity.ProxyProfile;
+import com.xenoamess.damning_proxy.proxy.CircuitBreaker;
 import com.xenoamess.damning_proxy.repository.ProfileRepository;
 import com.xenoamess.damning_proxy.util.Validation;
+import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -19,6 +21,9 @@ public class ProfileAdminApi {
 
     @Inject
     ProfileRepository profileRepository;
+
+    @Inject
+    CircuitBreaker circuitBreaker;
 
     @GET
     public List<ProxyProfile> list() {
@@ -42,6 +47,7 @@ public class ProfileAdminApi {
         }
         ProxyProfile profile = toEntity(form);
         profileRepository.save(profile);
+        Log.infof("Profile created: id=%d slug=%s", profile.id, form.slug);
         return Response.status(Response.Status.CREATED).entity(profile).build();
     }
 
@@ -58,6 +64,7 @@ public class ProfileAdminApi {
                 ProxyProfile profile = toEntity(form);
                 profile.id = id;
                 profileRepository.save(profile);
+                Log.infof("Profile updated: id=%d slug=%s", id, form.slug);
                 return Response.ok(profile).build();
             })
             .orElse(Response.status(Response.Status.NOT_FOUND).build());
@@ -67,7 +74,15 @@ public class ProfileAdminApi {
     @Path("/{id}")
     @Transactional
     public Response delete(@PathParam("id") Long id) {
+        ProxyProfile profile = profileRepository.findById(id).orElse(null);
+        if (profile == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
         boolean deleted = profileRepository.deleteById(id);
+        if (deleted) {
+            circuitBreaker.removeCircuit(profile.baseUrl);
+            Log.infof("Profile deleted: id=%d slug=%s", id, profile.slug);
+        }
         return deleted ? Response.noContent().build() : Response.status(Response.Status.NOT_FOUND).build();
     }
 

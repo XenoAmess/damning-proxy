@@ -85,6 +85,7 @@ public class OpenAiProxyService {
     }
 
     public Response listModels(String instanceSlug, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        Log.debugf("Proxy: listModels instanceSlug=%s", instanceSlug);
         return proxyRequest(instanceSlug, null, "GET", "/v1/models", incomingHeaders,
             (profile, context) -> upstreamHttpClient.send(
                 "GET", profile.baseUrl, "/models",
@@ -94,6 +95,7 @@ public class OpenAiProxyService {
     }
 
     public Response chatCompletions(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        Log.debugf("Proxy: chatCompletions instanceSlug=%s", instanceSlug);
         return proxyRequest(instanceSlug, requestBody, "POST", "/v1/chat/completions", incomingHeaders,
             (profile, context) -> upstreamHttpClient.send(
                 "POST", profile.baseUrl, "/chat/completions",
@@ -103,6 +105,7 @@ public class OpenAiProxyService {
     }
 
     public Response embeddings(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        Log.debugf("Proxy: embeddings instanceSlug=%s", instanceSlug);
         return proxyRequest(instanceSlug, requestBody, "POST", "/v1/embeddings", incomingHeaders,
             (profile, context) -> upstreamHttpClient.send(
                 "POST", profile.baseUrl, "/embeddings",
@@ -112,6 +115,7 @@ public class OpenAiProxyService {
     }
 
     public Response imageGenerations(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        Log.debugf("Proxy: imageGenerations instanceSlug=%s", instanceSlug);
         return proxyRequest(instanceSlug, requestBody, "POST", "/v1/images/generations", incomingHeaders,
             (profile, context) -> upstreamHttpClient.send(
                 "POST", profile.baseUrl, "/images/generations",
@@ -121,16 +125,19 @@ public class OpenAiProxyService {
     }
 
     public Response audioSpeech(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        Log.debugf("Proxy: audio/speech instanceSlug=%s", instanceSlug);
         return proxyAudioBinary(instanceSlug, requestBody, "POST", "/v1/audio/speech", "/audio/speech", incomingHeaders);
     }
 
     public Response audioTranscriptions(String instanceSlug, UpstreamHttpClient.MultipartData multipart,
                                         jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        Log.debugf("Proxy: audio/transcriptions instanceSlug=%s", instanceSlug);
         return proxyMultipart(instanceSlug, multipart, "POST", "/v1/audio/transcriptions", "/audio/transcriptions", incomingHeaders);
     }
 
     public Response audioTranslations(String instanceSlug, UpstreamHttpClient.MultipartData multipart,
                                       jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
+        Log.debugf("Proxy: audio/translations instanceSlug=%s", instanceSlug);
         return proxyMultipart(instanceSlug, multipart, "POST", "/v1/audio/translations", "/audio/translations", incomingHeaders);
     }
 
@@ -656,6 +663,7 @@ public class OpenAiProxyService {
         PluginGroup group = pluginGroupRepository.findById(instance.pluginGroupId)
             .orElseThrow(() -> new WebApplicationException("Plugin group not found for instance: " + instanceSlug, Response.Status.NOT_FOUND));
 
+        Log.debugf("Resolved %s: instance=%s profile=%s group=%s", instanceSlug, instance.name, profile.name, group.name);
         return new ProxyContext(instance, profile, group);
     }
 

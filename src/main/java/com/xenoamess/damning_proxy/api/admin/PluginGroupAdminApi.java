@@ -6,6 +6,7 @@ import com.xenoamess.damning_proxy.entity.PluginGroupItem;
 import com.xenoamess.damning_proxy.repository.PluginGroupRepository;
 import com.xenoamess.damning_proxy.repository.PluginRepository;
 import com.xenoamess.damning_proxy.util.Validation;
+import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -50,6 +51,7 @@ public class PluginGroupAdminApi {
         }
         PluginGroup group = toEntity(request);
         groupRepository.save(group);
+        Log.infof("PluginGroup created: id=%d slug=%s", group.id, group.slug);
         return Response.status(Response.Status.CREATED).entity(group).build();
     }
 
@@ -69,6 +71,7 @@ public class PluginGroupAdminApi {
         PluginGroup group = toEntity(request);
         group.id = id;
         groupRepository.save(group);
+        Log.infof("PluginGroup updated: id=%d slug=%s", group.id, group.slug);
         return Response.ok(group).build();
     }
 
@@ -76,8 +79,13 @@ public class PluginGroupAdminApi {
     @Path("/{id}")
     @Transactional
     public Response delete(@PathParam("id") Long id) {
-        boolean deleted = groupRepository.deleteById(id);
-        return deleted ? Response.noContent().build() : Response.status(Response.Status.NOT_FOUND).build();
+        PluginGroup group = groupRepository.findById(id).orElse(null);
+        if (group == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        groupRepository.deleteById(id);
+        Log.infof("PluginGroup deleted: id=%d slug=%s", group.id, group.slug);
+        return Response.noContent().build();
     }
 
     @POST
