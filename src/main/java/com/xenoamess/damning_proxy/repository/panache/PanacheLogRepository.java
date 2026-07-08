@@ -96,15 +96,12 @@ public class PanacheLogRepository implements LogRepository {
         int remaining = count;
         while (remaining > 0) {
             int limit = Math.min(effectiveBatchSize, remaining);
-            List<TrafficLog> oldest = TrafficLog.findAll(Sort.ascending("requestTime")).page(0, limit).list();
-            if (oldest.isEmpty()) {
+            long deleted = TrafficLog.delete("id IN (SELECT t.id FROM TrafficLog t ORDER BY t.requestTime ASC LIMIT ?1)", limit);
+            if (deleted == 0) {
                 break;
             }
-            for (TrafficLog log : oldest) {
-                log.delete();
-            }
             TrafficLog.flush();
-            remaining -= oldest.size();
+            remaining -= (int) deleted;
         }
     }
 

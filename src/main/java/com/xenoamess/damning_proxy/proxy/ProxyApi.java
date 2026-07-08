@@ -72,11 +72,6 @@ public class ProxyApi {
         return rateLimitedResponse(instanceSlug, info);
     }
 
-    private RateLimiter.RateLimitInfo tryAcquireAndGetInfo(String instanceSlug) {
-        rateLimiter.tryAcquire(instanceSlug);
-        return rateLimiter.getRateLimitInfo(instanceSlug);
-    }
-
     @GET
     @Path("/models")
     @Produces(MediaType.APPLICATION_JSON)

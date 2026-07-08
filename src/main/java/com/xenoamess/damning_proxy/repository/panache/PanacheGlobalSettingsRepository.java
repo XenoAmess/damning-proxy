@@ -52,10 +52,18 @@ public class PanacheGlobalSettingsRepository implements GlobalSettingsRepository
             cached = new CachedSettings(settings, now);
             return settings;
         }
-        GlobalSettings settings = GlobalSettings.defaults();
-        settings.persistAndFlush();
-        cached = new CachedSettings(settings, now);
-        return settings;
+        synchronized (this) {
+            existing = GlobalSettings.findAll(Sort.by("id")).firstResultOptional();
+            if (existing.isPresent()) {
+                GlobalSettings settings = existing.get();
+                cached = new CachedSettings(settings, now);
+                return settings;
+            }
+            GlobalSettings settings = GlobalSettings.defaults();
+            settings.persistAndFlush();
+            cached = new CachedSettings(settings, now);
+            return settings;
+        }
     }
 
     @Override

@@ -136,7 +136,7 @@ public class GroovyPluginEngine implements PluginEngine {
             if (future != null) {
                 future.cancel(true);
             }
-            throw new RuntimeException("Groovy plugin timed out after " + (scriptTimeoutMs / 1000) + "s: " + plugin.name);
+            throw new RuntimeException("Groovy plugin timed out after " + (scriptTimeoutMs / 1000) + "s: " + plugin.name, e);
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute Groovy plugin: " + plugin.name, e);
         }

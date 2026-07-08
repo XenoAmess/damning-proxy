@@ -2,6 +2,7 @@ package com.xenoamess.damning_proxy.plugin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xenoamess.damning_proxy.entity.Plugin;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
@@ -68,6 +69,7 @@ public class PluginExecutionService {
                     plugin.id, plugin.name, phase1.name(), beforeBody, afterBody, false, null
                 );
             } catch (Exception e) {
+                Log.warnf(e, "Plugin execution failed: id=%d name=%s phase=%s", plugin.id, plugin.name, phase1.name());
                 previousAfterBody = null;
                 context.log("Plugin error [" + plugin.name + "]: " + e.getMessage());
                 context.getFriendlyLogCollector().add(

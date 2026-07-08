@@ -439,6 +439,10 @@ public class OpenAiProxyService {
                 }
             });
 
+            java.util.concurrent.atomic.AtomicBoolean streamCancelled = new java.util.concurrent.atomic.AtomicBoolean(false);
+            emitter.onTermination(() -> streamCancelled.set(true));
+
+
             Runnable finishWithError = () -> {
                 if (heartbeatHolder[0] != null) {
                     heartbeatHolder[0].cancel(false);
@@ -477,6 +481,9 @@ public class OpenAiProxyService {
                     return;
                 }
                 response.handler(buffer -> {
+                    if (streamCancelled.get()) {
+                        return;
+                    }
                     lastActivity.set(System.currentTimeMillis());
                     String chunk = buffer.toString();
                     responseBuffer.append(chunk);
@@ -502,6 +509,9 @@ public class OpenAiProxyService {
                     }
                 });
                 response.endHandler(v -> {
+                    if (streamCancelled.get()) {
+                        return;
+                    }
                     finishWithError.run();
                     String remaining = sseBuffer.toString().trim();
                     if (remaining.startsWith("data: ")) {
