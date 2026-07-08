@@ -2,12 +2,12 @@
 
 # 02 Proxy Request Processing Flow
 
-> Last updated: 2026-06-17  
+> Last updated: 2026-07-08
 > Corresponding source version: current workspace
 
 ## Common Preprocessing Steps
 
-Regardless of `/models`, `/chat/completions`, `/embeddings`, `/images/generations`, or streaming `/chat/completions`, the following steps are executed first:
+Regardless of `/models`, `/chat/completions`, `/embeddings`, `/images/generations`, `/audio/*`, or streaming `/chat/completions`, the following steps are executed first:
 
 1. **Resolve Instance**: Find `ProxyInstance` by the `instanceSlug` in the URL.
 2. **Validate Enabled Status**: Instance, Profile, and PluginGroup must all be enabled.
@@ -120,6 +120,35 @@ Multi.createFrom().emitter(...)
 - **Request-phase plugins**: Executed before sending to upstream; can rewrite model name, append system prompt, return directly, etc.
 - **Response-phase plugins**: Executed after the complete SSE stream is received, operating on the **accumulated final response body**, not per chunk.
 - If a request-phase plugin returns directly (`returnResponse`), the response is wrapped as a single SSE event plus `data: [DONE]` and returned.
+
+---
+
+## `/v1/proxy/{instanceSlug}/audio/*`
+
+Entry point: `src/main/java/com/xenoamess/damning_proxy/proxy/ProxyApi.java:50` onwards
+
+Three OpenAI audio endpoints are supported:
+
+- `POST /v1/proxy/{instanceSlug}/audio/transcriptions`
+- `POST /v1/proxy/{instanceSlug}/audio/translations`
+- `POST /v1/proxy/{instanceSlug}/audio/speech`
+
+Compared with ordinary OpenAI proxy endpoints, audio request/response bodies may be `multipart/form-data` or binary, so `ProxyApi` passes the body bytes through directly without JSON parsing:
+
+```text
+OpenAiProxyService.audioTranscriptions / audioTranslations / audioSpeech
+  ├─ resolveInstance / loadPlugins / recordRequest
+  ├─ createRequestContext(profile, requestBody)
+  ├─ executeRequestPlugins(plugins, context)
+  │     └─ If context.isReturned() is true: recordResponse and return directly
+  ├─ upstreamHttpClient.sendBinary(...)  Pass through request body and Content-Type
+  ├─ Set response status/body
+  ├─ executeResponsePlugins(plugins, context)
+  ├─ recordResponse(...)
+  └─ Return Response
+```
+
+Audio response content is returned to the client as a byte array; plugins can read/modify the byte array in `context.responseBody`.
 
 ---
 

@@ -95,7 +95,7 @@ This plan is derived from a review of the current codebase, documentation, recen
 
 | # | Status | Category | Title | Description |
 |---|---|----------|-------|-------------|
-| N2-1 | — | Documentation | Audit docs against code | README/data model/flow diagrams are missing `GlobalSettings`, `PluginScriptRevision`, audio endpoints, metrics, etc. Admin API docs completed. |
+| N2-1 | ✓ | Documentation | Audit docs against code | README/data model/flow diagrams were missing `GlobalSettings`, `PluginScriptRevision`, audio endpoints, metrics, etc. Admin API docs completed. |
 | N2-2 | — | Admin UI | Add admin-web frontend tests | Introduce Vitest + Vue Test Utils for critical views. |
 | N2-3 | ✓ | Code quality | Standardize frontend lockfile | Both `package-lock.json` and `pnpm-lock.yaml` existed. Standardized on pnpm, removed `package-lock.json`, and switched Maven `frontend-maven-plugin` to pnpm. |
 | N2-4 | ✓ | Plugin system | Reuse ThreadLocal engine cache in JS engine | Currently creates a new Nashorn engine per execution. Reuse the ThreadLocal cache. |

@@ -30,6 +30,10 @@
 - 工程效率：
   - 统一前端锁文件为 `pnpm-lock.yaml`，删除 `package-lock.json`。
   - Maven `frontend-maven-plugin` 改用 Node 22.14 + pnpm 11.8，本地构建与 CI 使用同一套工具链。
+- 文档同步审计（N2-1）：
+  - 更新数据模型文档：新增 `GlobalSettings`、`PluginScriptRevision` 实体，补充 `Plugin` 的 `mode`/`packagePath`/`sample` 字段、`ProxyProfile` 熔断器字段、音频代理端点、请求时间语义。
+  - 更新代理流程文档：补充 `/audio/*` 端点说明、修复 `PluginContext` 代码块格式。
+  - 更新 README（CN+EN）：移除 Native Image 声明、更新技术栈版本、补充音频端点/限流/熔断/指标/插件 ZIP 包等新特性，前端开发命令改用 pnpm。
 
 ## 2026-07-07
 

@@ -2,7 +2,7 @@
 
 # damning-proxy（大明proxy）
 
-一个基于 **Java 21**、**Quarkus**、**GraalVM Native Image** 的 OpenAI 协议代理服务器。
+一个基于 **Java 21**、**Quarkus** 的 OpenAI 协议代理服务器。
 
 大明proxy 可以代理多个上游 OpenAI 接口，并通过 **Groovy / JavaScript 插件** 按顺序篡改出入报文，实现自定义的模型映射、请求改写、响应替换、日志审计等功能。
 
@@ -16,21 +16,22 @@ https://www.bilibili.com/video/BV1oojW6uEbF
 - **实例化路由**：外部用户调用的是【实例】，每个实例绑定一个上游 Profile 和一个插件组
 - **上游配置管理**：独立管理上游 OpenAI 源地址、Token、自定义 Header 等
 - **插件组管理**：从插件库中挑选插件，指定执行顺序、优先级和启用状态
-- **插件库管理**：集中管理 Groovy / JavaScript 插件脚本
-- **全量流量日志**：按实例记录请求/响应，支持 Web 页查看与清理
+- **插件库管理**：集中管理 Groovy / JavaScript 插件脚本或 ZIP 包
+- **全量流量日志**：按实例记录请求/响应，支持 Web 页查看、清理与导出
 - **Web 管理后台**：基于 Vue 3 + Vite + Element Plus 的本地管理界面
-- **GraalVM Native Image** 支持
+- **限流与熔断**：全局速率限制、上游熔断器保护
+- **运行指标**：请求量、错误、延迟、token 用量统计
 
 ## 技术栈
 
 | 技术 | 版本 |
 |-----|------|
 | Java | 21 |
-| Quarkus | 3.15.1 |
+| Quarkus | 3.37.1 |
 | Maven | 3.9+ |
 | H2 | （默认，便于切换 PG/MySQL） |
 | Vue | 3 |
-| Vite | 6 |
+| Vite | 8 |
 | Element Plus | 2 |
 
 ## 快速开始
@@ -52,18 +53,9 @@ mvn clean package
 java -jar target/quarkus-app/quarkus-run.jar
 ```
 
-Maven 构建会自动安装 Node、npm 依赖并构建前端界面。
+Maven 构建会自动安装 Node、pnpm 依赖并构建前端界面。pnpm 9/10/11 生成的 `admin-web/pnpm-lock.yaml` 会被 `frontend-maven-plugin` 用于可复现构建。
 
-### 3. 构建 Native Image（需要 GraalVM）
 
-```bash
-mvn clean package -Pnative
-./target/damning-proxy-1.0-SNAPSHOT-runner
-```
-
-> 注意：native 构建需要 GraalVM 21，并提前用 `mvn clean package -DskipTests` 确认普通 JAR 可正常构建。
-
-## 代理端点
 
 所有代理端点都基于**实例**的 `slug`：
 
@@ -71,6 +63,11 @@ mvn clean package -Pnative
 |--------|------|------|
 | `POST` | `/v1/proxy/{instanceSlug}/chat/completions` | 聊天补全（支持 SSE 流式） |
 | `GET`  | `/v1/proxy/{instanceSlug}/models` | 模型列表 |
+| `POST` | `/v1/proxy/{instanceSlug}/embeddings` | Embeddings |
+| `POST` | `/v1/proxy/{instanceSlug}/images/generations` | 图片生成 |
+| `POST` | `/v1/proxy/{instanceSlug}/audio/transcriptions` | 语音转录 |
+| `POST` | `/v1/proxy/{instanceSlug}/audio/translations` | 语音翻译 |
+| `POST` | `/v1/proxy/{instanceSlug}/audio/speech` | 语音合成 |
 
 示例：
 
@@ -91,9 +88,11 @@ curl -H "Authorization: Bearer sk-test" \
 
 - **实例管理**：创建对外暴露的实例，绑定上游配置和插件组
 - **插件组**：从插件库挑选插件，配置执行顺序、优先级、启用状态
-- **插件管理**：编写 Groovy / JS 插件脚本，设置执行阶段（请求/响应/两者）
-- **上游配置**：配置多个 OpenAI 源，包含 baseURL、Bearer Token、自定义 Header、超时等
-- **流量日志**：按实例查看完整请求/响应、插件日志，支持删除和清空
+- **插件管理**：编写 Groovy / JS 插件脚本或上传 ZIP 包，设置执行阶段（请求/响应/两者），支持版本回滚
+- **上游配置**：配置多个 OpenAI 源，包含 baseURL、Bearer Token、自定义 Header、超时、熔断器等
+- **流量日志**：按实例查看完整请求/响应、插件日志，支持删除、清空、导出
+- **运行指标**：汇总、时序、Top 实例等统计图表
+- **限流设置**：全局请求速率限制
 
 ## 插件开发
 
@@ -208,8 +207,9 @@ mvn test
 
 ```bash
 cd admin-web
-npm install
-npm run dev
+corepack enable pnpm
+pnpm install
+pnpm run dev
 ```
 
 开发服务器代理 `/api` 到 `http://localhost:12360`。

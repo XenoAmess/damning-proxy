@@ -2,7 +2,7 @@
 
 # 01 数据模型
 
-> 最后更新：2026-06-21  
+> 最后更新：2026-07-08  
 > 对应源码版本：当前工作区
 
 ## 实体清单
@@ -14,6 +14,8 @@
 | Plugin | plugin | `src/main/java/com/xenoamess/damning_proxy/entity/Plugin.java` | 插件脚本 |
 | PluginGroup | plugin_group | `src/main/java/com/xenoamess/damning_proxy/entity/PluginGroup.java` | 插件组 |
 | PluginGroupItem | plugin_group_item | `src/main/java/com/xenoamess/damning_proxy/entity/PluginGroupItem.java` | 插件组与插件的多对多关系 |
+| PluginScriptRevision | plugin_script_revision | `src/main/java/com/xenoamess/damning_proxy/entity/PluginScriptRevision.java` | 插件脚本历史版本 |
+| GlobalSettings | global_settings | `src/main/java/com/xenoamess/damning_proxy/entity/GlobalSettings.java` | 全局设置（限流等） |
 | TrafficLog | traffic_log | `src/main/java/com/xenoamess/damning_proxy/entity/TrafficLog.java` | 流量日志 |
 
 ---
@@ -33,6 +35,8 @@
 | customBody | String | 可空，长度 10000 | JSON 格式请求体默认字段合并 |
 | defaultModel | String | 可空 | 默认模型名 |
 | timeoutMs | Integer | 默认 600000 | 上行请求超时毫秒 |
+| circuitBreakerFailureThreshold | Integer | 默认 5 | 连续失败多少次后打开熔断器 |
+| circuitBreakerOpenTimeoutSeconds | Integer | 默认 60 | 熔断器打开后等待多少秒进入半开 |
 | enabled | boolean | 默认 true | 是否启用 |
 | createdAt | LocalDateTime | 自动 | 创建时间 |
 | updatedAt | LocalDateTime | 自动 | 更新时间 |
@@ -62,6 +66,9 @@ GET  /v1/proxy/my-instance/models
 POST /v1/proxy/my-instance/chat/completions
 POST /v1/proxy/my-instance/embeddings
 POST /v1/proxy/my-instance/images/generations
+POST /v1/proxy/my-instance/audio/transcriptions
+POST /v1/proxy/my-instance/audio/translations
+POST /v1/proxy/my-instance/audio/speech
 ```
 
 ---
@@ -76,7 +83,10 @@ POST /v1/proxy/my-instance/images/generations
 | name | String | 非空 | 插件名称 |
 | description | String | 可空，长度 2000 | 描述 |
 | language | Language 枚举 | 非空 | `GROOVY` 或 `JS` |
-| script | String | 非空，长度 10000 | 插件脚本内容 |
+| script | String | 非空，长度 10000 | 插件脚本内容；`SINGLE_SCRIPT` 模式必填 |
+| mode | Mode 枚举 | 默认 `SINGLE_SCRIPT` | `SINGLE_SCRIPT` 单脚本 / `ZIP_PACKAGE` ZIP 包 |
+| packagePath | String | 可空 | `ZIP_PACKAGE` 模式下的包存储路径 |
+| sample | boolean | 默认 false | 是否为样本插件（样本插件不可修改） |
 | executionPhase | ExecutionPhase 枚举 | 非空，默认 `BOTH` | `REQUEST` / `RESPONSE` / `BOTH` |
 | enabled | boolean | 默认 true | 是否启用 |
 | createdAt | LocalDateTime | 自动 | 创建时间 |
@@ -88,6 +98,11 @@ POST /v1/proxy/my-instance/images/generations
 public enum Language {
     GROOVY,
     JS
+}
+
+public enum Mode {
+    SINGLE_SCRIPT,
+    ZIP_PACKAGE
 }
 
 public enum ExecutionPhase {
@@ -144,6 +159,37 @@ public enum ExecutionPhase {
 
 ---
 
+## PluginScriptRevision（插件脚本历史版本）
+
+`src/main/java/com/xenoamess/damning_proxy/entity/PluginScriptRevision.java:12`
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | Long | PK，自增 | 主键 |
+| pluginId | Long | 非空 | 所属插件 ID |
+| script | String | 非空，Lob | 快照时的脚本内容 |
+| createdAt | LocalDateTime | 自动 | 快照时间 |
+
+每次更新插件脚本时，旧脚本会被自动保存为一条 `PluginScriptRevision`，支持通过 `/api/plugins/{id}/revisions/{revisionId}/rollback` 回滚。
+
+---
+
+## GlobalSettings（全局设置）
+
+`src/main/java/com/xenoamess/damning_proxy/entity/GlobalSettings.java:12`
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | Long | PK，自增 | 主键 |
+| maxRequestsPerWindow | Integer | 默认 100 | 限流窗口内最大请求数 |
+| windowSeconds | Integer | 默认 60 | 限流窗口秒数 |
+| createdAt | LocalDateTime | 自动 | 创建时间 |
+| updatedAt | LocalDateTime | 自动 | 更新时间 |
+
+单例表，只有一条记录。`GlobalSettingsAdminApi` 暴露 `/api/settings/rate-limit` 用于读写。为减少 H2 查询，`PanacheGlobalSettingsRepository` 会缓存该对象，默认缓存 60 秒。
+
+---
+
 ## TrafficLog（流量日志）
 
 `src/main/java/com/xenoamess/damning_proxy/entity/TrafficLog.java:11`
@@ -162,7 +208,7 @@ public enum ExecutionPhase {
 | upstreamBaseUrl | String | 可空 | 上行请求的 baseUrl |
 | timeoutMs | Integer | 可空 | 上行请求超时毫秒 |
 | streaming | Boolean | 可空 | 是否为流式请求 |
-| requestTime | LocalDateTime | 自动 | 请求时间 |
+| requestTime | LocalDateTime | 手动 | 请求时间（由 `TrafficLogService.recordRequest()` 显式写入） |
 | responseStatus | Integer | 可空 | 响应状态码 |
 | responseHeaders | String | 可空，长度 4000 | JSON 格式响应头 |
 | responseBody | String | 可空，Lob | JSON 格式响应体 |
@@ -206,7 +252,9 @@ ProxyProfile  1 ──────< N  ProxyInstance
     │                              N  PluginGroupItem
     │                                   │ N
     │                                   │
-    │                                   N  Plugin
+    │                                   N  Plugin  1 ──────< N  PluginScriptRevision
+    │
+    │                       GlobalSettings (singleton)
     │
     └── 通过 instanceId/profileId 被 TrafficLog 引用
 ```
@@ -214,4 +262,6 @@ ProxyProfile  1 ──────< N  ProxyInstance
 - 一个 Profile 可被多个 Instance 使用。
 - 一个 Instance 使用一个 PluginGroup。
 - 一个 PluginGroup 包含多个 PluginGroupItem，每个 item 引用一个 Plugin。
+- 一个 Plugin 可拥有多条 PluginScriptRevision 历史版本。
+- GlobalSettings 为单例表，用于全局配置（如限流）。
 - TrafficLog 同时记录 instanceId 与 profileId，便于按实例或按上游筛选。

@@ -30,6 +30,10 @@
 - Engineering efficiency:
   - Standardized frontend lockfile on `pnpm-lock.yaml`; removed `package-lock.json`.
   - Switched Maven `frontend-maven-plugin` to Node 22.14 + pnpm 11.8, aligning local builds with CI.
+- Documentation audit (N2-1):
+  - Updated data model docs: added `GlobalSettings` and `PluginScriptRevision` entities, documented `Plugin` `mode`/`packagePath`/`sample` fields, `ProxyProfile` circuit breaker fields, audio proxy endpoints, and `requestTime` semantics.
+  - Updated proxy flow docs: added `/audio/*` endpoints and fixed the `PluginContext` code block formatting.
+  - Updated README (CN+EN): removed Native Image claim, refreshed tech-stack versions, added audio endpoints / rate limiting / circuit breaker / metrics / plugin ZIP packages, and switched frontend dev commands to pnpm.
 
 ## 2026-07-07
 

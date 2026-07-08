@@ -2,12 +2,12 @@
 
 # 02 代理请求处理流程
 
-> 最后更新：2026-06-17  
+> 最后更新：2026-07-08
 > 对应源码版本：当前工作区
 
 ## 公共前置步骤
 
-无论 `/models`、`/chat/completions`、`/embeddings`、`/images/generations` 还是流式 `/chat/completions`，都会先执行：
+无论 `/models`、`/chat/completions`、`/embeddings`、`/images/generations`、`/audio/*` 还是流式 `/chat/completions`，都会先执行：
 
 1. **解析 Instance**：根据 URL 中的 `instanceSlug` 查找 `ProxyInstance`。
 2. **校验启用状态**：Instance、Profile、PluginGroup 必须均启用。
@@ -123,11 +123,41 @@ Multi.createFrom().emitter(...)
 
 ---
 
+## `/v1/proxy/{instanceSlug}/audio/*`
+
+处理入口：`src/main/java/com/xenoamess/damning_proxy/proxy/ProxyApi.java:50` 起
+
+支持三个 OpenAI 音频端点：
+
+- `POST /v1/proxy/{instanceSlug}/audio/transcriptions`
+- `POST /v1/proxy/{instanceSlug}/audio/translations`
+- `POST /v1/proxy/{instanceSlug}/audio/speech`
+
+与普通 OpenAI 代理端点相比，音频端点的请求/响应体可能是 `multipart/form-data` 或二进制，因此由 `ProxyApi` 直接透传 body 字节，不经过 JSON 解析：
+
+```text
+OpenAiProxyService.audioTranscriptions / audioTranslations / audioSpeech
+  ├─ resolveInstance / loadPlugins / recordRequest
+  ├─ createRequestContext(profile, requestBody)
+  ├─ executeRequestPlugins(plugins, context)
+  │     └─ 若 context.isReturned() 为 true：直接 recordResponse 并返回
+  ├─ upstreamHttpClient.sendBinary(...)  透传请求体与 Content-Type
+  ├─ 设置响应状态/响应体
+  ├─ executeResponsePlugins(plugins, context)
+  ├─ recordResponse(...)
+  └─ 返回 Response
+```
+
+音频响应内容直接以字节数组返回给客户端，插件可读取/修改 `context.responseBody` 中的字节数组。
+
+---
+
 ## PluginContext 的构造
 
 `src/main/java/com/xenoamess/damning_proxy/proxy/OpenAiProxyService.java:327`
 
-```textncreateRequestContext(profile, requestBody)
+```text
+createRequestContext(profile, requestBody)
   ├─ context.setRequestBody(requestBody)
   ├─ 若 profile.bearerToken 非空：
   │     context.requestHeaders.put("Authorization", "Bearer " + profile.bearerToken)
