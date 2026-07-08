@@ -110,6 +110,7 @@ mvn clean package -Dskip.frontend.build=true
 | 运行 Native | `./target/damning-proxy-0.1.0-runner` |
 | 前端独立开发 | `cd admin-web && corepack enable pnpm && pnpm run dev` |
 | 前端独立构建 | `cd admin-web && corepack enable pnpm && pnpm run build` |
+| 运行前端测试 | `cd admin-web && corepack enable pnpm && pnpm test` |
 | 运行测试 | `mvn test` |
 | 跳过前端构建 | `mvn clean package -Dskip.frontend.build=true` |
 

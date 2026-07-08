@@ -18,6 +18,14 @@ mvn test
 - 集成测试使用 WireMock 模拟上游 OpenAI 服务。
 - **环境要求 JDK 21**，其他版本可能导致 Byte Buddy / GraalJS 初始化失败。
 
+### 运行前端测试
+
+```bash
+cd admin-web
+corepack enable pnpm
+pnpm test
+```
+
 ---
 
 ## 测试文件清单
@@ -208,7 +216,7 @@ if __name__ == '__main__':
 |---|---|
 | 运行全部测试 | `mvn test` |
 | 运行单个测试类 | `mvn test -Dtest=ProxyApiTest` |
-| Native 测试 | `mvn clean verify -Pnative` |
+| 运行前端测试 | `cd admin-web && corepack enable pnpm && pnpm test` |
 | 健康检查 | `curl http://localhost:12360/v1/health` |
 | 创建 Profile | `curl -X POST http://localhost:12360/api/profiles ...` |
 | 调用代理 | `curl http://localhost:12360/v1/proxy/{slug}/chat/completions ...` |

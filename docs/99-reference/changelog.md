@@ -34,6 +34,11 @@
   - 更新数据模型文档：新增 `GlobalSettings`、`PluginScriptRevision` 实体，补充 `Plugin` 的 `mode`/`packagePath`/`sample` 字段、`ProxyProfile` 熔断器字段、音频代理端点、请求时间语义。
   - 更新代理流程文档：补充 `/audio/*` 端点说明、修复 `PluginContext` 代码块格式。
   - 更新 README（CN+EN）：移除 Native Image 声明、更新技术栈版本、补充音频端点/限流/熔断/指标/插件 ZIP 包等新特性，前端开发命令改用 pnpm。
+- 前端测试（N2-2）：
+  - admin-web 引入 Vitest + @vue/test-utils + jsdom。
+  - 新增 `vitest.config.js` 与 `ChatParamPanel.test.js` 示例测试。
+  - package.json 增加 `pnpm test` / `pnpm test:watch` 脚本。
+  - CI 工作流与测试/构建文档已同步增加前端测试步骤。
 
 ## 2026-07-07
 

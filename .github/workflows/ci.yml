@@ -40,6 +40,10 @@ jobs:
           pnpm run type-check
           pnpm run format:check
 
+      - name: Run frontend tests
+        working-directory: admin-web
+        run: pnpm run test
+
       - name: Build frontend
         working-directory: admin-web
         run: pnpm run build

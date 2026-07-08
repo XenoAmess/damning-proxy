@@ -50,6 +50,7 @@ Vite dev server proxies `/api` to `http://localhost:12360`. Requires a backend r
 - Tests use an in-memory H2 database (`src/test/resources/application.properties` with `drop-and-create`).
 - Run a single test class: `$JAVA_HOME/bin/mvn test -Dtest=ProxyApiTest`
 - No separate lint/typecheck steps are configured; rely on `mvn test` and `mvn package`.
+- Frontend tests: `cd admin-web && corepack enable pnpm && pnpm test`.
 
 ## Data & State
 

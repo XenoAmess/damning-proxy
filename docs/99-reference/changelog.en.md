@@ -34,6 +34,11 @@
   - Updated data model docs: added `GlobalSettings` and `PluginScriptRevision` entities, documented `Plugin` `mode`/`packagePath`/`sample` fields, `ProxyProfile` circuit breaker fields, audio proxy endpoints, and `requestTime` semantics.
   - Updated proxy flow docs: added `/audio/*` endpoints and fixed the `PluginContext` code block formatting.
   - Updated README (CN+EN): removed Native Image claim, refreshed tech-stack versions, added audio endpoints / rate limiting / circuit breaker / metrics / plugin ZIP packages, and switched frontend dev commands to pnpm.
+- Frontend tests (N2-2):
+  - Added Vitest + @vue/test-utils + jsdom to admin-web.
+  - Added `vitest.config.js` and a sample `ChatParamPanel.test.js`.
+  - Added `pnpm test` / `pnpm test:watch` scripts to `package.json`.
+  - CI workflow and testing/build docs updated to include frontend test steps.
 
 ## 2026-07-07
 

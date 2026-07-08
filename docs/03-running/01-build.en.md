@@ -110,6 +110,7 @@ The property `skip.frontend.build` is defined in `pom.xml:22`, defaults to `fals
 | Run Native | `./target/damning-proxy-0.1.0-runner` |
 | Frontend standalone dev | `cd admin-web && corepack enable pnpm && pnpm run dev` |
 | Frontend standalone build | `cd admin-web && corepack enable pnpm && pnpm run build` |
+| Run frontend tests | `cd admin-web && corepack enable pnpm && pnpm test` |
 | Run tests | `mvn test` |
 | Skip frontend build | `mvn clean package -Dskip.frontend.build=true` |
 

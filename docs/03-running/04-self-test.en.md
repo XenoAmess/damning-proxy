@@ -18,6 +18,14 @@ mvn test
 - Integration tests use WireMock to simulate the upstream OpenAI service.
 - **Requires JDK 21**; other versions may cause Byte Buddy / GraalJS initialization failures.
 
+### Run Frontend Tests
+
+```bash
+cd admin-web
+corepack enable pnpm
+pnpm test
+```
+
 ---
 
 ## Test File List
@@ -208,7 +216,7 @@ Set the Profile's `baseUrl` to `http://localhost:18089/v1` to test.
 |---|---|
 | Run all tests | `mvn test` |
 | Run a single test class | `mvn test -Dtest=ProxyApiTest` |
-| Native tests | `mvn clean verify -Pnative` |
+| Run frontend tests | `cd admin-web && corepack enable pnpm && pnpm test` |
 | Health check | `curl http://localhost:12360/v1/health` |
 | Create Profile | `curl -X POST http://localhost:12360/api/profiles ...` |
 | Call proxy | `curl http://localhost:12360/v1/proxy/{slug}/chat/completions ...` |
