@@ -2,7 +2,7 @@
 
 # 01 Project Introduction
 
-> Last updated: 2026-06-21  
+> Last updated: 2026-07-08  
 > Source version: current workspace
 
 ## What is damning-proxy
