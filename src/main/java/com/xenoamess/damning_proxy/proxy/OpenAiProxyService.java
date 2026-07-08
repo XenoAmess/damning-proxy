@@ -172,7 +172,6 @@ public class OpenAiProxyService {
 
             pluginExecutionService.executeResponsePlugins(plugins, context);
 
-            circuitBreaker.recordSuccess(ctx.profile.baseUrl);
             trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
                 context.getResponseHeaders(), context.getResponseBody(),
                 System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
@@ -234,7 +233,6 @@ public class OpenAiProxyService {
 
             pluginExecutionService.executeResponsePlugins(plugins, context);
 
-            circuitBreaker.recordSuccess(ctx.profile.baseUrl);
             trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
                 context.getResponseHeaders(), context.getResponseBody(),
                 System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
@@ -293,7 +291,6 @@ public class OpenAiProxyService {
 
             pluginExecutionService.executeResponsePlugins(plugins, context);
 
-            circuitBreaker.recordSuccess(ctx.profile.baseUrl);
             trafficLogService.recordResponse(trafficLog, context.getResponseStatus(),
                 context.getResponseHeaders(), context.getResponseBody(),
                 System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());

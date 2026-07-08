@@ -4,6 +4,7 @@ import com.xenoamess.damning_proxy.entity.Plugin;
 import com.xenoamess.damning_proxy.plugin.PluginContext;
 import com.xenoamess.damning_proxy.plugin.PluginEngine;
 import com.xenoamess.damning_proxy.plugin.storage.PluginPackageStorage;
+import com.xenoamess.damning_proxy.util.Hashes;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -187,7 +188,7 @@ public class JavaScriptPluginEngine implements PluginEngine {
     }
 
     private String cacheKey(Plugin plugin, String script) {
-        return plugin.id + ":" + plugin.mode + ":" + script.hashCode();
+        return plugin.id + ":" + plugin.mode + ":" + Hashes.sha256Hex(script);
     }
 
     // Nashorn ScriptEngine instances are not thread-safe. Cache them per-thread

@@ -119,21 +119,25 @@ class TrafficLogServiceTest {
     @Test
     @Transactional
     void shouldDeleteLogsOlderThanCutoff() {
-        TrafficLog log = trafficLogService.recordRequest(
-            10L, "test-instance", 1L, "/v1/chat/completions", "POST",
-            Map.of(), Map.of("model", "gpt-4"),
-            "https://api.example.com", 30000, false
-        );
+        TrafficLog log = new TrafficLog();
+        log.instanceId = 10L;
+        log.instanceSlug = "test-instance";
+        log.profileId = 1L;
+        log.requestPath = "/v1/chat/completions";
+        log.requestMethod = "POST";
+        log.requestHeaders = "{}";
+        log.requestBody = "{\"model\":\"gpt-4\"}";
+        log.upstreamBaseUrl = "https://api.example.com";
+        log.timeoutMs = 30000;
+        log.streaming = false;
+        log.requestTime = LocalDateTime.now().minusDays(60);
+        log.persistAndFlush();
         assertNotNull(log.id);
-
-        TrafficLog found = TrafficLog.findById(log.id);
-        assertNotNull(found);
-        found.requestTime = LocalDateTime.now().minusDays(60);
 
         LocalDateTime cutoff = LocalDateTime.now().minusDays(30);
         long deleted = logRepository.deleteOlderThan(cutoff);
         assertTrue(deleted >= 1, "Expected at least 1 log deleted, got " + deleted);
-        assertTrue(TrafficLog.findByIdOptional(log.id).isEmpty());
+        assertEquals(0, TrafficLog.count("id", log.id));
     }
 
     @Transactional

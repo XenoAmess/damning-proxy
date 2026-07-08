@@ -84,6 +84,10 @@ class RateLimiterTest {
                 reads.incrementAndGet();
                 return settings;
             }
+
+            @Override
+            public void invalidateCache() {
+            }
         };
         return limiter;
     }

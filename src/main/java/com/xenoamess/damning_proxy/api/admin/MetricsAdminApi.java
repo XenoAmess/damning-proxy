@@ -31,8 +31,7 @@ public class MetricsAdminApi {
             @QueryParam("endTime") String endTime,
             @QueryParam("bucketMinutes") @DefaultValue("60") int bucketMinutes) {
         TimeRange range = resolveRange(startTime, endTime);
-        String fmt = formatForBucket(bucketMinutes);
-        return Response.ok(metricsService.timeSeries(range.start(), range.end(), fmt)).build();
+        return Response.ok(metricsService.timeSeries(range.start(), range.end(), bucketMinutes)).build();
     }
 
     @GET
@@ -78,18 +77,5 @@ public class MetricsAdminApi {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private String formatForBucket(int bucketMinutes) {
-        if (bucketMinutes <= 1) {
-            return "yyyy-MM-dd HH:mm";
-        }
-        if (bucketMinutes < 60) {
-            return "yyyy-MM-dd HH:mm";
-        }
-        if (bucketMinutes < 60 * 24) {
-            return "yyyy-MM-dd HH:00";
-        }
-        return "yyyy-MM-dd";
     }
 }

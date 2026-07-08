@@ -80,15 +80,15 @@ This plan is derived from a review of the current codebase, documentation, recen
 
 | # | Status | Category | Title | Description |
 |---|---|----------|-------|-------------|
-| N1-1 | — | Core proxy | Cache GlobalSettings in RateLimiter | `tryAcquire` currently queries H2 on every request. Cache `GlobalSettings` in memory and refresh on admin updates. |
-| N1-2 | — | Core proxy | Make metrics SQL dialect-neutral | Currently uses H2-only `FORMATDATETIME`. Rewrite with JPQL/HQL or dialect-neutral functions to support PostgreSQL/MySQL. |
-| N1-3 | — | Code quality | Bulk-delete aged logs | `deleteOlderThan` currently calls `listAll()` and iterates. Use `DELETE FROM TrafficLog WHERE requestTime < :cutoff`. |
+| N1-1 | ✓ | Core proxy | Cache GlobalSettings in RateLimiter | `tryAcquire` currently queries H2 on every request. Cache `GlobalSettings` in memory and refresh on admin updates. |
+| N1-2 | ✓ | Core proxy | Make metrics SQL dialect-neutral | Currently uses H2-only `FORMATDATETIME`. Rewrite with JPQL/HQL or dialect-neutral functions to support PostgreSQL/MySQL. |
+| N1-3 | ✓ | Code quality | Bulk-delete aged logs | `deleteOlderThan` currently calls `listAll()` and iterates. Use `DELETE FROM TrafficLog WHERE requestTime < :cutoff`. |
 | N1-4 | — | Code quality | Enforce strict slug validation | Currently only rejects blank slugs. Standardize on `^[a-zA-Z0-9_-]+$` for profiles, instances, plugins, and groups. |
-| N1-5 | — | Core proxy | Circuit breaker should only treat 2xx as success | Currently any exception-free response counts as success. Record success only for 2xx responses. |
-| N1-6 | — | Plugin system | Use SHA-256 for plugin cache keys | Currently uses `String.hashCode()`, which can collide. Switch to SHA-256 of script content. |
+| N1-5 | ✓ | Core proxy | Circuit breaker should only treat 2xx as success | Currently any exception-free response counts as success. Record success only for 2xx responses. |
+| N1-6 | ✓ | Plugin system | Use SHA-256 for plugin cache keys | Currently uses `String.hashCode()`, which can collide. Switch to SHA-256 of script content. |
 | N1-7 | — | Plugin system | Bound plugin execution thread pool | Currently uses `newCachedThreadPool()`. Replace with a bounded executor or Quarkus ManagedExecutor. |
 | N1-8 | — | Plugin system | Stream and limit upload/import sizes | Multipart and ZIP files are read fully into memory. Add max file size, max entry size, and streaming bounds. |
-| N1-9 | — | Code quality | Do not overwrite sample plugins on startup | `StartupMigration` currently overwrites sample scripts on every restart. Initialize sample data only once. |
+| N1-9 | ✓ | Code quality | Do not overwrite sample plugins on startup | `StartupMigration` currently overwrites sample scripts on every restart. Initialize sample data only once. |
 | N1-10 | — | Core proxy | Forward upstream error body | After retries are exhausted, the upstream body is discarded. Include it in the `WebApplicationException` response. |
 
 ### N2 — Documentation / Engineering Efficiency / Backlog

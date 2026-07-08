@@ -11,4 +11,6 @@ public interface GlobalSettingsRepository {
     Optional<GlobalSettings> findById(Long id);
 
     GlobalSettings getOrCreateSingleton();
+
+    void invalidateCache();
 }

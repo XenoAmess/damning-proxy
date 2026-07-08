@@ -2,7 +2,6 @@ package com.xenoamess.damning_proxy.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -54,7 +53,6 @@ public class TrafficLog extends PanacheEntityBase {
     @Column(name = "streaming")
     public Boolean streaming;
 
-    @CreationTimestamp
     @Column(name = "request_time")
     public LocalDateTime requestTime;
 

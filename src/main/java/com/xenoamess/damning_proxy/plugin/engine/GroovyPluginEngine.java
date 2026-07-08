@@ -25,6 +25,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import com.xenoamess.damning_proxy.util.Hashes;
 
 @ApplicationScoped
 public class GroovyPluginEngine implements PluginEngine {
@@ -149,6 +150,6 @@ public class GroovyPluginEngine implements PluginEngine {
     }
 
     private String cacheKey(Plugin plugin, String script) {
-        return plugin.id + ":" + plugin.mode + ":" + script.hashCode();
+        return plugin.id + ":" + plugin.mode + ":" + Hashes.sha256Hex(script);
     }
 }

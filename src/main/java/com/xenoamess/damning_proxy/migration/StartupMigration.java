@@ -204,40 +204,19 @@ public class StartupMigration {
 
     private Plugin ensureSamplePlugin(Plugin sample) {
         Plugin plugin = pluginRepository.findBySlug(sample.slug).orElse(null);
-        if (plugin == null) {
-            plugin = new Plugin();
-            plugin.sample = true;
+        if (plugin != null) {
+            return plugin;
         }
-        plugin.name = sample.name;
-        plugin.slug = sample.slug;
-        plugin.description = sample.description;
-        plugin.language = sample.language;
-        plugin.executionPhase = sample.executionPhase;
-        plugin.script = sample.script;
-        plugin.mode = sample.mode;
-        plugin.packagePath = sample.packagePath;
-        plugin.enabled = sample.enabled;
-        plugin.sample = true;
-        return pluginRepository.save(plugin);
+        sample.sample = true;
+        return pluginRepository.save(sample);
     }
 
     private PluginGroup ensureSampleGroup(String name, String slug, String description, Plugin plugin) {
         PluginGroup group = pluginGroupRepository.findBySlug(slug).orElse(null);
-        if (group == null) {
-            group = createGroup(name, slug, description, plugin);
-        } else {
-            group.name = name;
-            group.description = description;
-            group.enabled = true;
-            group.items.clear();
-            PluginGroupItem item = new PluginGroupItem();
-            item.group = group;
-            item.plugin = plugin;
-            item.orderIndex = 0;
-            item.priority = 0;
-            item.enabled = true;
-            group.items.add(item);
+        if (group != null) {
+            return group;
         }
+        group = createGroup(name, slug, description, plugin);
         return pluginGroupRepository.save(group);
     }
 
