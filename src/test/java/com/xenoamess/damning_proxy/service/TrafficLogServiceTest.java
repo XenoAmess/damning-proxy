@@ -8,6 +8,7 @@ import com.xenoamess.damning_proxy.repository.LogRepository;
 import com.xenoamess.damning_proxy.repository.ProfileRepository;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,9 @@ class TrafficLogServiceTest {
 
     @Inject
     InstanceRepository instanceRepository;
+
+    @Inject
+    EntityManager entityManager;
 
     @BeforeEach
     @Transactional
@@ -138,6 +142,52 @@ class TrafficLogServiceTest {
         long deleted = logRepository.deleteOlderThan(cutoff);
         assertTrue(deleted >= 1, "Expected at least 1 log deleted, got " + deleted);
         assertEquals(0, TrafficLog.count("id", log.id));
+    }
+
+    @Test
+    void shouldAppendPluginLogs() {
+        TrafficLog log = trafficLogService.recordRequest(
+            10L, "test-instance", 1L, "/v1/chat/completions", "POST",
+            Map.of(), Map.of("model", "gpt-4"),
+            "https://api.example.com", 30000, false
+        );
+
+        trafficLogService.appendPluginLog(log, "heartbeat: idle 30s");
+        trafficLogService.appendPluginLog(log, "heartbeat: idle 60s");
+
+        TrafficLog updated = logRepository.findById(log.id).orElseThrow();
+        assertNotNull(updated.pluginLogs);
+        assertTrue(updated.pluginLogs.contains("heartbeat: idle 30s"));
+        assertTrue(updated.pluginLogs.contains("heartbeat: idle 60s"));
+    }
+
+    @Test
+    @Transactional
+    void shouldPruneByCount() {
+        createTestLogs(5);
+        entityManager.flush();
+        entityManager.clear();
+        long before = TrafficLog.count();
+
+        logRepository.deleteOldest(3);
+
+        entityManager.flush();
+        entityManager.clear();
+        long after = TrafficLog.count();
+        assertEquals(Math.max(0, before - 3), after);
+    }
+
+    @Transactional
+    void createTestLogs(int count) {
+        for (int i = 0; i < count; i++) {
+            TrafficLog log = new TrafficLog();
+            log.instanceSlug = "prune-test";
+            log.requestMethod = "POST";
+            log.requestPath = "/v1/chat/completions";
+            log.requestTime = LocalDateTime.now().minusHours(i);
+            log.responseStatus = 200;
+            log.persistAndFlush();
+        }
     }
 
     @Transactional
