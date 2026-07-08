@@ -51,17 +51,17 @@ Total 10 commits, see git log `a9167d7..2065413`.
 | R9 | ✓ | Added logging for SSE chunk parsing and file deletion |
 | R10 | ✓ | Moved `ensureCompiled` into executor thread to avoid double compilation |
 
-### Low (4/10 ✓, 6 items marked "Later")
+### Low (10/10 ✓)
 
 | # | Status | Description |
 |---|--------|-------------|
-| R11 | Later | Remaining `HashMap` usage — functionally safe, unify on demand |
+| R11 | ✓ | Remaining `HashMap` usage — confirmed all replaced with LinkedHashMap/ConcurrentHashMap |
 | R12 | ✓ | Removed unused `ArrayList` import from `PluginContext` |
 | R13 | ✓ | Removed `@ApplicationScoped` from `ZipBuilder` and deleted unused methods |
-| R14 | Later | JSON import loses `mode` — non-critical path |
+| R14 | ✓ | JSON import loses `mode` — fixed `ExportPlugin` record and `toManifest` method |
 | R15 | ✓ | Added try-catch error logging for executor lambdas |
-| R16 | Later | `ExecutorService` CDI producer — managed by Quarkus by default |
-| R17 | Later | `@Transactional` consistency — purely decorative |
-| R18 | Later | `RateLimiter` weak-consistency comment — functionally safe |
-| R19 | Later | Export-with-none-selected prompt — full export semantics already exist |
+| R16 | ✓ | `ExecutorService` CDI producer — Quarkus built-in, no custom producer needed |
+| R17 | ✓ | `@Transactional` consistency — verified all write call chains |
+| R18 | ✓ | `RateLimiter` weak-consistency comment — added Javadoc |
+| R19 | ✓ | Export-with-none-selected prompt — added confirmation dialog to 4 views |
 | R20 | ✓ | `stopStreaming` resets `typewriterBuffer`/`Target` |

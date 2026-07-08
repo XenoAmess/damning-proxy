@@ -391,6 +391,17 @@ async function remove(id) {
 }
 
 async function exportPlugins() {
+  if (selectedIds.value.length === 0) {
+    try {
+      await ElMessageBox.confirm(
+        `未选择任何插件，将导出全部 ${plugins.value.length} 个插件。是否继续？`,
+        '导出确认',
+        { type: 'info', confirmButtonText: '导出全部', cancelButtonText: '取消' }
+      )
+    } catch {
+      return
+    }
+  }
   try {
     const res = await exportPluginsApi(selectedIds.value)
     const blob = new Blob([res.data], { type: 'application/zip' })

@@ -453,7 +453,7 @@ public class PluginAdminApi {
     }
 
     private ExportManifest toManifest(ExportPlugin ep) {
-        return new ExportManifest(ep.name, ep.slug, ep.description, ep.language, ep.executionPhase, Plugin.Mode.SINGLE_SCRIPT.name(), ep.enabled, null);
+        return new ExportManifest(ep.name, ep.slug, ep.description, ep.language, ep.executionPhase, ep.mode != null ? ep.mode : Plugin.Mode.SINGLE_SCRIPT.name(), ep.enabled, null);
     }
 
     private String toJson(Object value) {
@@ -495,7 +495,7 @@ public class PluginAdminApi {
     public record ExportRequest(List<Long> ids) {
     }
 
-    public record ExportPlugin(String name, String slug, String description, String language, String executionPhase, String script, boolean enabled) {
+    public record ExportPlugin(String name, String slug, String description, String language, String executionPhase, String mode, String script, boolean enabled) {
     }
 
     public record ExportManifest(String name, String slug, String description, String language, String executionPhase, String mode, boolean enabled, String packageFile) {

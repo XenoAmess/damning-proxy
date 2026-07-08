@@ -39,6 +39,12 @@
   - 新增 `vitest.config.js` 与 `ChatParamPanel.test.js` 示例测试。
   - package.json 增加 `pnpm test` / `pnpm test:watch` 脚本。
   - CI 工作流与测试/构建文档已同步增加前端测试步骤。
+- 收尾（checklist 6 项 "Later"）：
+  - R11/R16/R17：已验证 HashMap 残留（已全替换）、ExecutorService CDI（Quarkus 内置）、@Transactional 调用链（安全）。
+  - R14：修复 `PluginAdminApi.ExportPlugin` 缺少 `mode` 字段导致 JSON 导入强制 `SINGLE_SCRIPT`。
+  - R18：`RateLimiter` 新增 Javadoc 说明弱一致性与多实例限制。
+  - R19：4 个视图导出按钮在未选中项时弹出确认对话框提示全量导出数量。
+  - 新增 2 个前端组件单测（`ChatSessionSidebar`、`LogFilterBar`），共 3 文件 11 测试。
 
 ## 2026-07-07
 

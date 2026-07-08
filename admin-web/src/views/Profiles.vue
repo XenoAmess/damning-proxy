@@ -234,6 +234,17 @@ function validateJsonFields() {
 }
 
 async function exportProfiles() {
+  if (selectedIds.value.length === 0) {
+    try {
+      await ElMessageBox.confirm(
+        `未选择任何配置，将导出全部 ${profiles.value.length} 个配置。是否继续？`,
+        '导出确认',
+        { type: 'info', confirmButtonText: '导出全部', cancelButtonText: '取消' }
+      )
+    } catch {
+      return
+    }
+  }
   try {
     const res = await exportProfilesApi(selectedIds.value)
     exportJson(res.data, `damning_proxy_profiles_${formatTimestamp()}.json`)

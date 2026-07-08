@@ -225,6 +225,17 @@ async function remove(id) {
 }
 
 async function exportInstances() {
+  if (selectedIds.value.length === 0) {
+    try {
+      await ElMessageBox.confirm(
+        `未选择任何实例，将导出全部 ${instances.value.length} 个实例。是否继续？`,
+        '导出确认',
+        { type: 'info', confirmButtonText: '导出全部', cancelButtonText: '取消' }
+      )
+    } catch {
+      return
+    }
+  }
   try {
     const res = await exportInstancesApi(selectedIds.value)
     exportJson(res.data, `damning_proxy_instances_${formatTimestamp()}.json`)

@@ -307,6 +307,17 @@ async function remove(id) {
 }
 
 async function exportPluginGroups() {
+  if (selectedIds.value.length === 0) {
+    try {
+      await ElMessageBox.confirm(
+        `未选择任何插件组，将导出全部 ${groups.value.length} 个插件组。是否继续？`,
+        '导出确认',
+        { type: 'info', confirmButtonText: '导出全部', cancelButtonText: '取消' }
+      )
+    } catch {
+      return
+    }
+  }
   try {
     const res = await exportPluginGroupsApi(selectedIds.value)
     exportJson(res.data, `damning_proxy_plugin_groups_${formatTimestamp()}.json`)

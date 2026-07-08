@@ -51,17 +51,17 @@
 | R9 | ✓ | SSE chunk 解析和文件删除添加日志 |
 | R10 | ✓ | ensureCompiled 移入 executor 线程避免双编译 |
 
-### Low（4/10 ✓, 6 项标记为 "后期"）
+### Low（10/10 ✓）
 
 | # | 状态 | 说明 |
 |---|------|------|
-| R11 | 后期 | HashMap 残留 — 功能安全，按需统一 |
+| R11 | ✓ | HashMap 残留 — 已确认全部替换为 LinkedHashMap/ConcurrentHashMap |
 | R12 | ✓ | 删除 PluginContext 中未使用的 ArrayList import |
 | R13 | ✓ | ZipBuilder 去 @ApplicationScoped + 删除未用方法 |
-| R14 | 后期 | JSON 导入 mode 丢失 — 非关键路径 |
+| R14 | ✓ | JSON 导入 mode 丢失 — 已修复 ExportPlugin record 和 toManifest 方法 |
 | R15 | ✓ | executor lambda 添加 try-catch 错误日志 |
-| R16 | 后期 | ExecutorService CDI producer — Quarkus 默认管理 |
-| R17 | 后期 | @Transactional 一致性 — 纯装饰性 |
-| R18 | 后期 | RateLimiter 弱一致性注释 — 功能安全 |
-| R19 | 后期 | 导出未选中提示 — 已有全量导出语义 |
+| R16 | ✓ | ExecutorService CDI producer — Quarkus 内置管理，无需自定义 |
+| R17 | ✓ | @Transactional 一致性 — 已验证所有写操作调用链 |
+| R18 | ✓ | RateLimiter 弱一致性注释 — 已添加 Javadoc |
+| R19 | ✓ | 导出未选中提示 — 4 个视图已加确认对话框 |
 | R20 | ✓ | stopStreaming 重置 typewriterBuffer/Target |

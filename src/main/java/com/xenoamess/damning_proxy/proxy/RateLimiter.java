@@ -17,6 +17,25 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * In-memory sliding-window rate limiter backed by {@link ConcurrentHashMap}.
+ *
+ * <p><strong>Consistency model:</strong> the {@code buckets.compute(...)} +
+ * {@code counter.incrementAndGet()} pair in {@link #tryAcquire(String)} is not
+ * a single atomic operation.  Between the compute and the increment:
+ * <ul>
+ *   <li>another thread may observe or update the same bucket concurrently
+ *       (safe within a single JVM thanks to {@code ConcurrentHashMap} +
+ *       {@code AtomicInteger});</li>
+ *   <li>in a multi-instance deployment each replica maintains its own
+ *       independent {@code buckets} map, so the effective total rate limit
+ *       equals {@code configuredLimit × instanceCount}.  See
+ *       docs/06-ops/04-distributed-state.md for details.</li>
+ * </ul>
+ * The single-node safety combined with the multi-node caveat means the
+ * rate limiter is <em>functionally safe</em> but <em>not strictly
+ * accurate</em> outside a single-process deployment.
+ */
 @ApplicationScoped
 public class RateLimiter {
 

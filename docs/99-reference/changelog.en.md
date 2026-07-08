@@ -39,6 +39,12 @@
   - Added `vitest.config.js` and a sample `ChatParamPanel.test.js`.
   - Added `pnpm test` / `pnpm test:watch` scripts to `package.json`.
   - CI workflow and testing/build docs updated to include frontend test steps.
+- Cleanup (6 checklist "Later" items):
+  - R11/R16/R17: Verified HashMap residuals (all replaced), ExecutorService CDI (Quarkus built-in), @Transactional call chains (safe).
+  - R14: Fixed `PluginAdminApi.ExportPlugin` missing `mode` field, preventing JSON import from always forcing `SINGLE_SCRIPT`.
+  - R18: Added Javadoc to `RateLimiter` explaining weak consistency and multi-instance limitations.
+  - R19: Added confirmation dialog in 4 views when exporting with no items selected, showing the total count to export.
+  - Added 2 more frontend component tests (`ChatSessionSidebar`, `LogFilterBar`), totaling 3 files with 11 tests.
 
 ## 2026-07-07
 
