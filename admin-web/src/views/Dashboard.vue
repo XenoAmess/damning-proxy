@@ -2,6 +2,28 @@
   <div class="dashboard">
     <h2>Dashboard</h2>
 
+    <div class="time-range-bar">
+      <el-radio-group v-model="selectedRange" size="small" @change="onRangeChange">
+        <el-radio-button value="1h">1 小时</el-radio-button>
+        <el-radio-button value="6h">6 小时</el-radio-button>
+        <el-radio-button value="24h">24 小时</el-radio-button>
+        <el-radio-button value="7d">7 天</el-radio-button>
+        <el-radio-button value="custom">自定义</el-radio-button>
+      </el-radio-group>
+      <template v-if="selectedRange === 'custom'">
+        <el-date-picker
+          v-model="customRange"
+          type="datetimerange"
+          range-separator="至"
+          start-placeholder="开始"
+          end-placeholder="结束"
+          value-format="YYYY-MM-DDTHH:mm:ss"
+          style="margin-left: 12px"
+          @change="loadData"
+        />
+      </template>
+    </div>
+
     <div class="summary-cards">
       <el-card v-for="item in summaryCards" :key="item.label" class="summary-card">
         <div class="card-value">{{ item.value }}</div>
@@ -60,6 +82,33 @@ const summary = ref({})
 const timeSeries = ref([])
 const topInstances = ref([])
 const statusDistribution = ref([])
+const selectedRange = ref('24h')
+const customRange = ref([])
+
+function onRangeChange() {
+  if (selectedRange.value !== 'custom') {
+    loadData()
+  }
+}
+
+function getTimeRange() {
+  const now = new Date()
+  switch (selectedRange.value) {
+    case '1h':
+      return { start: new Date(now - 3600000), end: now }
+    case '6h':
+      return { start: new Date(now - 6 * 3600000), end: now }
+    case '7d':
+      return { start: new Date(now - 7 * 86400000), end: now }
+    case 'custom':
+      if (customRange.value && customRange.value.length === 2) {
+        return { start: new Date(customRange.value[0]), end: new Date(customRange.value[1]) }
+      }
+      return { start: new Date(now - 86400000), end: now }
+    default:
+      return { start: new Date(now - 86400000), end: now }
+  }
+}
 
 const summaryCards = computed(() => {
   return [
@@ -122,8 +171,7 @@ const statusOption = computed(() => {
 })
 
 async function loadData() {
-  const end = new Date()
-  const start = new Date(end.getTime() - 24 * 60 * 60 * 1000)
+  const { start, end } = getTimeRange()
   const startStr = start.toISOString().slice(0, 19)
   const endStr = end.toISOString().slice(0, 19)
   const params = { startTime: startStr, endTime: endStr }
@@ -147,6 +195,12 @@ onMounted(loadData)
 <style scoped>
 .dashboard {
   padding: 20px;
+}
+
+.time-range-bar {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
 }
 
 .summary-cards {

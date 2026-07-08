@@ -3,6 +3,7 @@
     <div class="toolbar">
       <el-button type="primary" @click="openDialog()"> 新增实例 </el-button>
       <el-button @click="exportInstances"> 导出实例 </el-button>
+      <el-button type="danger" @click="bulkDelete"> 批量删除 </el-button>
       <el-upload
         action="#"
         :auto-upload="false"
@@ -222,6 +223,34 @@ async function remove(id) {
       ElMessage.error('删除失败')
     }
   }
+}
+
+async function bulkDelete() {
+  if (selectedIds.value.length === 0) {
+    ElMessage.warning('请先选择要删除的实例')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确定删除选中的 ${selectedIds.value.length} 个实例？`,
+      '批量删除',
+      { type: 'warning' }
+    )
+  } catch {
+    return
+  }
+  let deleted = 0
+  for (const id of selectedIds.value) {
+    try {
+      await deleteInstance(id)
+      deleted++
+    } catch {
+      // continue
+    }
+  }
+  ElMessage.success(`已删除 ${deleted} 个实例`)
+  selectedIds.value = []
+  await load()
 }
 
 async function exportInstances() {
