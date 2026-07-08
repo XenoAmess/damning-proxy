@@ -11,6 +11,14 @@ Code location: `src/main/java/com/xenoamess/damning_proxy/api/admin/`
 
 ---
 
+## Common Conventions
+
+- `slug` fields follow the `^[a-zA-Z0-9_-]+$` regex and are validated during import.
+- `201` for successful creation, `200` for successful GET/PUT, `204` for successful DELETE.
+- `400` for parameter errors, `404` for missing resources, `409` for slug conflicts.
+
+---
+
 ## Upstream Profiles /api/profiles
 
 `src/main/java/com/xenoamess/damning_proxy/api/admin/ProfileAdminApi.java:16`
@@ -138,28 +146,100 @@ Response:
 |---|---|---|
 | `GET` | `/api/plugins` | List all Plugins |
 | `GET` | `/api/plugins/{id}` | Get a single Plugin |
-| `POST` | `/api/plugins` | Create a Plugin |
-| `PUT` | `/api/plugins/{id}` | Update a Plugin |
+| `POST` | `/api/plugins` | Create a Plugin (`multipart/form-data`) |
+| `PUT` | `/api/plugins/{id}` | Update a Plugin (`multipart/form-data`) |
 | `DELETE` | `/api/plugins/{id}` | Delete a Plugin |
+| `GET` | `/api/plugins/{id}/entries` | List files inside the plugin ZIP package |
+| `GET` | `/api/plugins/{id}/revisions` | List script revision history |
+| `POST` | `/api/plugins/{id}/revisions/{revisionId}/rollback` | Roll back to a specific revision |
+| `GET` | `/api/plugins/template` | Download a plugin template ZIP |
 | `POST` | `/api/plugins/export` | Export Plugins (by `ids` or all) |
-| `POST` | `/api/plugins/import` | Import Plugins |
+| `POST` | `/api/plugins/import` | Import Plugins (JSON or ZIP) |
 
-### Create/Update Request Body Example
+### Create/Update Request Body Fields (`multipart/form-data`)
 
-```json
-{
-  "name": "Model Mapper",
-  "description": "Rewrite model name",
-  "language": "JS",
-  "script": "var body = context.getRequestBody(); body.model = 'gpt-4o'; context.setRequestBody(body);",
-  "executionPhase": "REQUEST",
-  "enabled": true
-}
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `name` | String | Required | Display name |
+| `slug` | String | Required, unique | URL-friendly identifier |
+| `description` | String | Optional | Description |
+| `language` | String | Required | `GROOVY` or `JS` |
+| `executionPhase` | String | Required | `REQUEST`, `RESPONSE`, or `BOTH` |
+| `mode` | String | Default `SINGLE_SCRIPT` | `SINGLE_SCRIPT` or `ZIP_PACKAGE` |
+| `script` | String | Optional, max 10000 chars | Script content; required for `SINGLE_SCRIPT` mode |
+| `enabled` | boolean | Default true | Whether enabled |
+| `packageFile` | File | Optional | ZIP package for `ZIP_PACKAGE` mode; max `damning-proxy.plugin.zip.max-size-bytes` (default 10 MiB) |
+
+Create example (cURL):
+
+```bash
+curl -X POST http://localhost:12360/api/plugins \
+  -F "name=Model Mapper" \
+  -F "slug=model-mapper" \
+  -F "language=JS" \
+  -F "executionPhase=REQUEST" \
+  -F "mode=SINGLE_SCRIPT" \
+  -F "script=context.getRequestBody().model='gpt-4o';" \
+  -F "enabled=true"
+```
+
+ZIP package mode example:
+
+```bash
+curl -X POST http://localhost:12360/api/plugins \
+  -F "name=ZIP Plugin" \
+  -F "slug=zip-plugin" \
+  -F "language=GROOVY" \
+  -F "executionPhase=BOTH" \
+  -F "mode=ZIP_PACKAGE" \
+  -F "enabled=true" \
+  -F "packageFile=@plugin.zip"
 ```
 
 - `language` values: `GROOVY` or `JS`.
 - `executionPhase` values: `REQUEST`, `RESPONSE`, `BOTH`.
 - `script` maximum length is 10000.
+
+### Plugin ZIP Package Entries
+
+`GET /api/plugins/{id}/entries`
+
+Returns the list of file names inside the plugin ZIP package:
+
+```json
+["main.groovy", "assets/info.txt"]
+```
+
+### Script Revisions
+
+`GET /api/plugins/{id}/revisions`
+
+Returns the script revision history:
+
+```json
+[
+  {
+    "id": 1,
+    "pluginId": 1,
+    "script": "...",
+    "createdAt": "2026-07-08T10:00:00"
+  }
+]
+```
+
+Updating a plugin automatically snapshots the old script as a revision.
+
+### Rollback Script
+
+`POST /api/plugins/{id}/revisions/{revisionId}/rollback`
+
+Rolls the plugin script back to the specified revision. The current script is snapshotted first so the rollback can be undone.
+
+### Download Plugin Template
+
+`GET /api/plugins/template?language=JS&mode=ZIP_PACKAGE`
+
+Returns a ZIP template package. Defaults are `language=GROOVY` and `mode=SINGLE_SCRIPT`.
 
 ### Export/Import Examples
 
@@ -173,7 +253,9 @@ Response:
 
 Returns an array of plugins.
 
-`POST /api/plugins/import`
+#### JSON Import
+
+`POST /api/plugins/import` (`Content-Type: application/json`)
 
 ```json
 [
@@ -189,6 +271,17 @@ Returns an array of plugins.
 ```
 
 - Deduplicated by `script`; if it already exists, it is skipped. Returns `{ "imported": n, "skipped": n }`.
+
+#### ZIP Import
+
+`POST /api/plugins/import` (`Content-Type: application/zip`)
+
+Upload the ZIP produced by `/api/plugins/export`, which contains `manifest.json` and plugin packages.
+
+- Max ZIP size: `damning-proxy.plugin.import.max-zip-size` (default 50 MiB)
+- Max entry size: `damning-proxy.plugin.import.max-entry-size` (default 10 MiB)
+- Max entries: `damning-proxy.plugin.import.max-entries` (default 100)
+- Returns: `{ "imported": n, "skipped": n }`
 
 ---
 
@@ -284,6 +377,61 @@ Response:
 - During export, `pluginScript` is used in place of the local `pluginId` to facilitate cross-environment migration.
 - During import, local plugins are looked up by `pluginScript`; items whose plugin cannot be found are ignored.
 - If a `slug` already exists, the entry is skipped. Returns `{ "imported": n, "skipped": n }`.
+
+---
+
+## Plugin Debug /api/plugins/{id}/dry-run
+
+`src/main/java/com/xenoamess/damning_proxy/api/admin/PluginDebugApi.java:25`
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/plugins/{id}/dry-run` | Run a plugin once in isolation |
+
+### Request Body
+
+```json
+{
+  "phase": "REQUEST",
+  "instanceId": 1,
+  "requestBody": { "model": "gpt-4", "messages": [{ "role": "user", "content": "hi" }] },
+  "requestHeaders": { "X-Custom": "value" },
+  "responseBody": { "choices": [] },
+  "responseHeaders": {},
+  "responseStatus": 200
+}
+```
+
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `phase` | String | Required | `REQUEST`, `RESPONSE`, or `STREAM_CHUNK` |
+| `instanceId` | Long | Optional | Load the associated Profile's custom headers/body |
+| `requestBody` | Object | Optional | Request body |
+| `requestHeaders` | Object | Optional | Request headers |
+| `responseBody` | Object | Optional | Response body |
+| `responseHeaders` | Object | Optional | Response headers |
+| `responseStatus` | Integer | Optional | Response status code |
+
+### Response
+
+```json
+{
+  "pluginName": "Model Mapper",
+  "phase": "REQUEST",
+  "pluginLogs": ["JS plugin executed, messages: 1"],
+  "requestBody": { "model": "gpt-4o", "messages": [...] },
+  "requestHeaders": { "Authorization": "Bearer ..." },
+  "responseBody": null,
+  "responseHeaders": {},
+  "responseStatus": null,
+  "stopped": false,
+  "returned": false,
+  "input": { "model": "gpt-4", "messages": [...] },
+  "output": { "model": "gpt-4o", "messages": [...] },
+  "error": false,
+  "errorMessage": null
+}
+```
 
 ---
 
@@ -415,6 +563,36 @@ Response:
 - Time parameters format: `YYYY-MM-DDTHH:mm:ss`.
 - Defaults to the last 24 hours when omitted.
 - `bucketMinutes` defaults to 60 (hourly buckets); switches to daily buckets when spanning multiple days.
+
+---
+
+## Rate-Limit Settings /api/settings/rate-limit
+
+`src/main/java/com/xenoamess/damning_proxy/api/admin/GlobalSettingsAdminApi.java:11`
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/settings/rate-limit` | Get current rate-limit settings |
+| `PUT` | `/api/settings/rate-limit` | Update rate-limit settings |
+
+### Request/Response Body
+
+```json
+{
+  "id": 1,
+  "maxRequestsPerWindow": 100,
+  "windowSeconds": 60,
+  "createdAt": "2026-07-08T10:00:00",
+  "updatedAt": "2026-07-08T10:00:00"
+}
+```
+
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `maxRequestsPerWindow` | Integer | Required, 1-1000000 | Max requests allowed in each window |
+| `windowSeconds` | Integer | Required, 1-86400 | Rate-limit window in seconds |
+
+Because global settings are cached, updates may take up to `damning-proxy.global-settings.cache-ttl-seconds` (default 60 s) to take effect.
 
 ---
 

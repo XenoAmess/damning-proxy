@@ -44,6 +44,7 @@ This knowledge base is the documentation hub for [damning-proxy (大明proxy)](.
 - [01 Traffic Logging](06-ops/01-logging.en.md)
 - [02 Health Checks & Monitoring](06-ops/02-monitoring.en.md)
 - [03 Data Migration](06-ops/03-data-migration.en.md)
+- [04 Distributed-State Limitation](06-ops/04-distributed-state.en.md)
 
 ### 99 Reference
 - [Changelog](99-reference/changelog.en.md)

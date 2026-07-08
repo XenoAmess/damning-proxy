@@ -44,6 +44,7 @@
 - [01 流量日志](06-ops/01-logging.md) | [English](06-ops/01-logging.en.md)
 - [02 健康检查与监控](06-ops/02-monitoring.md) | [English](06-ops/02-monitoring.en.md)
 - [03 数据迁移](06-ops/03-data-migration.md) | [English](06-ops/03-data-migration.en.md)
+- [04 分布式状态限制](06-ops/04-distributed-state.md) | [English](06-ops/04-distributed-state.en.md)
 
 ### 99 参考资料
 - [变更日志](99-reference/changelog.md) | [English](99-reference/changelog.en.md)

@@ -95,13 +95,13 @@ This plan is derived from a review of the current codebase, documentation, recen
 
 | # | Status | Category | Title | Description |
 |---|---|----------|-------|-------------|
-| N2-1 | — | Documentation | Audit docs against code | README/data model/flow diagrams are missing `GlobalSettings`, `PluginScriptRevision`, audio endpoints, metrics, etc. |
+| N2-1 | — | Documentation | Audit docs against code | README/data model/flow diagrams are missing `GlobalSettings`, `PluginScriptRevision`, audio endpoints, metrics, etc. Admin API docs completed. |
 | N2-2 | — | Admin UI | Add admin-web frontend tests | Introduce Vitest + Vue Test Utils for critical views. |
 | N2-3 | — | Code quality | Standardize frontend lockfile | Both `package-lock.json` and `pnpm-lock.yaml` exist. Standardize on one and remove the other. |
-| N2-4 | — | Plugin system | Reuse ThreadLocal engine cache in JS engine | Currently creates a new Nashorn engine per execution. Reuse the ThreadLocal cache. |
-| N2-5 | — | Operations | Document distributed-state limitation | Circuit breaker / rate limiter state is in-memory only; document multi-replica limitation or provide optional Redis extension. |
-| N2-6 | — | Operations | Cache Maven dependencies in Dockerfile | Add a `mvn dependency:go-offline` layer to avoid re-downloading dependencies on every build. |
-| N2-7 | — | Documentation | Complete Admin API docs | Missing revisions, settings, plugin entries, rate-limit headers, etc. |
+| N2-4 | ✓ | Plugin system | Reuse ThreadLocal engine cache in JS engine | Currently creates a new Nashorn engine per execution. Reuse the ThreadLocal cache. |
+| N2-5 | ✓ | Operations | Document distributed-state limitation | Circuit breaker / rate limiter state is in-memory only; document multi-replica limitation or provide optional Redis extension. |
+| N2-6 | ✓ | Operations | Cache Maven dependencies in Dockerfile | Add a `mvn dependency:go-offline` layer to avoid re-downloading dependencies on every build. |
+| N2-7 | ✓ | Documentation | Complete Admin API docs | Missing revisions, settings, plugin entries, rate-limit headers, etc. |
 
 ### Suggested Execution Order
 

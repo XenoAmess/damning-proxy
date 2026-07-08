@@ -11,6 +11,14 @@
 
 ---
 
+## 通用约定
+
+- `slug` 字段格式统一为 `^[a-zA-Z0-9_-]+$`（字母、数字、下划线、短横线），导入时同样校验。
+- 创建成功返回 `201`，更新成功返回 `200`，删除成功返回 `204`。
+- 参数错误返回 `400`，资源不存在返回 `404`，`slug` 冲突返回 `409`。
+
+---
+
 ## 上游配置 /api/profiles
 
 `src/main/java/com/xenoamess/damning_proxy/api/admin/ProfileAdminApi.java:16`
@@ -138,28 +146,100 @@ create() 和 update() 接受 `ProfileForm` record（而非 `ProxyProfile` 实体
 |---|---|---|
 | `GET` | `/api/plugins` | 列出所有 Plugin |
 | `GET` | `/api/plugins/{id}` | 获取单个 Plugin |
-| `POST` | `/api/plugins` | 创建 Plugin |
-| `PUT` | `/api/plugins/{id}` | 更新 Plugin |
+| `POST` | `/api/plugins` | 创建 Plugin（`multipart/form-data`） |
+| `PUT` | `/api/plugins/{id}` | 更新 Plugin（`multipart/form-data`） |
 | `DELETE` | `/api/plugins/{id}` | 删除 Plugin |
+| `GET` | `/api/plugins/{id}/entries` | 列出 ZIP 包内文件 |
+| `GET` | `/api/plugins/{id}/revisions` | 列出脚本历史版本 |
+| `POST` | `/api/plugins/{id}/revisions/{revisionId}/rollback` | 回滚到指定历史版本 |
+| `GET` | `/api/plugins/template` | 下载插件模板 ZIP |
 | `POST` | `/api/plugins/export` | 导出 Plugin（按 `ids` 或全部） |
-| `POST` | `/api/plugins/import` | 导入 Plugin |
+| `POST` | `/api/plugins/import` | 导入 Plugin（JSON 或 ZIP） |
 
-### 创建/更新请求体示例
+### 创建/更新请求体字段（`multipart/form-data`）
 
-```json
-{
-  "name": "Model Mapper",
-  "description": "Rewrite model name",
-  "language": "JS",
-  "script": "var body = context.getRequestBody(); body.model = 'gpt-4o'; context.setRequestBody(body);",
-  "executionPhase": "REQUEST",
-  "enabled": true
-}
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| `name` | String | 非空 | 显示名称 |
+| `slug` | String | 非空，唯一 | URL 友好标识 |
+| `description` | String | 可空 | 描述 |
+| `language` | String | 非空 | `GROOVY` 或 `JS` |
+| `executionPhase` | String | 非空 | `REQUEST`、`RESPONSE`、`BOTH` |
+| `mode` | String | 默认 `SINGLE_SCRIPT` | `SINGLE_SCRIPT` 单脚本 或 `ZIP_PACKAGE` ZIP 包 |
+| `script` | String | 可空，最大 10000 字符 | 脚本内容；`SINGLE_SCRIPT` 模式必填 |
+| `enabled` | boolean | 默认 true | 是否启用 |
+| `packageFile` | File | 可空 | `ZIP_PACKAGE` 模式上传的 ZIP 包；最大 `damning-proxy.plugin.zip.max-size-bytes`（默认 10 MiB） |
+
+创建示例（cURL）：
+
+```bash
+curl -X POST http://localhost:12360/api/plugins \
+  -F "name=Model Mapper" \
+  -F "slug=model-mapper" \
+  -F "language=JS" \
+  -F "executionPhase=REQUEST" \
+  -F "mode=SINGLE_SCRIPT" \
+  -F "script=context.getRequestBody().model='gpt-4o';" \
+  -F "enabled=true"
+```
+
+ZIP 包模式示例：
+
+```bash
+curl -X POST http://localhost:12360/api/plugins \
+  -F "name=ZIP Plugin" \
+  -F "slug=zip-plugin" \
+  -F "language=GROOVY" \
+  -F "executionPhase=BOTH" \
+  -F "mode=ZIP_PACKAGE" \
+  -F "enabled=true" \
+  -F "packageFile=@plugin.zip"
 ```
 
 - `language` 取值：`GROOVY` 或 `JS`。
 - `executionPhase` 取值：`REQUEST`、`RESPONSE`、`BOTH`。
 - `script` 最大长度 10000。
+
+### 插件 ZIP 包文件列表
+
+`GET /api/plugins/{id}/entries`
+
+返回 ZIP 包内所有条目名列表：
+
+```json
+["main.groovy", "assets/info.txt"]
+```
+
+### 脚本历史版本
+
+`GET /api/plugins/{id}/revisions`
+
+返回脚本历史版本数组：
+
+```json
+[
+  {
+    "id": 1,
+    "pluginId": 1,
+    "script": "...",
+    "createdAt": "2026-07-08T10:00:00"
+  }
+]
+```
+
+更新插件时，旧脚本会被自动快照为一条 revision。
+
+### 回滚脚本
+
+`POST /api/plugins/{id}/revisions/{revisionId}/rollback`
+
+将当前脚本回滚到指定 revision，并先对当前脚本做快照，便于撤销回滚。
+
+### 下载插件模板
+
+`GET /api/plugins/template?language=JS&mode=ZIP_PACKAGE`
+
+返回一个 ZIP 模板包，默认 `language=GROOVY`、`mode=SINGLE_SCRIPT`。
 
 ### 导出/导入示例
 
@@ -173,7 +253,9 @@ create() 和 update() 接受 `ProfileForm` record（而非 `ProxyProfile` 实体
 
 返回插件数组。
 
-`POST /api/plugins/import`
+#### JSON 导入
+
+`POST /api/plugins/import`（`Content-Type: application/json`）
 
 ```json
 [
@@ -189,6 +271,17 @@ create() 和 update() 接受 `ProfileForm` record（而非 `ProxyProfile` 实体
 ```
 
 - 按 `script` 去重，已存在则跳过，返回 `{ "imported": n, "skipped": n }`。
+
+#### ZIP 导入
+
+`POST /api/plugins/import`（`Content-Type: application/zip`）
+
+上传由 `/api/plugins/export` 生成的 ZIP 包，内含 `manifest.json` 与各插件包。
+
+- 单文件大小限制：`damning-proxy.plugin.import.max-zip-size`（默认 50 MiB）
+- 单条目大小限制：`damning-proxy.plugin.import.max-entry-size`（默认 10 MiB）
+- 条目数量限制：`damning-proxy.plugin.import.max-entries`（默认 100）
+- 返回：`{ "imported": n, "skipped": n }`
 
 ---
 
@@ -284,6 +377,61 @@ create() 和 update() 接受 `ProfileForm` record（而非 `ProxyProfile` 实体
 - 导出时使用 `pluginScript` 代替本地 `pluginId`，便于跨环境迁移。
 - 导入时按 `pluginScript` 查找本地插件，找不到的 item 会被忽略。
 - `slug` 已存在则跳过，返回 `{ "imported": n, "skipped": n }`。
+
+---
+
+## 插件调试 /api/plugins/{id}/dry-run
+
+`src/main/java/com/xenoamess/damning_proxy/api/admin/PluginDebugApi.java:25`
+
+| Method | Path | 说明 |
+|---|---|---|
+| `POST` | `/api/plugins/{id}/dry-run` | 对指定插件执行一次模拟运行 |
+
+### 请求体
+
+```json
+{
+  "phase": "REQUEST",
+  "instanceId": 1,
+  "requestBody": { "model": "gpt-4", "messages": [{ "role": "user", "content": "hi" }] },
+  "requestHeaders": { "X-Custom": "value" },
+  "responseBody": { "choices": [] },
+  "responseHeaders": {},
+  "responseStatus": 200
+}
+```
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| `phase` | String | 必填 | `REQUEST`、`RESPONSE`、`STREAM_CHUNK` |
+| `instanceId` | Long | 可空 | 指定 Instance 以加载对应 Profile 的自定义 header/body |
+| `requestBody` | Object | 可空 | 请求体 |
+| `requestHeaders` | Object | 可空 | 请求头 |
+| `responseBody` | Object | 可空 | 响应体 |
+| `responseHeaders` | Object | 可空 | 响应头 |
+| `responseStatus` | Integer | 可空 | 响应状态码 |
+
+### 响应
+
+```json
+{
+  "pluginName": "Model Mapper",
+  "phase": "REQUEST",
+  "pluginLogs": ["JS plugin executed, messages: 1"],
+  "requestBody": { "model": "gpt-4o", "messages": [...] },
+  "requestHeaders": { "Authorization": "Bearer ..." },
+  "responseBody": null,
+  "responseHeaders": {},
+  "responseStatus": null,
+  "stopped": false,
+  "returned": false,
+  "input": { "model": "gpt-4", "messages": [...] },
+  "output": { "model": "gpt-4o", "messages": [...] },
+  "error": false,
+  "errorMessage": null
+}
+```
 
 ---
 
@@ -415,6 +563,36 @@ curl -X POST "http://localhost:12360/api/admin/database/restore?path=/home/xxx/.
 - 时间参数格式：`YYYY-MM-DDTHH:mm:ss`。
 - 省略时间参数时，默认查询最近 24 小时。
 - `bucketMinutes` 默认值 60，按小时聚合；跨天时按天聚合。
+
+---
+
+## 限流设置 /api/settings/rate-limit
+
+`src/main/java/com/xenoamess/damning_proxy/api/admin/GlobalSettingsAdminApi.java:11`
+
+| Method | Path | 说明 |
+|---|---|---|
+| `GET` | `/api/settings/rate-limit` | 获取当前限流设置 |
+| `PUT` | `/api/settings/rate-limit` | 更新限流设置 |
+
+### 请求/响应体
+
+```json
+{
+  "id": 1,
+  "maxRequestsPerWindow": 100,
+  "windowSeconds": 60,
+  "createdAt": "2026-07-08T10:00:00",
+  "updatedAt": "2026-07-08T10:00:00"
+}
+```
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| `maxRequestsPerWindow` | Integer | 必填，1-1000000 | 每个时间窗口内允许的最大请求数 |
+| `windowSeconds` | Integer | 必填，1-86400 | 限流时间窗口秒数 |
+
+更新后，由于全局设置缓存，新规则最多延迟 `damning-proxy.global-settings.cache-ttl-seconds`（默认 60 秒）生效。
 
 ---
 

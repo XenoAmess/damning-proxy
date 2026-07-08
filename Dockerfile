@@ -11,6 +11,10 @@ WORKDIR /workspace
 # Copy Maven descriptor first to leverage dependency cache when possible.
 COPY pom.xml ./
 
+# Download Maven dependencies before copying the full source so that
+# subsequent code changes do not invalidate the already-populated layer.
+RUN mvn dependency:go-offline
+
 # Copy frontend descriptors and install dependencies with pnpm.
 COPY admin-web/package.json admin-web/pnpm-lock.yaml ./admin-web/
 RUN cd admin-web && pnpm install --frozen-lockfile

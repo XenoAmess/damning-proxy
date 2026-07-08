@@ -2,8 +2,30 @@
 
 # Changelog
 
-> Last updated: 2026-07-07
+> Last updated: 2026-07-08
 > Source version: current workspace
+
+## 2026-07-08
+
+- Explicitly dropped **GraalVM Native Image** support: the dynamic Groovy / JavaScript script engines conflict with the native-image closed-world assumption, so the related configuration and plugins have been removed.
+- Performance improvements:
+  - `GlobalSettings` is now cached in memory; `RateLimiter` no longer queries H2 on every request.
+  - `MetricsService.timeSeries()` was rewritten to use JPQL + Java-side bucketing, making it portable across databases (PostgreSQL/MySQL).
+  - `TrafficLog` cleanup is now batched, avoiding performance issues with large log tables.
+- Correctness fixes:
+  - The circuit breaker now records upstream responses as success only for 2xx status codes; 4xx/5xx are counted as failures.
+  - Removed `@CreationTimestamp` from `TrafficLog.requestTime` so manually set timestamps are not overwritten.
+- Plugin system improvements:
+  - Plugin cache keys now use SHA-256 instead of `String.hashCode()` to avoid collisions.
+  - The plugin execution thread pool is now a bounded `ThreadPoolExecutor` (configurable via `damning-proxy.plugin.execution.pool-size`), preventing unbounded thread growth.
+  - Plugin uploads and ZIP imports now enforce size and entry-count limits (`BoundedInputStream`).
+- Code quality:
+  - `slug` values are now strictly validated with `^[a-zA-Z0-9_-]+$` across profiles, instances, plugins, groups, and imports.
+  - `StartupMigration` initializes sample plugins/groups only once and no longer overwrites existing data.
+- Documentation:
+  - Added "Distributed-State Limitation" operations doc explaining that circuit breaker, rate limiter, plugin cache, and global settings cache are in-process only and not shared across replicas.
+  - Completed Admin API docs: added `/api/settings/rate-limit`, plugin dry-run, template, revisions, rollback, entries, and ZIP import endpoints.
+  - Updated Dockerfile with a `mvn dependency:go-offline` layer to reuse Maven dependency cache.
 
 ## 2026-07-07
 

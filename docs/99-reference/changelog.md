@@ -2,8 +2,30 @@
 
 # 变更日志
 
-> 最后更新：2026-07-07
+> 最后更新：2026-07-08
 > 对应源码版本：当前工作区
+
+## 2026-07-08
+
+- 明确声明**不支持 GraalVM Native Image**：Groovy / JavaScript 动态脚本引擎与 native-image 的闭世界假设冲突，已移除相关配置与插件。
+- 性能优化：
+  - `GlobalSettings` 在内存中缓存，`RateLimiter` 不再每次请求都查 H2。
+  - `MetricsService.timeSeries()` 改写为 JPQL + Java 端分桶，支持跨数据库（PostgreSQL/MySQL）迁移。
+  - `TrafficLog` 按天清理改为批量删除，避免高日志量下性能问题。
+- 正确性修复：
+  - 熔断器仅把上游 2xx 响应记为成功，4xx/5xx 记为失败。
+  - 移除 `TrafficLog.requestTime` 的 `@CreationTimestamp`，避免手动设置的时间被覆盖。
+- 插件系统改进：
+  - 插件缓存 key 从 `String.hashCode()` 改为 SHA-256 摘要，避免碰撞。
+  - 插件执行线程池改为有界 `ThreadPoolExecutor`（可配置 `damning-proxy.plugin.execution.pool-size`），防止无限线程增长。
+  - 插件上传与 ZIP 导入增加大小与条目数量限制（`BoundedInputStream`）。
+- 代码质量：
+  - `slug` 统一使用 `^[a-zA-Z0-9_-]+$` 严格校验，覆盖 profile / instance / plugin / group 的创建与导入。
+  - `StartupMigration` 样本插件/插件组只初始化一次，不再覆盖已有数据。
+- 文档：
+  - 新增《分布式状态限制》运维文档，说明熔断/限流/插件缓存/全局设置缓存仅内存内有效，多副本不共享。
+  - 补齐 Admin API 文档：新增 `/api/settings/rate-limit`、插件 dry-run、模板、revisions、rollback、entries、ZIP 导入等接口说明。
+  - 更新 Dockerfile：增加 `mvn dependency:go-offline` 层以复用 Maven 依赖缓存。
 
 ## 2026-07-07
 
