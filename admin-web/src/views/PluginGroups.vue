@@ -18,7 +18,7 @@
     <ImportPreviewDialog ref="previewDialog" />
     <el-table v-loading="loading" :data="groups" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
-      <el-table-column prop="id" label="ID" width="60" />
+      <el-table-column prop="id" label="ID" width="60" sortable />
       <el-table-column prop="name" label="名称" min-width="120" />
       <el-table-column prop="description" label="描述" min-width="160" show-overflow-tooltip />
       <el-table-column prop="slug" label="标识" />
