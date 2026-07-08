@@ -26,6 +26,9 @@
   - 新增《分布式状态限制》运维文档，说明熔断/限流/插件缓存/全局设置缓存仅内存内有效，多副本不共享。
   - 补齐 Admin API 文档：新增 `/api/settings/rate-limit`、插件 dry-run、模板、revisions、rollback、entries、ZIP 导入等接口说明。
   - 更新 Dockerfile：增加 `mvn dependency:go-offline` 层以复用 Maven 依赖缓存。
+- 工程效率：
+  - 统一前端锁文件为 `pnpm-lock.yaml`，删除 `package-lock.json`。
+  - Maven `frontend-maven-plugin` 改用 Node 22.14 + pnpm 11.8，本地构建与 CI 使用同一套工具链。
 
 ## 2026-07-07
 

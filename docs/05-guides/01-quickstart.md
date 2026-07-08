@@ -20,7 +20,7 @@ mvn -version   # 需要 Maven 3.9+
 mvn quarkus:dev
 ```
 
-首次启动会自动下载 Node/npm 并构建前端，耗时约 1-3 分钟。
+首次启动会自动下载 Node/pnpm 并构建前端，耗时约 1-3 分钟。
 
 ### 3. 打开管理后台
 

@@ -26,6 +26,9 @@
   - Added "Distributed-State Limitation" operations doc explaining that circuit breaker, rate limiter, plugin cache, and global settings cache are in-process only and not shared across replicas.
   - Completed Admin API docs: added `/api/settings/rate-limit`, plugin dry-run, template, revisions, rollback, entries, and ZIP import endpoints.
   - Updated Dockerfile with a `mvn dependency:go-offline` layer to reuse Maven dependency cache.
+- Engineering efficiency:
+  - Standardized frontend lockfile on `pnpm-lock.yaml`; removed `package-lock.json`.
+  - Switched Maven `frontend-maven-plugin` to Node 22.14 + pnpm 11.8, aligning local builds with CI.
 
 ## 2026-07-07
 

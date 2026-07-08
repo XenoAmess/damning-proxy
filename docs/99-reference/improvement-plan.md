@@ -97,7 +97,7 @@
 |---|---|------|------|------|
 | N2-1 | — | 文档 | 文档与代码同步审计 | README/数据模型/流程图缺 `GlobalSettings`、`PluginScriptRevision`、audio 端点、metrics 等。Admin API 已补齐。 |
 | N2-2 | — | 管理后台 | admin-web 前端测试 | 引入 Vitest + Vue Test Utils，覆盖核心视图。 |
-| N2-3 | — | 代码质量 | 前端统一锁文件 | 当前 `package-lock.json` + `pnpm-lock.yaml` 并存。统一用一种并删除另一个。 |
+| N2-3 | ✓ | 代码质量 | 前端统一锁文件 | 当前 `package-lock.json` + `pnpm-lock.yaml` 并存。统一用 pnpm 并删除 `package-lock.json`；Maven 的 `frontend-maven-plugin` 改用 pnpm。 |
 | N2-4 | ✓ | 插件系统 | JS 引擎复用 ThreadLocal 缓存 | 当前每次执行新建 Nashorn engine。改为复用 ThreadLocal 缓存。 |
 | N2-5 | ✓ | 运维 | 文档化分布式状态限制 | 熔断/限流状态仅内存，多副本不一致。文档说明或提供可选 Redis 扩展。 |
 | N2-6 | ✓ | 运维 | Dockerfile 缓存 Maven 依赖层 | 加 `mvn dependency:go-offline` 层，避免每次构建重新下载依赖。 |

@@ -20,7 +20,7 @@ mvn -version   # Maven 3.9+ required
 mvn quarkus:dev
 ```
 
-The first startup downloads Node/npm and builds the frontend; this takes about 1–3 minutes.
+The first startup downloads Node/pnpm and builds the frontend; this takes about 1–3 minutes.
 
 ### 3. Open the Admin UI
 

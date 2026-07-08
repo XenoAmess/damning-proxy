@@ -36,12 +36,12 @@ java -jar target/quarkus-app/quarkus-run.jar
 
 During the build `frontend-maven-plugin` will automatically:
 
-1. Install Node.js and npm in `admin-web/`.
-2. Run `npm install`.
-3. Run `npm run build`.
+1. Install Node.js and pnpm in `admin-web/`.
+2. Run `pnpm install --frozen-lockfile`.
+3. Run `pnpm run build`.
 4. Output the build artifacts to `src/main/resources/META-INF/resources/admin/`.
 
-Frontend build config: `pom.xml:138`
+Frontend build config: `pom.xml:178`
 
 ---
 
@@ -65,8 +65,9 @@ To develop the frontend separately:
 
 ```bash
 cd admin-web
-npm install
-npm run dev
+corepack enable pnpm
+pnpm install
+pnpm run dev
 ```
 
 The dev server proxies `/api` to `http://localhost:12360` by default; the backend must be running.
@@ -75,8 +76,9 @@ Production build:
 
 ```bash
 cd admin-web
-npm install
-npm run build
+corepack enable pnpm
+pnpm install
+pnpm run build
 ```
 
 Output goes to `admin-web/dist/`; Maven build will automatically copy it to `src/main/resources/META-INF/resources/admin/`.
@@ -106,8 +108,8 @@ The property `skip.frontend.build` is defined in `pom.xml:22`, defaults to `fals
 | Run JAR | `java -jar target/quarkus-app/quarkus-run.jar` |
 | Build Native Image | `mvn clean package -Pnative` |
 | Run Native | `./target/damning-proxy-0.1.0-runner` |
-| Frontend standalone dev | `cd admin-web && npm run dev` |
-| Frontend standalone build | `cd admin-web && npm run build` |
+| Frontend standalone dev | `cd admin-web && corepack enable pnpm && pnpm run dev` |
+| Frontend standalone build | `cd admin-web && corepack enable pnpm && pnpm run build` |
 | Run tests | `mvn test` |
 | Skip frontend build | `mvn clean package -Dskip.frontend.build=true` |
 
@@ -118,5 +120,5 @@ The property `skip.frontend.build` is defined in `pom.xml:22`, defaults to `fals
 | Issue | Possible Cause | Solution |
 |---|---|---|
 | `Java 21 is required` | JDK version mismatch | Use JDK 21 |
-| Frontend build slow/fails | Node/npm download slow | Configure Maven/Node mirror, or run `npm install` manually in `admin-web/` |
+| Frontend build slow/fails | Node/pnpm download slow | Configure Maven/Node mirror, or run `pnpm install` manually in `admin-web/` |
 | Native build fails | Missing GraalVM | Install GraalVM 21 and set `JAVA_HOME` |

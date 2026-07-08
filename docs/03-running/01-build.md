@@ -36,12 +36,12 @@ java -jar target/quarkus-app/quarkus-run.jar
 
 构建过程中 `frontend-maven-plugin` 会自动：
 
-1. 在 `admin-web/` 目录安装 Node.js 和 npm。
-2. 执行 `npm install`。
-3. 执行 `npm run build`。
+1. 在 `admin-web/` 目录安装 Node.js 和 pnpm。
+2. 执行 `pnpm install --frozen-lockfile`。
+3. 执行 `pnpm run build`。
 4. 将构建产物输出到 `src/main/resources/META-INF/resources/admin/`。
 
-前端构建配置：`pom.xml:138`
+前端构建配置：`pom.xml:178`
 
 ---
 
@@ -65,8 +65,9 @@ java -jar target/quarkus-app/quarkus-run.jar
 
 ```bash
 cd admin-web
-npm install
-npm run dev
+corepack enable pnpm
+pnpm install
+pnpm run dev
 ```
 
 开发服务器默认代理 `/api` 到 `http://localhost:12360`，后端需同时运行。
@@ -75,8 +76,9 @@ npm run dev
 
 ```bash
 cd admin-web
-npm install
-npm run build
+corepack enable pnpm
+pnpm install
+pnpm run build
 ```
 
 产物输出到 `admin-web/dist/`，Maven 构建时会自动复制到 `src/main/resources/META-INF/resources/admin/`。
@@ -106,8 +108,8 @@ mvn clean package -Dskip.frontend.build=true
 | 运行 JAR | `java -jar target/quarkus-app/quarkus-run.jar` |
 | 构建 Native Image | `mvn clean package -Pnative` |
 | 运行 Native | `./target/damning-proxy-0.1.0-runner` |
-| 前端独立开发 | `cd admin-web && npm run dev` |
-| 前端独立构建 | `cd admin-web && npm run build` |
+| 前端独立开发 | `cd admin-web && corepack enable pnpm && pnpm run dev` |
+| 前端独立构建 | `cd admin-web && corepack enable pnpm && pnpm run build` |
 | 运行测试 | `mvn test` |
 | 跳过前端构建 | `mvn clean package -Dskip.frontend.build=true` |
 
@@ -118,5 +120,5 @@ mvn clean package -Dskip.frontend.build=true
 | 问题 | 可能原因 | 解决 |
 |---|---|---|
 | `Java 21 is required` | JDK 版本不符 | 使用 JDK 21 |
-| 前端构建慢/失败 | Node/npm 下载慢 | 配置 Maven/Node 镜像，或手动在 `admin-web/` 运行 `npm install` |
+| 前端构建慢/失败 | Node/pnpm 下载慢 | 配置 Maven/Node 镜像，或手动在 `admin-web/` 运行 `pnpm install` |
 | Native 构建失败 | 缺少 GraalVM | 安装 GraalVM 21 并设置 `JAVA_HOME` |

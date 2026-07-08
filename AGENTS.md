@@ -31,8 +31,8 @@
 | Native image | **不支持**。Groovy / JavaScript 动态脚本引擎与 native-image 的闭世界假设冲突，无法可靠运行。项目只提供 JVM 构建产物。 |
 
 - Dev server listens on `http://localhost:12360`. Root `/` redirects to the admin UI; admin UI is also at `/admin/index.html`.
-- Maven auto-builds the Vue admin UI via `frontend-maven-plugin` (Node 22.12, npm 10.9). Vite 8 emits engine warnings but the build succeeds.
-- CI uses `pnpm` (via `corepack`) instead of npm because npm 10.x crashes with 'Exit handler never called!' on GitHub Actions runners.
+- Maven auto-builds the Vue admin UI via `frontend-maven-plugin` (Node 22.14, pnpm 11.8). Vite 8 emits engine warnings but the build succeeds.
+- CI and Maven both use `pnpm` (via `corepack` in CI and via `frontend-maven-plugin` locally) to avoid the npm 10.x 'Exit handler never called!' crash on GitHub Actions runners.
 
 ## Frontend-only dev
 

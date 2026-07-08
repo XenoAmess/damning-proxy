@@ -91,16 +91,17 @@ Solution:
 
 Common causes:
 
-- Node/npm download failure (network issue).
-- `admin-web/package-lock.json` inconsistent with `package.json`.
+- Node/pnpm download failure (network issue).
+- `admin-web/pnpm-lock.yaml` inconsistent with `package.json`.
 
 Solution:
 
 ```bash
 cd admin-web
-rm -rf node_modules package-lock.json
-npm install
-npm run build
+rm -rf node_modules pnpm-lock.yaml
+corepack enable pnpm
+pnpm install
+pnpm run build
 ```
 
 ---

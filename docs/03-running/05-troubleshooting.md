@@ -91,16 +91,17 @@ tail -f /tmp/daming-proxy-dev.log
 
 常见原因：
 
-- Node/npm 下载失败（网络问题）。
-- `admin-web/package-lock.json` 与 `package.json` 不一致。
+- Node/pnpm 下载失败（网络问题）。
+- `admin-web/pnpm-lock.yaml` 与 `package.json` 不一致。
 
 解决：
 
 ```bash
 cd admin-web
-rm -rf node_modules package-lock.json
-npm install
-npm run build
+rm -rf node_modules pnpm-lock.yaml
+corepack enable pnpm
+pnpm install
+pnpm run build
 ```
 
 ---
