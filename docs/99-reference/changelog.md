@@ -15,6 +15,7 @@
 - 正确性修复：
   - 熔断器仅把上游 2xx 响应记为成功，4xx/5xx 记为失败。
   - 移除 `TrafficLog.requestTime` 的 `@CreationTimestamp`，避免手动设置的时间被覆盖。
+  - 上游错误响应体重试耗尽后透传到代理响应（`UpstreamHttpClient` 与 `OpenAiProxyService` 中保留 `WebApplicationException` 的 response entity）。
 - 插件系统改进：
   - 插件缓存 key 从 `String.hashCode()` 改为 SHA-256 摘要，避免碰撞。
   - 插件执行线程池改为有界 `ThreadPoolExecutor`（可配置 `damning-proxy.plugin.execution.pool-size`），防止无限线程增长。

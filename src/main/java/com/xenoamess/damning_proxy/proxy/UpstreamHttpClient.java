@@ -123,7 +123,7 @@ public class UpstreamHttpClient {
                 if (result.statusCode >= 400 && retryableStatusCodes.contains(result.statusCode) && attempt < maxRetries) {
                     lastException = new WebApplicationException(
                         "Upstream returned " + result.statusCode,
-                        Response.Status.fromStatusCode(result.statusCode));
+                        buildErrorResponse(result));
                     continue;
                 }
                 if (result.statusCode < 400) {
@@ -172,6 +172,15 @@ public class UpstreamHttpClient {
         circuitBreaker.recordFailure(baseUrl, profile);
         recordUpstreamMetrics(baseUrl, Response.Status.BAD_GATEWAY.getStatusCode(), startNs);
         throw new WebApplicationException("Upstream request failed: max retries exceeded", Response.Status.BAD_GATEWAY);
+    }
+
+    private Response buildErrorResponse(UpstreamResponse result) {
+        String contentType = result.headers != null ? result.headers.get(HttpHeaders.CONTENT_TYPE) : null;
+        Response.ResponseBuilder builder = Response.status(result.statusCode).entity(result.body != null ? result.body : "");
+        if (contentType != null && !contentType.isEmpty()) {
+            builder.type(contentType);
+        }
+        return builder.build();
     }
 
     private void recordUpstreamMetrics(String baseUrl, int statusCode, long startNs) {

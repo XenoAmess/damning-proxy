@@ -13,8 +13,9 @@
   - `MetricsService.timeSeries()` was rewritten to use JPQL + Java-side bucketing, making it portable across databases (PostgreSQL/MySQL).
   - `TrafficLog` cleanup is now batched, avoiding performance issues with large log tables.
 - Correctness fixes:
-  - The circuit breaker now records upstream responses as success only for 2xx status codes; 4xx/5xx are counted as failures.
+  - Circuit breaker now records upstream responses as success only for 2xx status codes; 4xx/5xx are counted as failures.
   - Removed `@CreationTimestamp` from `TrafficLog.requestTime` so manually set timestamps are not overwritten.
+  - Upstream error response bodies are now passed through to the proxy response after retries are exhausted (`UpstreamHttpClient` and `OpenAiProxyService` preserve the `WebApplicationException` response entity).
 - Plugin system improvements:
   - Plugin cache keys now use SHA-256 instead of `String.hashCode()` to avoid collisions.
   - The plugin execution thread pool is now a bounded `ThreadPoolExecutor` (configurable via `damning-proxy.plugin.execution.pool-size`), preventing unbounded thread growth.

@@ -89,7 +89,7 @@
 | N1-7 | ✓ | 插件系统 | 插件执行线程池有界 | 当前用 `newCachedThreadPool()`。改为 bounded executor 或注入 Quarkus ManagedExecutor。 |
 | N1-8 | ✓ | 插件系统 | 上传/导入流式大小限制 | multipart / zip 直接读入内存。加 max file size、max entry size、流式边界校验。 |
 | N1-9 | ✓ | 代码质量 | StartupMigration 不覆盖样本插件 | 每次启动覆盖样本脚本。改为样本数据只初始化一次，存在即跳过。 |
-| N1-10 | — | 核心代理 | 上游错误体透传 | 重试耗尽后返回空 502/504。把上游 body 带回 `WebApplicationException` 响应。 |
+| N1-10 | ✓ | 核心代理 | 上游错误体透传 | 重试耗尽后返回空 502/504。把上游 body 带回 `WebApplicationException` 响应。 |
 
 ### N2 — 文档 / 工程效率 / Backlog
 

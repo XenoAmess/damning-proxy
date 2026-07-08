@@ -301,11 +301,16 @@ public class OpenAiProxyService {
                 .build();
         } catch (Exception e) {
             int status = (e instanceof jakarta.ws.rs.WebApplicationException wae) ? wae.getResponse().getStatus() : 502;
+            Object errorBody = extractErrorBody(e);
             trafficLogService.recordResponse(trafficLog, status,
-                Map.of(), "Upstream request failed: " + e.getMessage(),
+                Map.of(), errorBody != null ? errorBody : "Upstream request failed: " + e.getMessage(),
                 System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), e.getMessage());
             responseRecorded = true;
-            throw new WebApplicationException(e.getMessage(), e, Response.status(status).build());
+            Response.ResponseBuilder responseBuilder = Response.status(status);
+            if (errorBody != null) {
+                responseBuilder.entity(errorBody);
+            }
+            throw new WebApplicationException(e.getMessage(), e, responseBuilder.build());
         } finally {
             if (!responseRecorded) {
                 trafficLogService.recordResponse(trafficLog, 504,
@@ -314,6 +319,16 @@ public class OpenAiProxyService {
                     "Upstream request completed without producing a response");
             }
         }
+    }
+
+    private static Object extractErrorBody(Exception e) {
+        if (e instanceof jakarta.ws.rs.WebApplicationException wae) {
+            Response response = wae.getResponse();
+            if (response.hasEntity()) {
+                return response.getEntity();
+            }
+        }
+        return null;
     }
 
     public Multi<String> chatCompletionsStream(String instanceSlug, Object requestBody, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {

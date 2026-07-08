@@ -234,6 +234,32 @@ class ProxyApiTest {
     }
 
     @Test
+    void shouldReturnUpstreamErrorBodyOnNonRetryableFailure() {
+        String errorBody = "{\"error\":{\"message\":\"model overloaded\",\"type\":\"upstream_error\"}}";
+        wireMockServer.stubFor(post(urlEqualTo("/v1/chat/completions"))
+            .willReturn(aResponse()
+                .withStatus(502)
+                .withHeader("Content-Type", "application/json")
+                .withBody(errorBody)));
+
+        createInstance("openai-502-body", "http://localhost:18089/v1", "sk-test");
+
+        Map<String, Object> body = Map.of(
+            "model", "gpt-4",
+            "messages", java.util.List.of(Map.of("role", "user", "content", "Hello")),
+            "stream", false
+        );
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(body)
+            .when().post("/v1/proxy/openai-502-body/chat/completions")
+            .then()
+            .statusCode(502)
+            .body(containsString("model overloaded"));
+    }
+
+    @Test
     void shouldReturn502WhenUpstreamConnectionRefused() {
         createInstance("openai-refused", "http://localhost:18090/v1", "sk-test");
 

@@ -123,8 +123,9 @@ class UpstreamHttpClientTest {
 
     @Test
     void shouldReturnBadGatewayAfterMaxRetries() {
+        String errorBody = "{\"error\":\"upstream failure\"}";
         wireMockServer.stubFor(post(urlEqualTo("/v1/chat/completions"))
-            .willReturn(aResponse().withStatus(502).withBody("bad gateway")));
+            .willReturn(aResponse().withStatus(502).withBody(errorBody)));
 
         ProxyProfile profile = profile();
         UpstreamHttpClient.UpstreamResponse response = upstreamHttpClient.send(
@@ -133,6 +134,7 @@ class UpstreamHttpClientTest {
         );
 
         assertEquals(502, response.statusCode);
+        assertEquals(errorBody, response.body);
         wireMockServer.verify(3, postRequestedFor(urlEqualTo("/v1/chat/completions")));
     }
 

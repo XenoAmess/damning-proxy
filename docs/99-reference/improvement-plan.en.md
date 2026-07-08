@@ -89,7 +89,7 @@ This plan is derived from a review of the current codebase, documentation, recen
 | N1-7 | ✓ | Plugin system | Bound plugin execution thread pool | Currently uses `newCachedThreadPool()`. Replace with a bounded executor or Quarkus ManagedExecutor. |
 | N1-8 | ✓ | Plugin system | Stream and limit upload/import sizes | Multipart and ZIP files are read fully into memory. Add max file size, max entry size, and streaming bounds. |
 | N1-9 | ✓ | Code quality | Do not overwrite sample plugins on startup | `StartupMigration` currently overwrites sample scripts on every restart. Initialize sample data only once. |
-| N1-10 | — | Core proxy | Forward upstream error body | After retries are exhausted, the upstream body is discarded. Include it in the `WebApplicationException` response. |
+| N1-10 | ✓ | Core proxy | Forward upstream error body | After retries are exhausted, the upstream body is discarded. Include it in the `WebApplicationException` response. |
 
 ### N2 — Documentation / Engineering Efficiency / Backlog
 
