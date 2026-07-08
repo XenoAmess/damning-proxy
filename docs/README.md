@@ -58,7 +58,7 @@
 | 我想了解 | 跳转 |
 |---|---|
 | 如何运行开发环境 | [03-running/02-run.md](03-running/02-run.md) / [English](03-running/02-run.en.md) |
-| 如何构建 JAR / Native Image | [03-running/01-build.md](03-running/01-build.md) / [English](03-running/01-build.en.md) |
+| 如何构建 JAR | [03-running/01-build.md](03-running/01-build.md) / [English](03-running/01-build.en.md) |
 | 如何跑测试 | [03-running/04-self-test.md](03-running/04-self-test.md) / [English](03-running/04-self-test.en.md) |
 | 如何写一个插件 | [05-guides/02-plugin-development.md](05-guides/02-plugin-development.md) / [English](05-guides/02-plugin-development.en.md) |
 | API 清单 | [04-api/](04-api/) |

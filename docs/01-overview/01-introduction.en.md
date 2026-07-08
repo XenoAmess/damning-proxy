@@ -24,7 +24,7 @@ Project source entry: `README.md`
 - **Plugin Library Management**: Centrally manage Groovy / JavaScript plugin scripts.
 - **Full Traffic Logging**: Records request/response per instance, viewable and cleanable via the web UI.
 - **Web Admin Console**: Local management UI based on Vue 3 + Vite + Element Plus.
-- **GraalVM Native Image Support**: Can be built into a native executable.
+- **GraalVM Native Image is explicitly not supported**: Because the Groovy / JavaScript dynamic script engines cannot reliably run under native-image's closed-world assumption, the project does not build or ship native executables.
 
 ---
 

@@ -45,40 +45,17 @@ Frontend build config: `pom.xml:138`
 
 ---
 
-## Build Native Image
+## Build Native Image (Not Supported)
 
-Requires GraalVM 21; confirm that the normal JAR builds first.
+This project **does not support** building a GraalVM Native Image.
 
-```bash
-mvn clean package -DskipTests
-mvn clean package -Pnative
-```
+Because the Groovy / JavaScript plugin engines dynamically compile and execute scripts at runtime, this conflicts with native-image's closed-world assumption and cannot reliably produce a working native executable. Therefore `pom.xml` no longer provides a native profile; build commands only support JVM artifacts.
 
-Or combined:
+Run with:
 
 ```bash
-mvn clean package -Pnative -DskipTests
+java -jar target/quarkus-app/quarkus-run.jar
 ```
-
-Artifact:
-
-```text
-target/damning-proxy-0.1.0-runner
-```
-
-Run:
-
-```bash
-./target/damning-proxy-0.1.0-runner
-```
-
-Notes:
-
-- Native Image builds take a long time.
-- Some dependencies (e.g. Groovy/JS engines) may require additional GraalVM reflection/resource configuration.
-- `pom.xml` already configures `quarkus.native.additional-build-args=-H:+ReportExceptionStackTraces` to help troubleshoot.
-
-`pom.xml:229`
 
 ---
 

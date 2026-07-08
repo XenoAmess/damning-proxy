@@ -45,40 +45,17 @@ java -jar target/quarkus-app/quarkus-run.jar
 
 ---
 
-## 构建 Native Image
+## 构建 Native Image（已不支持）
 
-需要 GraalVM 21，并提前确认普通 JAR 可正常构建。
+本项目**不支持**构建 GraalVM Native Image。
 
-```bash
-mvn clean package -DskipTests
-mvn clean package -Pnative
-```
+由于 Groovy / JavaScript 插件引擎需要在运行时动态编译和执行脚本，这与 native-image 的“闭世界”假设冲突，无法可靠地生成可工作的 native 可执行文件。因此 `pom.xml` 中不再提供 native profile，构建命令仅支持 JVM 产物。
 
-或合并为：
+运行请使用：
 
 ```bash
-mvn clean package -Pnative -DskipTests
+java -jar target/quarkus-app/quarkus-run.jar
 ```
-
-产物：
-
-```text
-target/damning-proxy-0.1.0-runner
-```
-
-运行：
-
-```bash
-./target/damning-proxy-0.1.0-runner
-```
-
-注意：
-
-- Native Image 构建耗时较长。
-- 部分依赖（如 Groovy/JS 引擎）可能需要额外的 GraalVM 反射/资源配置。
-- 当前 `pom.xml` 中已配置 `quarkus.native.additional-build-args=-H:+ReportExceptionStackTraces` 便于排查问题。
-
-`pom.xml:229`
 
 ---
 

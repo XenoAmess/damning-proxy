@@ -84,16 +84,6 @@ quarkus.log.category."com.xenoamess.damning_proxy".level=DEBUG
 
 ---
 
-### Native Image
-
-```properties
-quarkus.native.additional-build-args=-H:+ReportExceptionStackTraces
-```
-
-- Native 构建失败时输出详细堆栈。
-
----
-
 ### 代理自定义配置
 
 ```properties

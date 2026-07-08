@@ -58,7 +58,7 @@ This knowledge base is the documentation hub for [damning-proxy (大明proxy)](.
 | I want to learn | Jump to |
 |---|---|
 | How to run the dev environment | [03-running/02-run.en.md](03-running/02-run.en.md) |
-| How to build JAR / Native Image | [03-running/01-build.en.md](03-running/01-build.en.md) |
+| How to build JAR | [03-running/01-build.en.md](03-running/01-build.en.md) |
 | How to run tests | [03-running/04-self-test.en.md](03-running/04-self-test.en.md) |
 | How to write a plugin | [05-guides/02-plugin-development.en.md](05-guides/02-plugin-development.en.md) |
 | API list | [04-api/](04-api/) |

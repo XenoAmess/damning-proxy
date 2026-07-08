@@ -34,18 +34,12 @@ java -jar target/quarkus-app/quarkus-run.jar
 
 ---
 
-## Run via Native Image
+## Run via Native Image (Not Supported)
 
-Build:
-
-```bash
-mvn clean package -Pnative -DskipTests
-```
-
-Run:
+This project **does not support** GraalVM Native Image. The Groovy / JavaScript dynamic script engines conflict with native-image's closed-world assumption, so native executables are not provided. Run via JVM instead:
 
 ```bash
-./target/damning-proxy-0.1.0-runner
+java -jar target/quarkus-app/quarkus-run.jar
 ```
 
 ---

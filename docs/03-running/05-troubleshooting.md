@@ -103,12 +103,6 @@ npm install
 npm run build
 ```
 
-### Native 构建失败
-
-- 确认 GraalVM 21 已安装并设置 `JAVA_HOME`。
-- 检查是否缺少反射/资源配置文件。
-- 查看 `target/native-image-output/` 下的报告。
-
 ---
 
 ## 代理问题

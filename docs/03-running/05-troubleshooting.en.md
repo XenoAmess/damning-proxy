@@ -103,12 +103,6 @@ npm install
 npm run build
 ```
 
-### Native Build Failure
-
-- Confirm GraalVM 21 is installed and `JAVA_HOME` is set.
-- Check whether reflection/resource configuration files are missing.
-- Check reports under `target/native-image-output/`.
-
 ---
 
 ## Proxy Issues

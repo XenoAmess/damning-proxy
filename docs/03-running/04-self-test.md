@@ -18,15 +18,6 @@ mvn test
 - 集成测试使用 WireMock 模拟上游 OpenAI 服务。
 - **环境要求 JDK 21**，其他版本可能导致 Byte Buddy / GraalJS 初始化失败。
 
-### Native Image 测试
-
-```bash
-mvn clean verify -Pnative
-```
-
-- 会构建 Native Image 并运行集成测试。
-- 耗时较长，需要 GraalVM。
-
 ---
 
 ## 测试文件清单

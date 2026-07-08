@@ -59,7 +59,7 @@
 | P2-7 | ✓ 2026-07-07 | 运维 | H2 热备份/恢复接口 | 提供 admin API 触发 `BACKUP` 和恢复。已新增 `POST /api/admin/database/backup`（H2 热备份到 `~/.damning-proxy/backups/`）和 `POST /api/admin/database/restore`（验证并暂存恢复文件，因 H2 文件锁需重启后生效）。 |
 | P2-8 | ✓ 2026-07-07 | 运维 | 限流响应头 | 返回 `RateLimit-Remaining`、`RateLimit-Reset` 等标准头。已添加 `RateLimitInfo` 记录和 `getRateLimitInfo()` 方法，所有代理端点响应均携带 `RateLimit-Limit`、`RateLimit-Remaining`、`RateLimit-Reset` 头。 |
 | P2-9 | ✓ 2026-07-07 | 代码质量 | `skip.frontend.build` 属性文档化 | 已确认属性在 `pom.xml:186` 生效，构建文档中更正了跳过前端的命令为 `-Dskip.frontend.build=true`。 |
-| P2-10 | — | 代码质量 | Native image 反射配置 | 插件引擎和脚本缓存依赖反射，需补充 `reflect-config.json` 并验证 native build。 |
+| P2-10 | ✗ 已移除 2026-07-08 | 代码质量 | Native image 反射配置 | ~~插件引擎和脚本缓存依赖反射，需补充 `reflect-config.json` 并验证 native build。~~ 已决定**不支持 GraalVM Native Image**：Groovy / JavaScript 动态脚本引擎与 native-image 的闭世界假设冲突，无法可靠运行，因此回退相关改动，并在文档中明确声明不支持。 |
 
 ---
 

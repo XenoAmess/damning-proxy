@@ -34,18 +34,12 @@ java -jar target/quarkus-app/quarkus-run.jar
 
 ---
 
-## Native Image 方式运行
+## Native Image 方式运行（已不支持）
 
-构建：
-
-```bash
-mvn clean package -Pnative -DskipTests
-```
-
-运行：
+本项目**不支持** GraalVM Native Image。Groovy / JavaScript 动态脚本引擎与 native-image 的闭世界假设冲突，因此不提供 native 可执行文件运行方式。请使用 JVM 方式运行：
 
 ```bash
-./target/damning-proxy-0.1.0-runner
+java -jar target/quarkus-app/quarkus-run.jar
 ```
 
 ---

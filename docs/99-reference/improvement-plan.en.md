@@ -59,7 +59,7 @@ This plan is derived from a review of the current codebase, documentation, recen
 | P2-7 | ✓ 2026-07-07 | Operations | H2 hot backup / restore endpoint | Provide an admin API to trigger `BACKUP` and restore. Added `POST /api/admin/database/backup` (H2 hot backup to `~/.damning-proxy/backups/`) and `POST /api/admin/database/restore` (validate and stage restore file; requires restart due to H2 file lock). |
 | P2-8 | ✓ 2026-07-07 | Operations | Rate-limit response headers | Return standard headers such as `RateLimit-Remaining` and `RateLimit-Reset`. Added `RateLimitInfo` record and `getRateLimitInfo()` method; all proxy endpoint responses now carry `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset` headers. |
 | P2-9 | ✓ 2026-07-07 | Code quality | Document `skip.frontend.build` property | Verified the property works at `pom.xml:186`; corrected the skip-frontend command in the build guide to `-Dskip.frontend.build=true`. |
-| P2-10 | — | Code quality | Native image reflection configuration | Plugin engines and script caches rely on reflection; add `reflect-config.json` and verify native build. |
+| P2-10 | ✗ Removed 2026-07-08 | Code quality | Native image reflection configuration | ~~Plugin engines and script caches rely on reflection; add `reflect-config.json` and verify native build.~~ **GraalVM Native Image is explicitly not supported**: the Groovy / JavaScript dynamic script engines conflict with native-image's closed-world assumption and cannot run reliably, so the related changes have been reverted and the documentation now states that native image is unsupported. |
 
 ---
 

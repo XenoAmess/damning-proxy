@@ -28,7 +28,7 @@
 | Run tests | `$JAVA_HOME/bin/mvn test` |
 | Build runnable JAR + admin UI | `$JAVA_HOME/bin/mvn clean package -DskipTests` |
 | Run the built JAR | `$JAVA_HOME/bin/java -jar target/quarkus-app/quarkus-run.jar` |
-| Native image (needs GraalVM 21) | `$JAVA_HOME/bin/mvn clean package -Pnative` then `./target/damning-proxy-1.0-SNAPSHOT-runner` |
+| Native image | **Not supported**. The Groovy / JavaScript dynamic script engines conflict with native-image's closed-world assumption and cannot reliably run. Only JVM artifacts are provided. |
 
 - Dev server listens on `http://localhost:12360`. Root `/` redirects to the admin UI; admin UI is also at `/admin/index.html`.
 - Maven auto-builds the Vue admin UI via `frontend-maven-plugin` (Node 22.12, npm 10.9). Vite 8 emits engine warnings but the build succeeds.

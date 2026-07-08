@@ -24,7 +24,7 @@
 - **插件库管理**：集中管理 Groovy / JavaScript 插件脚本。
 - **全量流量日志**：按实例记录请求/响应，支持 Web 页查看与清理。
 - **Web 管理后台**：基于 Vue 3 + Vite + Element Plus 的本地管理界面。
-- **GraalVM Native Image 支持**：可构建为本地可执行文件。
+- **明确不支持 GraalVM Native Image**：由于 Groovy / JavaScript 动态脚本引擎在 native-image 闭世界假设下无法可靠运行，项目不构建、不交付 native 可执行文件。
 
 ---
 

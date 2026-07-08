@@ -84,16 +84,6 @@ quarkus.log.category."com.xenoamess.damning_proxy".level=DEBUG
 
 ---
 
-### Native Image
-
-```properties
-quarkus.native.additional-build-args=-H:+ReportExceptionStackTraces
-```
-
-- Output detailed stack traces when Native build fails.
-
----
-
 ### Proxy Custom Configuration
 
 ```properties
