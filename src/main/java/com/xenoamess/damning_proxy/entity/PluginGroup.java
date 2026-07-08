@@ -7,7 +7,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 @Entity
@@ -31,6 +30,7 @@ public class PluginGroup extends PanacheEntityBase {
     public boolean enabled = true;
 
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OrderBy("orderIndex ASC, priority ASC, id ASC")
     public List<PluginGroupItem> items = new ArrayList<>();
 
     @CreationTimestamp
@@ -45,10 +45,6 @@ public class PluginGroup extends PanacheEntityBase {
     }
 
     public List<PluginGroupItem> sortedItems() {
-        return items.stream()
-            .sorted(Comparator.comparingInt((PluginGroupItem i) -> i.orderIndex)
-                .thenComparingInt(i -> i.priority)
-                .thenComparingLong(i -> i.id == null ? Long.MAX_VALUE : i.id))
-            .toList();
+        return items;
     }
 }

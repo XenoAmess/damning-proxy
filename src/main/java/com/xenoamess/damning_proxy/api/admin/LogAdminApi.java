@@ -14,6 +14,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.StreamingOutput;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -34,6 +35,12 @@ public class LogAdminApi {
     @Inject
     ObjectMapper objectMapper;
 
+    @ConfigProperty(name = "damning-proxy.log.max-page-size", defaultValue = "1000")
+    int maxPageSize;
+
+    @ConfigProperty(name = "damning-proxy.log.export-max-records", defaultValue = "10000")
+    int exportMaxRecords;
+
     @GET
     public PageResponse<TrafficLog> list(@QueryParam("limit") @DefaultValue("100") int limit,
                                          @QueryParam("offset") @DefaultValue("0") int offset,
@@ -43,7 +50,7 @@ public class LogAdminApi {
                                          @QueryParam("path") String path,
                                          @QueryParam("startTime") String startTime,
                                          @QueryParam("endTime") String endTime) {
-        int effectiveLimit = Math.min(limit, 1000);
+        int effectiveLimit = Math.min(limit, maxPageSize);
         LocalDateTime start = parseDateTime(startTime);
         LocalDateTime end = parseDateTime(endTime);
         List<TrafficLog> items = logRepository.findByFilters(
@@ -134,7 +141,7 @@ public class LogAdminApi {
                                @QueryParam("endTime") String endTime) {
         LocalDateTime start = parseDateTime(startTime);
         LocalDateTime end = parseDateTime(endTime);
-        int fetchLimit = 10000;
+        int fetchLimit = exportMaxRecords;
         List<TrafficLog> items = logRepository.findByFilters(
             instanceId, profileId, status, path, start, end, 0, fetchLimit);
 
@@ -431,79 +438,81 @@ public class LogAdminApi {
         }
         Map<?, ?> m = (Map<?, ?>) raw;
         ChatMessage cm = new ChatMessage();
-        Object role = m.get("role");
-        if (role instanceof String) {
-            cm.role = (String) role;
+        cm.role = stringField(m, "role");
+        cm.name = stringField(m, "name");
+        cm.reasoningContent = stringField(m, "reasoning_content");
+        cm.toolResultCallId = stringField(m, "tool_call_id");
+
+        parseContent(m, cm);
+        parseToolCalls(m, cm);
+
+        if (cm.role == null && cm.content == null && cm.reasoningContent == null
+            && cm.toolCallIds == null) {
+            return null;
         }
-        Object name = m.get("name");
-        if (name instanceof String) {
-            cm.name = (String) name;
-        }
-        Object reasoning = m.get("reasoning_content");
-        if (reasoning instanceof String) {
-            cm.reasoningContent = (String) reasoning;
-        }
+        return cm;
+    }
+
+    private static String stringField(Map<?, ?> m, String key) {
+        Object v = m.get(key);
+        return v instanceof String ? (String) v : null;
+    }
+
+    private static void parseContent(Map<?, ?> m, ChatMessage cm) {
         Object content = m.get("content");
-        if (content instanceof String) {
-            cm.content = (String) content;
-            cm.contentLength = cm.content.length();
+        if (content instanceof String s) {
+            cm.content = s;
+            cm.contentLength = s.length();
         } else if (content instanceof List) {
             StringBuilder sb = new StringBuilder();
             for (Object part : (List<?>) content) {
-                if (part instanceof Map) {
-                    Map<?, ?> pm = (Map<?, ?>) part;
+                if (part instanceof Map<?, ?> pm) {
                     Object type = pm.get("type");
                     Object text = pm.get("text");
-                    if ("text".equals(type) && text instanceof String) {
+                    if ("text".equals(type) && text instanceof String s) {
                         if (sb.length() > 0) {
                             sb.append("\n");
                         }
-                        sb.append(text);
+                        sb.append(s);
                     }
                 }
             }
             cm.content = sb.toString();
             cm.contentLength = cm.content.length();
         }
-        Object toolCallId = m.get("tool_call_id");
-        if (toolCallId instanceof String) {
-            cm.toolResultCallId = (String) toolCallId;
-        }
+    }
+
+    private static void parseToolCalls(Map<?, ?> m, ChatMessage cm) {
         Object toolCalls = m.get("tool_calls");
-        if (toolCalls instanceof List) {
-            List<String> ids = new ArrayList<>();
-            List<String> funcs = new ArrayList<>();
-            List<String> args = new ArrayList<>();
-            for (Object tc : (List<?>) toolCalls) {
-                if (tc instanceof Map) {
-                    Map<?, ?> tcm = (Map<?, ?>) tc;
-                    Object id = tcm.get("id");
-                    if (id instanceof String) {
-                        ids.add((String) id);
-                    }
-                    Object fn = tcm.get("function");
-                    if (fn instanceof Map) {
-                        Object fname = ((Map<?, ?>) fn).get("name");
-                        Object fargs = ((Map<?, ?>) fn).get("arguments");
-                        funcs.add(fname instanceof String ? (String) fname : "?");
-                        args.add(fargs instanceof String ? (String) fargs : "{}");
-                    } else {
-                        funcs.add("?");
-                        args.add("{}");
-                    }
+        if (!(toolCalls instanceof List)) {
+            return;
+        }
+        List<String> ids = new ArrayList<>();
+        List<String> funcs = new ArrayList<>();
+        List<String> args = new ArrayList<>();
+        for (Object tc : (List<?>) toolCalls) {
+            if (tc instanceof Map<?, ?> tcm) {
+                Object id = tcm.get("id");
+                if (id instanceof String s) {
+                    ids.add(s);
+                }
+                Object fn = tcm.get("function");
+                if (fn instanceof Map<?, ?> fnm) {
+                    Object fname = fnm.get("name");
+                    Object fargs = fnm.get("arguments");
+                    funcs.add(fname instanceof String s ? s : "?");
+                    args.add(fargs instanceof String s ? s : "{}");
+                } else {
+                    funcs.add("?");
+                    args.add("{}");
                 }
             }
-            if (!ids.isEmpty()) {
-                cm.toolCallIds = ids;
-                cm.toolCallFunctions = funcs;
-                cm.toolCallArguments = args;
-            }
         }
-        if (cm.role == null && cm.content == null && cm.reasoningContent == null
-            && cm.toolCallIds == null) {
-            return null;
+        if (!ids.isEmpty()) {
+            cm.toolCallIds = ids;
+            cm.toolCallFunctions = funcs;
+            cm.toolCallArguments = args;
         }
-        return cm;
     }
 }
 

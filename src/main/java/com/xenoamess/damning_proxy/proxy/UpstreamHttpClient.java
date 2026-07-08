@@ -62,6 +62,9 @@ public class UpstreamHttpClient {
     @ConfigProperty(name = "damning-proxy.upstream.retry-on-timeout", defaultValue = "true")
     boolean retryOnTimeout;
 
+    @ConfigProperty(name = "damning-proxy.upstream.max-timeout-ms", defaultValue = "3600000")
+    int maxTimeoutMs;
+
     private Set<Integer> retryableStatusCodes;
 
     @Inject
@@ -347,12 +350,9 @@ public class UpstreamHttpClient {
         return "https".equalsIgnoreCase(uri.getScheme());
     }
 
-    private static int clampTimeoutMs(int timeoutMs) {
-        // 0 means "no timeout configured" – still enforce a hard ceiling so a
-        // runaway upstream cannot pin the worker pool indefinitely.
-        int hardCeilingMs = 3_600_000; // 1 hour
-        if (timeoutMs <= 0 || timeoutMs > hardCeilingMs) {
-            return hardCeilingMs;
+    private int clampTimeoutMs(int timeoutMs) {
+        if (timeoutMs <= 0 || timeoutMs > maxTimeoutMs) {
+            return maxTimeoutMs;
         }
         return timeoutMs;
     }
