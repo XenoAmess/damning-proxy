@@ -69,3 +69,44 @@ This plan is derived from a review of the current codebase, documentation, recen
 2. **P1-1 (health check), P1-3 (DB indexes), P1-8/P1-9 (tests)**: Stabilize the core path.
 3. **P1-11 (Docker), P1-12 (metrics), P1-7 (frontend tooling)**: Move toward production readiness.
 4. **P2 items**: Pull in as business needs arise.
+
+---
+
+## Next Phase Plan
+
+> Based on the 2026-07-08 code audit, focused on **non-security** performance, correctness, maintainability, documentation, and engineering efficiency.
+
+### N1 — Performance / Correctness / Maintainability
+
+| # | Status | Category | Title | Description |
+|---|---|----------|-------|-------------|
+| N1-1 | — | Core proxy | Cache GlobalSettings in RateLimiter | `tryAcquire` currently queries H2 on every request. Cache `GlobalSettings` in memory and refresh on admin updates. |
+| N1-2 | — | Core proxy | Make metrics SQL dialect-neutral | Currently uses H2-only `FORMATDATETIME`. Rewrite with JPQL/HQL or dialect-neutral functions to support PostgreSQL/MySQL. |
+| N1-3 | — | Code quality | Bulk-delete aged logs | `deleteOlderThan` currently calls `listAll()` and iterates. Use `DELETE FROM TrafficLog WHERE requestTime < :cutoff`. |
+| N1-4 | — | Code quality | Enforce strict slug validation | Currently only rejects blank slugs. Standardize on `^[a-zA-Z0-9_-]+$` for profiles, instances, plugins, and groups. |
+| N1-5 | — | Core proxy | Circuit breaker should only treat 2xx as success | Currently any exception-free response counts as success. Record success only for 2xx responses. |
+| N1-6 | — | Plugin system | Use SHA-256 for plugin cache keys | Currently uses `String.hashCode()`, which can collide. Switch to SHA-256 of script content. |
+| N1-7 | — | Plugin system | Bound plugin execution thread pool | Currently uses `newCachedThreadPool()`. Replace with a bounded executor or Quarkus ManagedExecutor. |
+| N1-8 | — | Plugin system | Stream and limit upload/import sizes | Multipart and ZIP files are read fully into memory. Add max file size, max entry size, and streaming bounds. |
+| N1-9 | — | Code quality | Do not overwrite sample plugins on startup | `StartupMigration` currently overwrites sample scripts on every restart. Initialize sample data only once. |
+| N1-10 | — | Core proxy | Forward upstream error body | After retries are exhausted, the upstream body is discarded. Include it in the `WebApplicationException` response. |
+
+### N2 — Documentation / Engineering Efficiency / Backlog
+
+| # | Status | Category | Title | Description |
+|---|---|----------|-------|-------------|
+| N2-1 | — | Documentation | Audit docs against code | README/data model/flow diagrams are missing `GlobalSettings`, `PluginScriptRevision`, audio endpoints, metrics, etc. |
+| N2-2 | — | Admin UI | Add admin-web frontend tests | Introduce Vitest + Vue Test Utils for critical views. |
+| N2-3 | — | Code quality | Standardize frontend lockfile | Both `package-lock.json` and `pnpm-lock.yaml` exist. Standardize on one and remove the other. |
+| N2-4 | — | Plugin system | Reuse ThreadLocal engine cache in JS engine | Currently creates a new Nashorn engine per execution. Reuse the ThreadLocal cache. |
+| N2-5 | — | Operations | Document distributed-state limitation | Circuit breaker / rate limiter state is in-memory only; document multi-replica limitation or provide optional Redis extension. |
+| N2-6 | — | Operations | Cache Maven dependencies in Dockerfile | Add a `mvn dependency:go-offline` layer to avoid re-downloading dependencies on every build. |
+| N2-7 | — | Documentation | Complete Admin API docs | Missing revisions, settings, plugin entries, rate-limit headers, etc. |
+
+### Suggested Execution Order
+
+1. **N1-1 / N1-2 / N1-3**: Small changes with large performance and portability gains.
+2. **N1-5 / N1-6 / N1-9**: Correctness fixes to avoid false positives.
+3. **N1-4 / N1-7 / N1-8**: Boundaries and stability.
+4. **N2 documentation and engineering efficiency**.
+

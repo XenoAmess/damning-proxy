@@ -69,3 +69,44 @@
 2. **P1-1（健康检查）、P1-3（DB 索引）、P1-8/P1-9（测试）**：稳定化核心链路。
 3. **P1-11（Docker）、P1-12（指标）、P1-7（前端工具链）**：迈向可生产部署。
 4. **P2 项**：按实际业务需求逐步纳入。
+
+---
+
+## 下一阶段计划
+
+> 基于 2026-07-08 代码审计，聚焦**非安全项**的性能、正确性、可维护性与文档/工程效率。
+
+### N1 — 性能 / 正确性 / 可维护性
+
+| # | 状态 | 类别 | 标题 | 说明 |
+|---|---|------|------|------|
+| N1-1 | — | 核心代理 | RateLimiter 缓存 GlobalSettings | 当前 `tryAcquire` 每次查 H2。改为内存缓存，admin 更新 `GlobalSettings` 时刷新。 |
+| N1-2 | — | 核心代理 | Metrics SQL 方言中立 | 当前用 H2-only `FORMATDATETIME`。改为 JPQL/HQL 或方言中性函数，支持切换 PostgreSQL/MySQL。 |
+| N1-3 | — | 代码质量 | 日志按天清理改为批量删除 | 当前 `deleteOlderThan` 先 `listAll()` 再逐条删除。改为 `DELETE FROM TrafficLog WHERE requestTime < :cutoff`。 |
+| N1-4 | — | 代码质量 | slug 严格校验 | 当前只判空。统一使用 `^[a-zA-Z0-9_-]+$`，覆盖 profile / instance / plugin / group。 |
+| N1-5 | — | 核心代理 | 熔断器仅把 2xx 记为成功 | 当前只要没抛异常就算 success。应仅 2xx 记 success，4xx/5xx 记 failure。 |
+| N1-6 | — | 插件系统 | 插件缓存 key 用 SHA-256 | 当前用 `String.hashCode()`，可能碰撞。改为 SHA-256 内容摘要。 |
+| N1-7 | — | 插件系统 | 插件执行线程池有界 | 当前用 `newCachedThreadPool()`。改为 bounded executor 或注入 Quarkus ManagedExecutor。 |
+| N1-8 | — | 插件系统 | 上传/导入流式大小限制 | multipart / zip 直接读入内存。加 max file size、max entry size、流式边界校验。 |
+| N1-9 | — | 代码质量 | StartupMigration 不覆盖样本插件 | 每次启动覆盖样本脚本。改为样本数据只初始化一次，存在即跳过。 |
+| N1-10 | — | 核心代理 | 上游错误体透传 | 重试耗尽后返回空 502/504。把上游 body 带回 `WebApplicationException` 响应。 |
+
+### N2 — 文档 / 工程效率 / Backlog
+
+| # | 状态 | 类别 | 标题 | 说明 |
+|---|---|------|------|------|
+| N2-1 | — | 文档 | 文档与代码同步审计 | README/数据模型/流程图缺 `GlobalSettings`、`PluginScriptRevision`、audio 端点、metrics 等。 |
+| N2-2 | — | 管理后台 | admin-web 前端测试 | 引入 Vitest + Vue Test Utils，覆盖核心视图。 |
+| N2-3 | — | 代码质量 | 前端统一锁文件 | 当前 `package-lock.json` + `pnpm-lock.yaml` 并存。统一用一种并删除另一个。 |
+| N2-4 | — | 插件系统 | JS 引擎复用 ThreadLocal 缓存 | 当前每次执行新建 Nashorn engine。改为复用 ThreadLocal 缓存。 |
+| N2-5 | — | 运维 | 文档化分布式状态限制 | 熔断/限流状态仅内存，多副本不一致。文档说明或提供可选 Redis 扩展。 |
+| N2-6 | — | 运维 | Dockerfile 缓存 Maven 依赖层 | 加 `mvn dependency:go-offline` 层，避免每次构建重新下载依赖。 |
+| N2-7 | — | 文档 | 补齐 Admin API 文档 | 缺 revisions、settings、plugin entries、rate-limit headers 等。 |
+
+### 建议执行顺序
+
+1. **N1-1 / N1-2 / N1-3**：小改动，性能与可移植性收益大。
+2. **N1-5 / N1-6 / N1-9**：正确性，避免误判。
+3. **N1-4 / N1-7 / N1-8**：边界与稳定性。
+4. **N2 文档与工程效率**。
+
