@@ -236,8 +236,8 @@ public class ProxyApi {
                 },
                 err -> {
                     try {
-                        String event = "event: error\n" +
-                            "data: " + objectMapper.writeValueAsString(Map.of("error", Map.of("message", err.getMessage()))) + "\n\n";
+                        String event = OpenAiProxyService.SSE_ERROR_PREFIX +
+                            OpenAiProxyService.SSE_DATA_PREFIX + objectMapper.writeValueAsString(Map.of("error", Map.of("message", err.getMessage()))) + OpenAiProxyService.SSE_NEWLINE;
                         output.write(event.getBytes(StandardCharsets.UTF_8));
                         output.flush();
                     } catch (Exception writeErr) {

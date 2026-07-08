@@ -43,6 +43,10 @@ VOLUME /data
 EXPOSE 12360
 
 # Default JVM options point user.home to /data so the H2 file lives on the volume.
-ENV JAVA_OPTS="-Duser.home=/data"
+# -XX:MaxRAMPercentage=75.0 allows the JVM to use up to 75 % of the container memory.
+ENV JAVA_OPTS="-Duser.home=/data -XX:MaxRAMPercentage=75.0"
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:12360/v1/health || exit 1
 
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/quarkus-run.jar"]

@@ -84,6 +84,12 @@ public class OpenAiProxyService {
         heartbeatScheduler.shutdownNow();
     }
 
+    static final String SSE_DATA_PREFIX = "data: ";
+    static final String SSE_NEWLINE = "\n\n";
+    static final String SSE_DONE = "[DONE]";
+    static final String SSE_DONE_LINE = SSE_DATA_PREFIX + SSE_DONE + SSE_NEWLINE;
+    static final String SSE_ERROR_PREFIX = "event: error\n";
+
     public Response listModels(String instanceSlug, jakarta.ws.rs.core.HttpHeaders incomingHeaders) {
         Log.debugf("Proxy: listModels instanceSlug=%s", instanceSlug);
         return proxyRequest(instanceSlug, null, "GET", "/v1/models", incomingHeaders,
@@ -358,7 +364,7 @@ public class OpenAiProxyService {
                 context.getResponseHeaders(), context.getResponseBody(),
                 System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots());
             String returned = toJson(context.getResponseBody());
-            return Multi.createFrom().item("data: " + returned + "\n\ndata: [DONE]\n\n");
+            return Multi.createFrom().item(SSE_DATA_PREFIX + returned + SSE_NEWLINE + SSE_DONE_LINE);
         }
 
         return doStreamChatCompletions(ctx, context, plugins, trafficLog, start);
@@ -500,9 +506,9 @@ public class OpenAiProxyService {
                     sseBuffer.append(lines[lines.length - 1]);
                     for (int i = 0; i < lines.length - 1; i++) {
                         String line = lines[i].trim();
-                        if (line.startsWith("data: ")) {
+                        if (line.startsWith(SSE_DATA_PREFIX)) {
                             String data = line.substring(6).trim();
-                            if ("[DONE]".equals(data)) {
+                            if (SSE_DONE.equals(data)) {
                                 Object parsedBody = buildStreamingResponseBody(accumulatedChoices);
                                 context.setResponseBody(parsedBody);
                                 pluginExecutionService.executeResponsePlugins(plugins, context);
@@ -521,9 +527,9 @@ public class OpenAiProxyService {
                     }
                     finishWithError.run();
                     String remaining = sseBuffer.toString().trim();
-                    if (remaining.startsWith("data: ")) {
+                    if (remaining.startsWith(SSE_DATA_PREFIX)) {
                         String data = remaining.substring(6).trim();
-                        if (!"[DONE]".equals(data)) {
+                        if (!SSE_DONE.equals(data)) {
                             processStreamChunk(data, context, plugins, emitter::emit, accumulatedChoices);
                         }
                     }
@@ -562,7 +568,7 @@ public class OpenAiProxyService {
         pluginExecutionService.executeStreamChunkPlugins(plugins, context);
         if (!context.isReturned()) {
             String modifiedData = chunkToSseData(context.getResponseBody());
-            emit.accept("data: " + modifiedData + "\n\n");
+            emit.accept(SSE_DATA_PREFIX + modifiedData + SSE_NEWLINE);
             accumulateStreamDelta(modifiedData, accumulatedChoices);
         }
     }
@@ -801,6 +807,6 @@ public class OpenAiProxyService {
         if (statusCode != null) {
             error.put("code", statusCode);
         }
-        return "event: error\ndata: " + toJson(Map.of("error", error)) + "\n\n";
+        return SSE_ERROR_PREFIX + SSE_DATA_PREFIX + toJson(Map.of("error", error)) + SSE_NEWLINE;
     }
 }
