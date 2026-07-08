@@ -39,12 +39,11 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <!-- Pin Groovy to the version our tests & plugin engine target; newer
-                 surefire releases pull a different minor that lacks createRange. -->
+            <!-- Pin Groovy to a stable version whose v7 IndyInterface still has the method GraalVM's native-image substitution expects. -->
             <dependency>
                 <groupId>org.apache.groovy</groupId>
                 <artifactId>groovy-bom</artifactId>
-                <version>6.0.0-alpha-2</version>
+                <version>4.0.31</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -102,6 +101,11 @@
             <version>15.7</version>
         </dependency>
         <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <version>1.4.21</version>
+        </dependency>
+        <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm</artifactId>
         </dependency>
@@ -116,11 +120,6 @@
         <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm-tree</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-compress</artifactId>
-            <version>1.28.0</version>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>

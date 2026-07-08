@@ -2,7 +2,7 @@
 
 # 01 构建方式
 
-> 最后更新：2026-07-07  
+> 最后更新：2026-07-08  
 > 对应源码版本：当前工作区
 
 ## 环境要求
@@ -74,9 +74,10 @@ target/damning-proxy-0.1.0-runner
 
 注意：
 
-- Native Image 构建耗时较长。
-- 部分依赖（如 Groovy/JS 引擎）可能需要额外的 GraalVM 反射/资源配置。
-- 当前 `pom.xml` 中已配置 `quarkus.native.additional-build-args=-H:+ReportExceptionStackTraces` 便于排查问题。
+- Native Image 构建耗时较长（约 1-2 分钟，取决于机器）。
+- 当前配置已通过验证的依赖：Groovy 4.0.31（与 GraalVM 内置 substitution 兼容）、XStream 1.4.21（满足 Groovy AST 解析）、`java.util.zip` 替代 `commons-compress`。
+- 反射配置已放在 `src/main/resources/META-INF/native-image/reflect-config.json`。
+- `application.properties:29` 配置了 `quarkus.native.additional-build-args=-H:+ReportExceptionStackTraces` 便于排查问题。
 
 `pom.xml:229`
 

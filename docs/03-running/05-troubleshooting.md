@@ -2,7 +2,7 @@
 
 # 05 常见问题排查
 
-> 最后更新：2026-06-18  
+> 最后更新：2026-07-08  
 > 对应源码版本：当前工作区
 
 ## 启动问题
@@ -106,7 +106,11 @@ npm run build
 ### Native 构建失败
 
 - 确认 GraalVM 21 已安装并设置 `JAVA_HOME`。
-- 检查是否缺少反射/资源配置文件。
+- 检查 `src/main/resources/META-INF/native-image/reflect-config.json` 是否注册了需要的反射类。
+- 常见已修复问题：
+  - `IndyInterface.invalidateSwitchPoints` 相关错误：Groovy 6.x 的 `v7.IndyInterface` 已移除该方法，与 GraalVM 内置 substitution 不兼容，当前已降级到 Groovy 4.0.31。
+  - `org.tukaani.xz.XZInputStream` / `org.apache.commons.compress...` 类初始化失败：已移除 `commons-compress`，插件 ZIP 读写改用 `java.util.zip`。
+  - `com.thoughtworks.xstream` 类找不到：已添加 `xstream` 依赖以满足 Groovy AST 解析。
 - 查看 `target/native-image-output/` 下的报告。
 
 ---

@@ -2,7 +2,7 @@
 
 # 05 Troubleshooting
 
-> Last updated: 2026-06-18  
+> Last updated: 2026-07-08  
 > Source version: current workspace
 
 ## Startup Issues
@@ -106,7 +106,11 @@ npm run build
 ### Native Build Failure
 
 - Confirm GraalVM 21 is installed and `JAVA_HOME` is set.
-- Check whether reflection/resource configuration files are missing.
+- Check that `src/main/resources/META-INF/native-image/reflect-config.json` registers the required reflection classes.
+- Common already-fixed issues:
+  - `IndyInterface.invalidateSwitchPoints` errors: Groovy 6.x removed this method from `v7.IndyInterface` and is incompatible with GraalVM's built-in substitution; currently downgraded to Groovy 4.0.31.
+  - `org.tukaani.xz.XZInputStream` / `org.apache.commons.compress...` class initialization failures: removed `commons-compress` and migrated plugin ZIP read/write to `java.util.zip`.
+  - `com.thoughtworks.xstream` classes not found: added the `xstream` dependency to satisfy Groovy AST parsing.
 - Check reports under `target/native-image-output/`.
 
 ---
