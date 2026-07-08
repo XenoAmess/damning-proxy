@@ -18,10 +18,11 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
@@ -44,22 +45,40 @@ public class GroovyPluginEngine implements PluginEngine {
     @ConfigProperty(name = "damning-proxy.plugin.timeout-ms", defaultValue = "30000")
     long scriptTimeoutMs = 30_000;
 
-    private final ExecutorService scriptExecutor = Executors.newCachedThreadPool(r -> {
-        Thread t = new Thread(r, "groovy-plugin-exec");
-        t.setDaemon(true);
-        return t;
-    });
+    @ConfigProperty(name = "damning-proxy.plugin.execution.pool-size", defaultValue = "16")
+    int poolSize = 16;
+
+    private ExecutorService scriptExecutor;
 
     public GroovyPluginEngine() {
         // Used when the engine is instantiated outside of CDI (e.g. unit tests).
         // Defaults to a sandboxed configuration.
         initShell(new PluginSandbox());
+        this.scriptExecutor = createExecutor(16);
     }
 
     @PostConstruct
     void init() {
         // Reinitialize with the CDI-injected sandbox so configuration is honored.
         initShell(sandbox != null ? sandbox : new PluginSandbox());
+        if (scriptExecutor != null) {
+            scriptExecutor.shutdownNow();
+        }
+        this.scriptExecutor = createExecutor(poolSize);
+    }
+
+    private ExecutorService createExecutor(int size) {
+        return new ThreadPoolExecutor(
+            size, size,
+            0L, TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(size * 10),
+            r -> {
+                Thread t = new Thread(r, "groovy-plugin-exec");
+                t.setDaemon(true);
+                return t;
+            },
+            new ThreadPoolExecutor.CallerRunsPolicy()
+        );
     }
 
     private void initShell(PluginSandbox sandbox) {

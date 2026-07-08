@@ -17,11 +17,12 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -45,25 +46,43 @@ public class JavaScriptPluginEngine implements PluginEngine {
     @ConfigProperty(name = "damning-proxy.plugin.timeout-ms", defaultValue = "30000")
     long scriptTimeoutMs = 30_000;
 
+    @ConfigProperty(name = "damning-proxy.plugin.execution.pool-size", defaultValue = "16")
+    int poolSize = 16;
+
     private ClassFilter classFilter;
     private ClassLoader engineClassLoader;
 
-    private final ExecutorService scriptExecutor = Executors.newCachedThreadPool(r -> {
-        Thread t = new Thread(r, "js-plugin-exec");
-        t.setDaemon(true);
-        return t;
-    });
+    private ExecutorService scriptExecutor;
 
     public JavaScriptPluginEngine() {
         // Used when the engine is instantiated outside of CDI (e.g. unit tests).
         // Defaults to a sandboxed configuration.
         initSandbox(new PluginSandbox());
+        this.scriptExecutor = createExecutor(16);
     }
 
     @PostConstruct
     void init() {
         // Reinitialize with the CDI-injected sandbox so configuration is honored.
         initSandbox(sandbox != null ? sandbox : new PluginSandbox());
+        if (scriptExecutor != null) {
+            scriptExecutor.shutdownNow();
+        }
+        this.scriptExecutor = createExecutor(poolSize);
+    }
+
+    private ExecutorService createExecutor(int size) {
+        return new ThreadPoolExecutor(
+            size, size,
+            0L, TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(size * 10),
+            r -> {
+                Thread t = new Thread(r, "js-plugin-exec");
+                t.setDaemon(true);
+                return t;
+            },
+            new ThreadPoolExecutor.CallerRunsPolicy()
+        );
     }
 
     private void initSandbox(PluginSandbox sandbox) {

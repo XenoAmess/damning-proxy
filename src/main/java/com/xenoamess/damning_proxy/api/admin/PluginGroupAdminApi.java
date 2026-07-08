@@ -117,9 +117,7 @@ public class PluginGroupAdminApi {
         int imported = 0;
         int skipped = 0;
         for (ExportGroup eg : groups) {
-            if (eg.slug == null || eg.slug.isBlank()) {
-                continue;
-            }
+            Validation.validateSlug(eg.slug);
             if (groupRepository.findBySlug(eg.slug).isPresent()) {
                 skipped++;
                 continue;

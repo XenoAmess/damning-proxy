@@ -3,7 +3,11 @@ package com.xenoamess.damning_proxy.util;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
+import java.util.regex.Pattern;
+
 public final class Validation {
+
+    private static final Pattern SLUG_PATTERN = Pattern.compile("^[a-zA-Z0-9_-]+$");
 
     private Validation() {
     }
@@ -11,6 +15,9 @@ public final class Validation {
     public static void validateSlug(String slug) {
         if (slug == null || slug.isBlank()) {
             throw new WebApplicationException("slug is required", Response.Status.BAD_REQUEST);
+        }
+        if (!SLUG_PATTERN.matcher(slug).matches()) {
+            throw new WebApplicationException("slug must only contain letters, digits, underscores, or hyphens", Response.Status.BAD_REQUEST);
         }
     }
 

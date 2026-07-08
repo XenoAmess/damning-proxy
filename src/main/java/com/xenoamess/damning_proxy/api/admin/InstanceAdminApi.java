@@ -139,9 +139,7 @@ public class InstanceAdminApi {
         int imported = 0;
         int skipped = 0;
         for (ExportInstance ei : instances) {
-            if (ei.slug == null || ei.slug.isBlank()) {
-                continue;
-            }
+            Validation.validateSlug(ei.slug);
             if (instanceRepository.findBySlug(ei.slug).isPresent()) {
                 skipped++;
                 continue;

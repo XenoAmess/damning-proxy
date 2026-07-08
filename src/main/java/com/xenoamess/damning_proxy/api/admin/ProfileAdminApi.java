@@ -111,7 +111,8 @@ public class ProfileAdminApi {
         int imported = 0;
         int skipped = 0;
         for (ExportProfile ep : profiles) {
-            if (ep.slug == null || ep.slug.isBlank() || ep.baseUrl == null || ep.baseUrl.isBlank()) {
+            Validation.validateSlug(ep.slug);
+            if (ep.baseUrl == null || ep.baseUrl.isBlank()) {
                 continue;
             }
             if (profileRepository.findBySlug(ep.slug).isPresent()) {

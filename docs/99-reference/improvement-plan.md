@@ -83,11 +83,11 @@
 | N1-1 | ✓ | 核心代理 | RateLimiter 缓存 GlobalSettings | 当前 `tryAcquire` 每次查 H2。改为内存缓存，admin 更新 `GlobalSettings` 时刷新。 |
 | N1-2 | ✓ | 核心代理 | Metrics SQL 方言中立 | 当前用 H2-only `FORMATDATETIME`。改为 JPQL/HQL 或方言中性函数，支持切换 PostgreSQL/MySQL。 |
 | N1-3 | ✓ | 代码质量 | 日志按天清理改为批量删除 | 当前 `deleteOlderThan` 先 `listAll()` 再逐条删除。改为 `DELETE FROM TrafficLog WHERE requestTime < :cutoff`。 |
-| N1-4 | — | 代码质量 | slug 严格校验 | 当前只判空。统一使用 `^[a-zA-Z0-9_-]+$`，覆盖 profile / instance / plugin / group。 |
+| N1-4 | ✓ | 代码质量 | slug 严格校验 | 当前只判空。统一使用 `^[a-zA-Z0-9_-]+$`，覆盖 profile / instance / plugin / group。 |
 | N1-5 | ✓ | 核心代理 | 熔断器仅把 2xx 记为成功 | 当前只要没抛异常就算 success。应仅 2xx 记 success，4xx/5xx 记 failure。 |
 | N1-6 | ✓ | 插件系统 | 插件缓存 key 用 SHA-256 | 当前用 `String.hashCode()`，可能碰撞。改为 SHA-256 内容摘要。 |
-| N1-7 | — | 插件系统 | 插件执行线程池有界 | 当前用 `newCachedThreadPool()`。改为 bounded executor 或注入 Quarkus ManagedExecutor。 |
-| N1-8 | — | 插件系统 | 上传/导入流式大小限制 | multipart / zip 直接读入内存。加 max file size、max entry size、流式边界校验。 |
+| N1-7 | ✓ | 插件系统 | 插件执行线程池有界 | 当前用 `newCachedThreadPool()`。改为 bounded executor 或注入 Quarkus ManagedExecutor。 |
+| N1-8 | ✓ | 插件系统 | 上传/导入流式大小限制 | multipart / zip 直接读入内存。加 max file size、max entry size、流式边界校验。 |
 | N1-9 | ✓ | 代码质量 | StartupMigration 不覆盖样本插件 | 每次启动覆盖样本脚本。改为样本数据只初始化一次，存在即跳过。 |
 | N1-10 | — | 核心代理 | 上游错误体透传 | 重试耗尽后返回空 502/504。把上游 body 带回 `WebApplicationException` 响应。 |
 

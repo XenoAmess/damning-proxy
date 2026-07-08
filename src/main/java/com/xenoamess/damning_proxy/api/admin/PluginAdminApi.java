@@ -8,6 +8,7 @@ import com.xenoamess.damning_proxy.plugin.storage.PluginPackageStorage;
 import com.xenoamess.damning_proxy.plugin.storage.ZipBuilder;
 import com.xenoamess.damning_proxy.repository.PluginRepository;
 import com.xenoamess.damning_proxy.repository.PluginScriptRevisionRepository;
+import com.xenoamess.damning_proxy.util.BoundedInputStream;
 import com.xenoamess.damning_proxy.util.Validation;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -15,9 +16,11 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.WebApplicationException;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -49,6 +52,18 @@ public class PluginAdminApi {
     @Inject
     jakarta.enterprise.inject.Instance<PluginEngine> engines;
 
+    @ConfigProperty(name = "damning-proxy.plugin.zip.max-size-bytes", defaultValue = "10485760")
+    long maxPackageSizeBytes;
+
+    @ConfigProperty(name = "damning-proxy.plugin.import.max-zip-size", defaultValue = "52428800")
+    long maxImportZipSizeBytes;
+
+    @ConfigProperty(name = "damning-proxy.plugin.import.max-entry-size", defaultValue = "10485760")
+    long maxImportEntrySizeBytes;
+
+    @ConfigProperty(name = "damning-proxy.plugin.import.max-entries", defaultValue = "100")
+    int maxImportEntries;
+
     @GET
     public List<Plugin> list() {
         return pluginRepository.listAll();
@@ -76,6 +91,11 @@ public class PluginAdminApi {
         pluginRepository.save(plugin);
         if (plugin.mode == Plugin.Mode.ZIP_PACKAGE && form.packageFile != null) {
             try {
+                long size = Files.size(form.packageFile.uploadedFile());
+                if (size > maxPackageSizeBytes) {
+                    return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("Plugin package file too large: " + size + " bytes (max " + maxPackageSizeBytes + ")").build();
+                }
                 String stored = packageStorage.storePackage(plugin, Files.newInputStream(form.packageFile.uploadedFile()));
                 plugin.packagePath = stored;
             } catch (IllegalArgumentException e) {
@@ -106,6 +126,11 @@ public class PluginAdminApi {
                 if (plugin.mode == Plugin.Mode.ZIP_PACKAGE && form.packageFile != null) {
                     packageStorage.deletePackage(existing);
                     try {
+                        long size = Files.size(form.packageFile.uploadedFile());
+                        if (size > maxPackageSizeBytes) {
+                            return Response.status(Response.Status.BAD_REQUEST)
+                                .entity("Plugin package file too large: " + size + " bytes (max " + maxPackageSizeBytes + ")").build();
+                        }
                         String stored = packageStorage.storePackage(plugin, Files.newInputStream(form.packageFile.uploadedFile()));
                         plugin.packagePath = stored;
                     } catch (IllegalArgumentException e) {
@@ -304,11 +329,17 @@ public class PluginAdminApi {
     public Response importPluginsZip(InputStream zipInput) {
         Map<String, byte[]> pluginZips = new LinkedHashMap<>();
         List<ExportManifest> manifest = null;
-        try (ZipInputStream zis = new ZipInputStream(zipInput)) {
+        int entryCount = 0;
+        try (ZipInputStream zis = new ZipInputStream(new BoundedInputStream(zipInput, maxImportZipSizeBytes))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 if (entry.isDirectory()) continue;
-                byte[] content = zis.readAllBytes();
+                entryCount++;
+                if (entryCount > maxImportEntries) {
+                    return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("Import zip has too many entries: " + entryCount + " (max " + maxImportEntries + ")").build();
+                }
+                byte[] content = readEntryBounded(zis, maxImportEntrySizeBytes, entry.getName());
                 if ("manifest.json".equals(entry.getName())) {
                     manifest = objectMapper.readValue(content, objectMapper.getTypeFactory().constructCollectionType(List.class, ExportManifest.class));
                 } else if (entry.getName().endsWith(".zip")) {
@@ -324,6 +355,21 @@ public class PluginAdminApi {
         return doImportPlugins(manifest, pluginZips);
     }
 
+    private byte[] readEntryBounded(ZipInputStream zis, long maxEntrySize, String entryName) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        long total = 0;
+        int read;
+        while ((read = zis.read(buffer)) != -1) {
+            total += read;
+            if (total > maxEntrySize) {
+                throw new IOException("Import zip entry too large: " + entryName + " (max " + maxEntrySize + " bytes)");
+            }
+            baos.write(buffer, 0, read);
+        }
+        return baos.toByteArray();
+    }
+
     private Response doImportPlugins(List<ExportManifest> manifests, Map<String, byte[]> pluginZips) {
         if (manifests == null || manifests.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST).entity("No plugins to import").build();
@@ -331,9 +377,7 @@ public class PluginAdminApi {
         int imported = 0;
         int skipped = 0;
         for (ExportManifest m : manifests) {
-            if (m.slug == null || m.slug.isBlank()) {
-                continue;
-            }
+            Validation.validateSlug(m.slug);
             if (pluginRepository.findBySlug(m.slug).isPresent()) {
                 skipped++;
                 continue;
