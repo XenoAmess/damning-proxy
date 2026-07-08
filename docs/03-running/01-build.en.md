@@ -2,7 +2,7 @@
 
 # 01 Build Methods
 
-> Last updated: 2026-07-08  
+> Last updated: 2026-07-07  
 > Source version: current workspace
 
 ## Environment Requirements
@@ -74,10 +74,9 @@ Run:
 
 Notes:
 
-- Native Image builds take a while (about 1-2 minutes depending on the machine).
-- Currently verified dependencies: Groovy 4.0.31 (compatible with GraalVM's built-in substitution), XStream 1.4.21 (satisfies Groovy AST parsing), and `java.util.zip` replacing `commons-compress`.
-- Reflection configuration is in `src/main/resources/META-INF/native-image/reflect-config.json`.
-- `application.properties:29` configures `quarkus.native.additional-build-args=-H:+ReportExceptionStackTraces` to help troubleshoot.
+- Native Image builds take a long time.
+- Some dependencies (e.g. Groovy/JS engines) may require additional GraalVM reflection/resource configuration.
+- `pom.xml` already configures `quarkus.native.additional-build-args=-H:+ReportExceptionStackTraces` to help troubleshoot.
 
 `pom.xml:229`
 

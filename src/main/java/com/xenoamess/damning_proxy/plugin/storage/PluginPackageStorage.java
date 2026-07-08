@@ -4,8 +4,11 @@ import com.xenoamess.damning_proxy.entity.Plugin;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -13,11 +16,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 @ApplicationScoped
 public class PluginPackageStorage {
@@ -90,7 +90,7 @@ public class PluginPackageStorage {
         }
         String normalized = normalizeResourcePath(resourcePath);
         try (ZipFile zipFile = new ZipFile(packagePath.toFile())) {
-            ZipEntry entry = zipFile.getEntry(normalized);
+            ZipArchiveEntry entry = zipFile.getEntry(normalized);
             if (entry == null) {
                 throw new IOException("Resource not found: " + resourcePath);
             }
@@ -116,7 +116,7 @@ public class PluginPackageStorage {
             return entries;
         }
         try (ZipFile zipFile = new ZipFile(packagePath.toFile())) {
-            Collections.list(zipFile.entries()).forEach(e -> entries.add(e.getName()));
+            zipFile.getEntries().asIterator().forEachRemaining(e -> entries.add(e.getName()));
         }
         return entries;
     }
@@ -132,15 +132,15 @@ public class PluginPackageStorage {
                 "Plugin ZIP package too large: " + size + " bytes (max " + maxZipSizeBytes + ")");
         }
         try (ZipFile zipFile = new ZipFile(zipPath.toFile())) {
-            List<ZipEntry> entries = new ArrayList<>();
-            Collections.list(zipFile.entries()).forEach(entries::add);
+            List<ZipArchiveEntry> entries = new ArrayList<>();
+            zipFile.getEntries().asIterator().forEachRemaining(entries::add);
             if (entries.size() > maxZipEntries) {
                 throw new IllegalArgumentException(
                     "Plugin ZIP package has too many entries: " + entries.size() + " (max " + maxZipEntries + ")");
             }
             String expectedMain = plugin.language == Plugin.Language.GROOVY ? "main.groovy" : "main.js";
             boolean hasMain = false;
-            for (ZipEntry entry : entries) {
+            for (ZipArchiveEntry entry : entries) {
                 String name = entry.getName();
                 if (name == null || name.isBlank()) {
                     throw new IllegalArgumentException("Plugin ZIP package contains an entry with an empty name");
