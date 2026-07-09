@@ -51,6 +51,7 @@ This knowledge base is the documentation hub for [damning-proxy (大明proxy)](.
 - [Improvement Checklist](99-reference/improvement-checklist.en.md)
 - [Optimization and Action Plan](99-reference/improvement-plan.en.md)
 - [Roadmap](99-reference/roadmap.en.md)
+- [Kimi-code Integration Plan](99-reference/kimi-code-integration-plan.en.md)
 
 ---
 

@@ -51,6 +51,7 @@
 - [优化与改进清单](99-reference/improvement-checklist.md) | [English](99-reference/improvement-checklist.en.md)
 - [优化与落地计划](99-reference/improvement-plan.md) | [English](99-reference/improvement-plan.en.md)
 - [项目路线图](99-reference/roadmap.md) | [English](99-reference/roadmap.en.md)
+- [Kimi-code 接入计划](99-reference/kimi-code-integration-plan.md) | [English](99-reference/kimi-code-integration-plan.en.md)
 
 ---
 
