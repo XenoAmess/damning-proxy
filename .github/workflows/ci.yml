@@ -89,8 +89,8 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Enable pnpm
+        run: corepack enable pnpm
 
       - name: Install frontend dependencies
         working-directory: admin-web
