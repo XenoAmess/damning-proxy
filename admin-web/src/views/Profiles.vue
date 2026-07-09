@@ -46,6 +46,15 @@
         <el-form-item label="标识" required>
           <el-input v-model="form.slug" :disabled="!!form.id" />
         </el-form-item>
+        <el-form-item label="提供商">
+          <el-select v-model="providerType" @change="handleProviderChange">
+            <el-option label="Generic OpenAI-compatible" value="generic" />
+            <el-option label="Kimi-code" value="kimi" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="providerType === 'kimi'" label="Kimi Device ID">
+          <el-input v-model="kimiDeviceId" @input="handleDeviceIdInput" />
+        </el-form-item>
         <el-form-item label="上游地址" required>
           <el-input v-model="form.baseUrl" placeholder="https://api.openai.com/v1" />
         </el-form-item>
@@ -109,6 +118,7 @@ import {
 } from '../api/damning.js'
 import { formatTimestamp } from '../utils/format.js'
 import { exportJson, importJson } from '../utils/export.js'
+import { generateKimiDeviceId, buildKimiHeaders } from '../utils/kimi.js'
 import CodeEditor from '../components/CodeEditor.vue'
 import ImportPreviewDialog from '../components/ImportPreviewDialog.vue'
 
@@ -119,6 +129,8 @@ const visible = ref(false)
 const selectedIds = ref([])
 const previewDialog = ref(null)
 const errors = ref({ customHeaders: '', customBody: '' })
+const providerType = ref('generic')
+const kimiDeviceId = ref('')
 const form = ref({
   name: '',
   slug: '',
@@ -135,6 +147,73 @@ const form = ref({
 
 watch(() => form.value.customHeaders, validateCustomHeaders)
 watch(() => form.value.customBody, validateCustomBody)
+watch(
+  () => form.value.customHeaders,
+  () => {
+    if (providerType.value === 'kimi') {
+      kimiDeviceId.value = extractDeviceId(form.value.customHeaders)
+    }
+  }
+)
+
+function detectProviderType(customHeaders) {
+  try {
+    const headers = JSON.parse(customHeaders || '{}')
+    if (headers['X-Msh-Platform'] === 'kimi_cli') return 'kimi'
+  } catch {
+    // ignore invalid JSON
+  }
+  return 'generic'
+}
+
+function extractDeviceId(customHeaders) {
+  try {
+    const headers = JSON.parse(customHeaders || '{}')
+    return headers['X-Msh-Device-Id'] || ''
+  } catch {
+    return ''
+  }
+}
+
+function applyKimiPreset() {
+  let headers = {}
+  try {
+    headers = JSON.parse(form.value.customHeaders || '{}')
+  } catch {
+    headers = {}
+  }
+
+  const deviceId = headers['X-Msh-Device-Id'] || generateKimiDeviceId()
+  const newHeaders = buildKimiHeaders(deviceId)
+  const merged = { ...newHeaders, ...headers }
+
+  form.value.customHeaders = JSON.stringify(merged, null, 2)
+  if (!form.value.baseUrl) {
+    form.value.baseUrl = 'https://api.kimi.com/coding/v1'
+  }
+  if (!form.value.defaultModel) {
+    form.value.defaultModel = 'kimi-for-coding'
+  }
+  kimiDeviceId.value = merged['X-Msh-Device-Id'] || deviceId
+}
+
+function handleProviderChange(val) {
+  if (val === 'kimi') {
+    applyKimiPreset()
+  }
+}
+
+function handleDeviceIdInput(val) {
+  let headers = {}
+  try {
+    headers = JSON.parse(form.value.customHeaders || '{}')
+  } catch {
+    headers = {}
+  }
+
+  headers['X-Msh-Device-Id'] = val
+  form.value.customHeaders = JSON.stringify(headers, null, 2)
+}
 
 function validateCustomHeaders() {
   parseJsonField('customHeaders')
@@ -175,6 +254,8 @@ function openDialog(row) {
         circuitBreakerOpenTimeoutSeconds: 30,
         enabled: true,
       }
+  providerType.value = detectProviderType(form.value.customHeaders)
+  kimiDeviceId.value = extractDeviceId(form.value.customHeaders)
   visible.value = true
 }
 

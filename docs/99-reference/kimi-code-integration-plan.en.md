@@ -4,7 +4,20 @@
 
 > Last updated: 2026-07-10  
 > Source version: current workspace (no tag)  
-> Status: pending implementation
+> Status: completed
+
+## Implementation Summary
+
+- Added `admin-web/src/utils/kimi.js`: provides `generateKimiDeviceId()` and `buildKimiHeaders()` to generate the 7 special Kimi-code headers.
+- Added a "Provider" dropdown to `admin-web/src/views/Profiles.vue`. Selecting `Kimi-code` auto-fills `baseUrl`, `defaultModel`, and `customHeaders`.
+- Device ID is visible and editable in the form, and is persisted to backend `ProxyProfile` via `customHeaders`.
+- The backend remains a generic OpenAI proxy with no changes.
+- Added `admin-web/src/utils/kimi.test.js` and `admin-web/src/views/Profiles.test.js`.
+
+## Verification
+
+- Frontend tests: all `pnpm test` passed.
+- Code quality: `pnpm lint`, `pnpm format:check`, and `pnpm type-check` all passed.
 
 ---
 

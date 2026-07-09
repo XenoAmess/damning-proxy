@@ -4,7 +4,20 @@
 
 > 最后更新：2026-07-10  
 > 对应源码版本：当前工作区（未打 tag）  
-> 状态：待实现
+> 状态：已完成
+
+## 实现概要
+
+- 新增 `admin-web/src/utils/kimi.js`：提供 `generateKimiDeviceId()` 与 `buildKimiHeaders()`，生成 Kimi-code 所需的 7 个特殊请求头。
+- 在 `admin-web/src/views/Profiles.vue` 增加「提供商」下拉框，选择 `Kimi-code` 后自动填充 `baseUrl`、`defaultModel` 与 `customHeaders`。
+- Device ID 在表单中可见、可编辑，最终随 `customHeaders` 保存到后端 `ProxyProfile`。
+- 后端保持通用 OpenAI 代理，未做任何改动。
+- 新增 `admin-web/src/utils/kimi.test.js` 与 `admin-web/src/views/Profiles.test.js` 测试。
+
+## 验证
+
+- 前端测试：`pnpm test` 全部通过。
+- 代码质量：`pnpm lint`、`pnpm format:check`、`pnpm type-check` 全部通过。
 
 ---
 

@@ -2,8 +2,17 @@
 
 # Changelog
 
-> Last updated: 2026-07-08
+> Last updated: 2026-07-10
 > Source version: current workspace
+
+## 2026-07-10
+
+- Kimi-code integration:
+  - Added a `Kimi-code` provider preset to the admin "Upstream Configuration" page.
+  - Selecting the preset auto-fills `baseUrl = https://api.kimi.com/coding/v1`, `defaultModel = kimi-for-coding`, and the 7 Kimi-cli-style special headers.
+  - Device ID is visible and editable in the form, and is persisted in `ProxyProfile.customHeaders`.
+  - The backend remains a generic OpenAI proxy; no backend changes were made.
+  - Added `admin-web/src/utils/kimi.test.js` and `admin-web/src/views/Profiles.test.js`.
 
 ## 2026-07-08
 

@@ -2,8 +2,17 @@
 
 # 变更日志
 
-> 最后更新：2026-07-08
+> 最后更新：2026-07-10
 > 对应源码版本：当前工作区
+
+## 2026-07-10
+
+- Kimi-code 接入：
+  - 在管理后台「上游配置」页面增加 `Kimi-code` 提供商预设。
+  - 选择预设后自动填充 `baseUrl = https://api.kimi.com/coding/v1`、`defaultModel = kimi-for-coding` 以及 Kimi-cli 风格的 7 个特殊请求头。
+  - Device ID 在表单中可见、可编辑，最终保存到 `ProxyProfile.customHeaders` 中。
+  - 后端保持通用 OpenAI 代理，未做改动。
+  - 新增 `admin-web/src/utils/kimi.test.js` 与 `admin-web/src/views/Profiles.test.js` 测试。
 
 ## 2026-07-08
 

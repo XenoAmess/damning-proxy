@@ -2,7 +2,7 @@
 
 # damning-proxy Knowledge Base
 
-> Last updated: 2026-07-08  
+> Last updated: 2026-07-10  
 > Source version: current workspace (no tag)
 
 This knowledge base is the documentation hub for [damning-proxy (大明proxy)](../README.en.md), covering project positioning, architecture design, APIs, build/run instructions, self-testing, operations, and development guides.
