@@ -397,11 +397,9 @@ async function bulkDelete() {
     return
   }
   try {
-    await ElMessageBox.confirm(
-      `确定删除选中的 ${selectedIds.value.length} 个插件？`,
-      '批量删除',
-      { type: 'warning' }
-    )
+    await ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 个插件？`, '批量删除', {
+      type: 'warning',
+    })
   } catch {
     return
   }

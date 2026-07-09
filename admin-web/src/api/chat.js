@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const proxy = axios.create({
+export const proxy = axios.create({
   baseURL: '/v1/proxy',
   headers: {
     'Content-Type': 'application/json',

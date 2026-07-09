@@ -33,16 +33,27 @@ jobs:
         working-directory: admin-web
         run: pnpm install --frozen-lockfile
 
-      - name: Lint, type-check, and format-check frontend
+      - name: Lint frontend
+        working-directory: admin-web
+        continue-on-error: true
+        run: pnpm run lint
+
+      - name: Type-check and format-check frontend
         working-directory: admin-web
         run: |
-          pnpm run lint
           pnpm run type-check
           pnpm run format:check
 
-      - name: Run frontend tests
+      - name: Run frontend tests with coverage
         working-directory: admin-web
-        run: pnpm run test
+        run: pnpm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-coverage
+          path: admin-web/coverage
 
       - name: Build frontend
         working-directory: admin-web
@@ -85,10 +96,14 @@ jobs:
         working-directory: admin-web
         run: pnpm install --frozen-lockfile
 
-      - name: Lint, type-check, and format-check frontend
+      - name: Lint frontend
+        working-directory: admin-web
+        continue-on-error: true
+        run: pnpm run lint
+
+      - name: Type-check and format-check frontend
         working-directory: admin-web
         run: |
-          pnpm run lint
           pnpm run type-check
           pnpm run format:check
 

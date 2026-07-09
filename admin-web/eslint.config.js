@@ -52,6 +52,11 @@ export default [
   },
   prettierConfig,
   {
-    ignores: ['dist/', 'node_modules/', 'src/main/resources/META-INF/resources/admin/'],
+    ignores: [
+      'dist/',
+      'node_modules/',
+      'coverage/',
+      'src/main/resources/META-INF/resources/admin/',
+    ],
   },
 ]

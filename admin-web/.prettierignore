@@ -3,3 +3,4 @@ node_modules
 src/main/resources/META-INF/resources/admin
 pnpm-lock.yaml
 package-lock.json
+coverage

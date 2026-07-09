@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: '/api',
 })
 
