@@ -11,8 +11,8 @@
   - 在管理后台「上游配置」页面增加 `Kimi-code` 提供商预设。
   - 选择预设后自动填充 `baseUrl = https://api.kimi.com/coding/v1`、`defaultModel = kimi-for-coding` 以及 Kimi-cli 风格的 7 个特殊请求头。
   - Device ID 在表单中可见、可编辑，最终保存到 `ProxyProfile.customHeaders` 中。
-  - 后端保持通用 OpenAI 代理，未做改动。
-  - 新增 `admin-web/src/utils/kimi.test.js` 与 `admin-web/src/views/Profiles.test.js` 测试。
+  - 后端保持通用 OpenAI 代理；修复流式响应 SSE 解析严格依赖 `data: `（冒号后空格）的问题，现在兼容 `data:` 与 `data: ` 两种上游格式。
+  - 新增 `admin-web/src/utils/kimi.test.js`、`admin-web/src/views/Profiles.test.js` 与 `ProxyApiTest.shouldProxyStreamingChatCompletionsWithoutSpaceAfterDataColon` 测试。
 
 ## 2026-07-08
 

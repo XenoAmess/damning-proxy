@@ -506,8 +506,8 @@ public class OpenAiProxyService {
                     sseBuffer.append(lines[lines.length - 1]);
                     for (int i = 0; i < lines.length - 1; i++) {
                         String line = lines[i].trim();
-                        if (line.startsWith(SSE_DATA_PREFIX)) {
-                            String data = line.substring(6).trim();
+                        if (line.startsWith("data:")) {
+                            String data = line.substring(5).trim();
                             if (SSE_DONE.equals(data)) {
                                 Object parsedBody = buildStreamingResponseBody(accumulatedChoices);
                                 context.setResponseBody(parsedBody);
@@ -527,8 +527,8 @@ public class OpenAiProxyService {
                     }
                     finishWithError.run();
                     String remaining = sseBuffer.toString().trim();
-                    if (remaining.startsWith(SSE_DATA_PREFIX)) {
-                        String data = remaining.substring(6).trim();
+                    if (remaining.startsWith("data:")) {
+                        String data = remaining.substring(5).trim();
                         if (!SSE_DONE.equals(data)) {
                             processStreamChunk(data, context, plugins, emitter::emit, accumulatedChoices);
                         }

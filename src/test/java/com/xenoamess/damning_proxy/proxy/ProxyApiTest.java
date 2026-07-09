@@ -199,6 +199,45 @@ class ProxyApiTest {
     }
 
     @Test
+    void shouldProxyStreamingChatCompletionsWithoutSpaceAfterDataColon() throws InterruptedException {
+        String sseBody = "data:{\"id\":\"chatcmpl-2\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"delta\":{\"role\":\"assistant\",\"content\":\"Hi\"}}]}\n\ndata:[DONE]\n\n";
+        wireMockServer.stubFor(post(urlEqualTo("/v1/chat/completions"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "text/event-stream")
+                .withChunkedDribbleDelay(5, 100)
+                .withBody(sseBody)));
+
+        ProxyInstance instance = createInstance("openai-stream-nospace", "http://localhost:18089/v1", "sk-test");
+
+        Map<String, Object> body = Map.of(
+            "model", "gpt-4",
+            "messages", java.util.List.of(Map.of("role", "user", "content", "Hello")),
+            "stream", true
+        );
+
+        String response = given()
+            .contentType(ContentType.JSON)
+            .header("Accept", "text/event-stream")
+            .body(body)
+            .when().post("/v1/proxy/openai-stream-nospace/chat/completions")
+            .then()
+            .statusCode(200)
+            .header("Content-Type", containsString("text/event-stream"))
+            .extract().body().asString();
+
+        assertTrue(response.contains("data: "));
+        assertTrue(response.contains("chatcmpl-2"));
+        assertTrue(response.contains("Hi"));
+
+        TrafficLog log = waitForLogByInstance(instance.id);
+        assertEquals("/v1/chat/completions", log.requestPath);
+        assertEquals(200, log.responseStatus);
+        assertTrue(log.streaming);
+        assertNotNull(log.responseBody);
+    }
+
+    @Test
     void shouldReturnSseErrorOnUpstreamStreamingFailure() throws InterruptedException {
         wireMockServer.stubFor(post(urlEqualTo("/v1/chat/completions"))
             .willReturn(aResponse()

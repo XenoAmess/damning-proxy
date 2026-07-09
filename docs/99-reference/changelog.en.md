@@ -11,8 +11,8 @@
   - Added a `Kimi-code` provider preset to the admin "Upstream Configuration" page.
   - Selecting the preset auto-fills `baseUrl = https://api.kimi.com/coding/v1`, `defaultModel = kimi-for-coding`, and the 7 Kimi-cli-style special headers.
   - Device ID is visible and editable in the form, and is persisted in `ProxyProfile.customHeaders`.
-  - The backend remains a generic OpenAI proxy; no backend changes were made.
-  - Added `admin-web/src/utils/kimi.test.js` and `admin-web/src/views/Profiles.test.js`.
+  - The backend remains a generic OpenAI proxy; fixed streaming SSE parsing that strictly required `data: ` (space after colon) so it now supports both `data:` and `data: ` upstream formats.
+  - Added `admin-web/src/utils/kimi.test.js`, `admin-web/src/views/Profiles.test.js`, and `ProxyApiTest.shouldProxyStreamingChatCompletionsWithoutSpaceAfterDataColon` tests.
 
 ## 2026-07-08
 
