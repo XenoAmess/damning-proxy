@@ -17,6 +17,7 @@
 ## Verification
 
 - Frontend tests: all `pnpm test` passed.
+- Build verification: `pnpm build` succeeded.
 - Code quality: `pnpm lint`, `pnpm format:check`, and `pnpm type-check` all passed.
 
 ---

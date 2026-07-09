@@ -17,6 +17,7 @@
 ## 验证
 
 - 前端测试：`pnpm test` 全部通过。
+- 构建验证：`pnpm build` 成功。
 - 代码质量：`pnpm lint`、`pnpm format:check`、`pnpm type-check` 全部通过。
 
 ---
