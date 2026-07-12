@@ -30,7 +30,7 @@
     "codemirror": "^6.0.2",
     "dompurify": "^3.4.12",
     "echarts": "^6.1.0",
-    "element-plus": "^2.14.2",
+    "element-plus": "^2.14.3",
     "html2canvas": "^1.4.1",
     "jszip": "^3.10.1",
     "marked": "^18.0.5",
