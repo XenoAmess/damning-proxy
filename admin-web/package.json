@@ -50,7 +50,7 @@
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "prettier": "^3.9.5",
-    "typescript": "^5.8.2",
+    "typescript": "^7.0.2",
     "vite": "^8.1.4",
     "vitest": "^4.1.10",
     "vue-tsc": "^3.3.7"
