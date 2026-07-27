@@ -121,7 +121,6 @@ class PluginIntegrationTest {
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader("Content-Type", "text/event-stream")
-                .withChunkedDribbleDelay(5, 100)
                 .withBody(sseBody)));
 
         ProxyProfile profile = saveProfile("openai", "http://localhost:18089/v1", "sk-test");

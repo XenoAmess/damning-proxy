@@ -394,7 +394,14 @@ public class OpenAiProxyService {
             });
         }
 
-        return Multi.createFrom().emitter(emitter -> {
+        // Bridge eagerly: the whole upstream response (headers, body, end) can
+        // arrive before a subscriber attaches, so response handlers must be
+        // registered now rather than inside a subscription-time emitter.
+        io.smallrye.mutiny.operators.multi.processors.UnicastProcessor<String> processor =
+            io.smallrye.mutiny.operators.multi.processors.UnicastProcessor.create();
+        java.util.concurrent.ScheduledFuture<?>[] heartbeatHolderRef = new java.util.concurrent.ScheduledFuture<?>[1];
+        java.util.concurrent.atomic.AtomicBoolean streamCancelledRef = new java.util.concurrent.atomic.AtomicBoolean(false);
+        {
             StringBuilder responseBuffer = new StringBuilder();
             StringBuilder sseBuffer = new StringBuilder();
             List<Map<String, Object>> accumulatedChoices = new ArrayList<>();
@@ -429,7 +436,7 @@ public class OpenAiProxyService {
             };
 
             java.util.concurrent.atomic.AtomicLong lastActivity = new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis());
-            java.util.concurrent.ScheduledFuture<?>[] heartbeatHolder = new java.util.concurrent.ScheduledFuture<?>[1];
+            java.util.concurrent.ScheduledFuture<?>[] heartbeatHolder = heartbeatHolderRef;
             Runnable heartbeat = () -> {
                 long idle = System.currentTimeMillis() - lastActivity.get();
                 Log.debugf("Streaming heartbeat for log #%d: idle %d ms", Long.valueOf(trafficLog.id), Long.valueOf(idle));
@@ -446,14 +453,7 @@ public class OpenAiProxyService {
             };
             heartbeatHolder[0] = heartbeatScheduler.scheduleAtFixedRate(heartbeat, 30, 30, TimeUnit.SECONDS);
 
-            emitter.onTermination(() -> {
-                if (heartbeatHolder[0] != null) {
-                    heartbeatHolder[0].cancel(false);
-                }
-            });
-
-            java.util.concurrent.atomic.AtomicBoolean streamCancelled = new java.util.concurrent.atomic.AtomicBoolean(false);
-            emitter.onTermination(() -> streamCancelled.set(true));
+            java.util.concurrent.atomic.AtomicBoolean streamCancelled = streamCancelledRef;
 
 
             Runnable finishWithError = () -> {
@@ -466,6 +466,7 @@ public class OpenAiProxyService {
                 context.setResponseStatus(response.statusCode());
                 context.getResponseHeaders().putAll(toMap(response.headers()));
                 if (response.statusCode() >= 400) {
+                    response.resume();
                     response.body()
                         .onSuccess(bodyBuffer -> {
                             finishWithError.run();
@@ -479,8 +480,8 @@ public class OpenAiProxyService {
                             String msg = "Upstream returned " + response.statusCode()
                                 + (detail.isBlank() ? "" : ": " + detail);
                             recordError.accept(response.statusCode(), msg);
-                            emitter.emit(sseError(msg, response.statusCode()));
-                            emitter.complete();
+                            processor.onNext(sseError(msg, response.statusCode()));
+                            processor.onComplete();
                         })
                         .onFailure(err -> {
                             finishWithError.run();
@@ -488,11 +489,23 @@ public class OpenAiProxyService {
                             circuitBreaker.recordFailure(ctx.profile.baseUrl, ctx.profile);
                             String msg = "Upstream response error: " + err.getMessage();
                             recordError.accept(response.statusCode(), msg);
-                            emitter.emit(sseError(msg, null));
-                            emitter.complete();
+                            processor.onNext(sseError(msg, null));
+                            processor.onComplete();
                         });
                     return;
                 }
+                response.exceptionHandler(err -> {
+                    if (streamCancelled.get()) {
+                        return;
+                    }
+                    finishWithError.run();
+                    Log.error("Streaming upstream response interrupted", err);
+                    circuitBreaker.recordFailure(ctx.profile.baseUrl, ctx.profile);
+                    String msg = "Upstream stream interrupted: " + err.getMessage();
+                    recordError.accept(502, msg);
+                    processor.onNext(sseError(msg, null));
+                    processor.onComplete();
+                });
                 response.handler(buffer -> {
                     if (streamCancelled.get()) {
                         return;
@@ -514,10 +527,10 @@ public class OpenAiProxyService {
                                 pluginExecutionService.executeResponsePlugins(plugins, context);
                                 circuitBreaker.recordSuccess(ctx.profile.baseUrl);
                                 recordOnce.run();
-                                emitter.complete();
+                                processor.onComplete();
                                 return;
                             }
-                            processStreamChunk(data, context, plugins, emitter::emit, accumulatedChoices);
+                            processStreamChunk(data, context, plugins, processor::onNext, accumulatedChoices);
                         }
                     }
                 });
@@ -526,11 +539,20 @@ public class OpenAiProxyService {
                         return;
                     }
                     finishWithError.run();
+                    if (responseBuffer.length() == 0) {
+                        String msg = "Upstream stream ended without any data (status=" + response.statusCode() + ")";
+                        Log.warnf("Streaming upstream for log #%d: %s", Long.valueOf(trafficLog.id), msg);
+                        circuitBreaker.recordFailure(ctx.profile.baseUrl, ctx.profile);
+                        recordError.accept(502, msg);
+                        processor.onNext(sseError(msg, null));
+                        processor.onComplete();
+                        return;
+                    }
                     String remaining = sseBuffer.toString().trim();
                     if (remaining.startsWith("data:")) {
                         String data = remaining.substring(5).trim();
                         if (!SSE_DONE.equals(data)) {
-                            processStreamChunk(data, context, plugins, emitter::emit, accumulatedChoices);
+                            processStreamChunk(data, context, plugins, processor::onNext, accumulatedChoices);
                         }
                     }
                     Object parsedBody = buildStreamingResponseBody(accumulatedChoices);
@@ -538,18 +560,32 @@ public class OpenAiProxyService {
                     pluginExecutionService.executeResponsePlugins(plugins, context);
                     circuitBreaker.recordSuccess(ctx.profile.baseUrl);
                     recordOnce.run();
-                    emitter.complete();
+                    processor.onComplete();
                 });
+                response.resume();
             }).onFailure(err -> {
                 finishWithError.run();
                 Log.error("Streaming upstream failed", err);
                 circuitBreaker.recordFailure(ctx.profile.baseUrl, ctx.profile);
                 String msg = err.getMessage();
                 recordError.accept(502, msg);
-                emitter.emit(sseError(msg, null));
-                emitter.complete();
+                processor.onNext(sseError(msg, null));
+                processor.onComplete();
             });
-        });
+        }
+        return processor
+            .onCancellation().invoke(() -> {
+                streamCancelledRef.set(true);
+                if (heartbeatHolderRef[0] != null) {
+                    heartbeatHolderRef[0].cancel(false);
+                }
+            })
+            .onTermination().invoke(() -> {
+                streamCancelledRef.set(true);
+                if (heartbeatHolderRef[0] != null) {
+                    heartbeatHolderRef[0].cancel(false);
+                }
+            });
     }
 
     private Object buildStreamingResponseBody(List<Map<String, Object>> accumulatedChoices) {

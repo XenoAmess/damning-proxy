@@ -277,6 +277,7 @@ public class UpstreamHttpClient {
     private Future<HttpClientResponse> sendStreamOnce(String method, String baseUrl, String path,
                                                        MultiMap headers, Object body, int timeoutMs) {
         URI uri = buildUri(baseUrl, path);
+        Log.debugf("Stream upstream connect: %s %s", method, uri);
         return streamHttpClient.request(new io.vertx.core.http.RequestOptions()
                 .setMethod(io.vertx.core.http.HttpMethod.valueOf(method))
                 .setHost(uri.getHost())
@@ -284,6 +285,7 @@ public class UpstreamHttpClient {
                 .setSsl(isSsl(uri))
                 .setURI(uri.getPath() + (uri.getQuery() != null ? "?" + uri.getQuery() : ""))
                 .setTimeout(timeoutMs > 0 ? timeoutMs : 0))
+            .onFailure(err -> Log.errorf(err, "Stream upstream request failed: %s %s", method, uri))
             .compose(req -> {
                 if (headers != null) {
                     headers.forEach(entry -> {
@@ -296,13 +298,23 @@ public class UpstreamHttpClient {
                     try {
                         String bodyJson = (body instanceof String) ? (String) body : objectMapper.writeValueAsString(body);
                         req.putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-                        return req.send(Buffer.buffer(bodyJson));
+                        return req.send(Buffer.buffer(bodyJson)).compose(this::pauseStreamResponse);
                     } catch (Exception e) {
                         return Future.failedFuture(e);
                     }
                 }
-                return req.send();
+                return req.send().compose(this::pauseStreamResponse);
             });
+    }
+
+    // Pause synchronously in the completion dispatch: body frames (and the end
+    // event) can be delivered in the same event-loop tick as the response
+    // future completion, before callers attach their handlers, and would be
+    // silently dropped. Callers must resume() after attaching handlers.
+    private Future<HttpClientResponse> pauseStreamResponse(HttpClientResponse resp) {
+        Log.debugf("Stream upstream response received: status=%d", resp.statusCode());
+        resp.pause();
+        return Future.succeededFuture(resp);
     }
 
     private Future<Void> delayedFuture(long delayMs) {
