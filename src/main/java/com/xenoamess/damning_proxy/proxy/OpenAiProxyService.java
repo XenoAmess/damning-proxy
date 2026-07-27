@@ -372,29 +372,27 @@ public class OpenAiProxyService {
 
     private Multi<String> doStreamChatCompletions(ProxyContext ctx, PluginContext context,
                                            List<Plugin> plugins, TrafficLog trafficLog, long start) {
-        Future<HttpClientResponse> upstreamFuture;
-        try {
-            if (!circuitBreaker.allowRequest(ctx.profile.baseUrl)) {
-                throw new WebApplicationException("Circuit breaker open for upstream: " + ctx.profile.baseUrl,
-                    Response.Status.SERVICE_UNAVAILABLE);
-            }
-            upstreamFuture = upstreamHttpClient.sendStream(
-                "POST", ctx.profile.baseUrl, "/chat/completions",
-                toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs
-            );
-        } catch (Exception e) {
-            String msg = e.getMessage();
-            int status = e instanceof WebApplicationException wae ? wae.getResponse().getStatus() : 502;
-            trafficLogService.recordResponse(trafficLog, status,
-                Map.of(), msg, System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), msg);
-            return Multi.createFrom().emitter(emitter -> {
+        return Multi.createFrom().emitter(emitter -> {
+            Future<HttpClientResponse> upstreamFuture;
+            try {
+                if (!circuitBreaker.allowRequest(ctx.profile.baseUrl)) {
+                    throw new WebApplicationException("Circuit breaker open for upstream: " + ctx.profile.baseUrl,
+                        Response.Status.SERVICE_UNAVAILABLE);
+                }
+                upstreamFuture = upstreamHttpClient.sendStream(
+                    "POST", ctx.profile.baseUrl, "/chat/completions",
+                    toMultiMap(context.getRequestHeaders()), context.getRequestBody(), ctx.profile.timeoutMs
+                );
+            } catch (Exception e) {
+                String msg = e.getMessage();
+                int status = e instanceof WebApplicationException wae ? wae.getResponse().getStatus() : 502;
+                trafficLogService.recordResponse(trafficLog, status,
+                    Map.of(), msg, System.currentTimeMillis() - start, context.getPluginLogs(), context.getFriendlyLogCollector().getSnapshots(), msg);
                 Log.error("Streaming upstream failed", e);
                 emitter.emit(sseError(msg, status));
                 emitter.complete();
-            });
-        }
-
-        return Multi.createFrom().emitter(emitter -> {
+                return;
+            }
             StringBuilder responseBuffer = new StringBuilder();
             StringBuilder sseBuffer = new StringBuilder();
             List<Map<String, Object>> accumulatedChoices = new ArrayList<>();
