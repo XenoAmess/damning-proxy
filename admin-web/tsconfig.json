@@ -15,9 +15,8 @@
     "noEmit": true,
     "allowJs": true,
     "checkJs": false,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*.vue", "src/**/*.js"],
