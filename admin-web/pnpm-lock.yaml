@@ -66,8 +66,8 @@ importers:
         specifier: ^3.5.41
         version: 3.5.41(typescript@5.9.3)
       vue-echarts:
-        specifier: ^8.0.1
-        version: 8.0.1(echarts@6.1.0)(vue@3.5.41(typescript@5.9.3))
+        specifier: ^8.1.0
+        version: 8.1.0(echarts@6.1.0)(vue@3.5.41(typescript@5.9.3))
       vue-router:
         specifier: ^5.2.0
         version: 5.2.0(@vue/compiler-sfc@3.5.41)(rolldown@1.2.4)(vite@8.2.1(yaml@2.9.0))(vue@3.5.41(typescript@5.9.3))
@@ -1753,8 +1753,8 @@ packages:
   vue-component-type-helpers@3.3.7:
     resolution: {integrity: sha512-Skkhw9agYSgsWqv7bxSOGJZa9SaiJbZVGdXuFWnrzKaQYHnw9qbjD630rw6RyMqDbp54nfLCLw5SZA55if7JLg==}
 
-  vue-echarts@8.0.1:
-    resolution: {integrity: sha512-23rJTFLu1OUEGRWjJGmdGt8fP+8+ja1gVgzMYPIPaHWpXegcO1viIAaeu2H4QHESlVeHzUAHIxKXGrwjsyXAaA==}
+  vue-echarts@8.1.0:
+    resolution: {integrity: sha512-/uJVwijy3M2vIZ0NcPDgdZVqgboc6zZtC/vERfESau0eFpkHOIujj0sIiMiLP4kztQrckMFnDYWrid+gLI+IOg==}
     peerDependencies:
       echarts: ^6.0.0
       vue: ^3.3.0
@@ -3411,7 +3411,7 @@ snapshots:
 
   vue-component-type-helpers@3.3.7: {}
 
-  vue-echarts@8.0.1(echarts@6.1.0)(vue@3.5.41(typescript@5.9.3)):
+  vue-echarts@8.1.0(echarts@6.1.0)(vue@3.5.41(typescript@5.9.3)):
     dependencies:
       echarts: 6.1.0
       vue: 3.5.41(typescript@5.9.3)
